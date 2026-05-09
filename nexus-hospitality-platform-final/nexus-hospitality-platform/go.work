@@ -1,0 +1,10 @@
+go 1.22
+
+use (
+	./services/backend-core
+	./services/pms-integration
+	./services/ai-platform
+	./services/iot-gateway
+	./services/iptv-middleware
+	./sdk/go-sdk
+)

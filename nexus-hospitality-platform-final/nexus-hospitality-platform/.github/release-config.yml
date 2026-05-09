@@ -1,0 +1,56 @@
+versioning:
+  strategy: semver
+  bump_rules:
+    major: "BREAKING CHANGE"
+    minor: "feat:"
+    patch: "fix:, perf:, docs:, chore:"
+
+branches:
+  main:
+    protection: true
+    required_reviews: 2
+    required_checks:
+      - ci-backend
+      - ci-iptv
+      - ci-security-scan
+      - e2e-smoke
+    auto_merge: false
+
+  release/*:
+    protection: true
+    required_reviews: 1
+    required_checks:
+      - ci-full-suite
+      - security-audit
+      - performance-baseline
+
+  hotfix/*:
+    protection: true
+    required_reviews: 1
+    fast_track: true
+    bypass_checks: ["e2e-full"]
+
+environments:
+  development:
+    auto_deploy: true
+    namespace: nexus-dev
+
+  staging:
+    auto_deploy: false
+    requires_approval: true
+    namespace: nexus-staging
+
+  production:
+    auto_deploy: false
+    requires_approval: true
+    requires_security_signoff: true
+    namespace: nexus-prod
+    canary_percentage: [5, 25, 50, 100]
+    rollback_window_minutes: 30
+
+artifacts:
+  container_registry: ghcr.io/nexus-platform
+  helm_registry: oci://ghcr.io/nexus-platform/charts
+  retention_days: 90
+  signing_required: true
+  sbom_generation: true

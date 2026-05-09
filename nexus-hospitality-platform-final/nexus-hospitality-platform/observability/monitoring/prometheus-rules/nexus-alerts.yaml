@@ -1,0 +1,397 @@
+# observability/monitoring/prometheus-rules/nexus-alerts.yaml
+# ============================================================
+# PROMETHEUS ALERTING RULES — Enterprise hospitality platform
+# ============================================================
+
+groups:
+  # ==================== PLATFORM HEALTH ====================
+  - name: platform-health
+    interval: 15s
+    rules:
+      - alert: NexusPlatformDown
+        expr: up{job=~"nexus-.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: sre
+          service: "{{ $labels.job }}"
+        annotations:
+          summary: "Nexus service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} on {{ $labels.instance }} has been down for more than 1 minute"
+          runbook_url: "https://wiki.nexus-platform.com/runbooks/service-down"
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{job=~"nexus-.*",status=~"5.."}[5m])) 
+          / 
+          sum(rate(http_requests_total{job=~"nexus-.*"}[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "High error rate on {{ $labels.job }}"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.99, 
+            sum(rate(http_request_duration_seconds_bucket{job=~"nexus-.*"}[5m])) by (le, job)
+          ) > 1
+        for: 3m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High latency on {{ $labels.job }}"
+          description: "P99 latency is {{ $value }}s"
+
+      - alert: DatabaseConnectionPoolExhausted
+        expr: |
+          nexus_db_connections_active / nexus_db_connections_max > 0.9
+        for: 1m
+        labels:
+          severity: critical
+          team: dba
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "{{ $value | humanizePercentage }} of connections in use"
+
+  # ==================== IPTV STREAMING ====================
+  - name: iptv-health
+    interval: 15s
+    rules:
+      - alert: IPTVStreamDown
+        expr: iptv_active_streams == 0
+        for: 30s
+        labels:
+          severity: critical
+          team: iptv
+        annotations:
+          summary: "No active IPTV streams"
+          description: "All IPTV streams are down on {{ $labels.instance }}"
+
+      - alert: HighBufferingRate
+        expr: |
+          rate(iptv_buffering_events_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          team: iptv
+        annotations:
+          summary: "High buffering rate detected"
+          description: "{{ $value }} buffering events per second"
+
+      - alert: LowQoEScore
+        expr: iptv_qoe_score < 70
+        for: 5m
+        labels:
+          severity: warning
+          team: iptv
+        annotations:
+          summary: "Low QoE score for room {{ $labels.room_id }}"
+          description: "QoE score is {{ $value }}/100"
+
+      - alert: DRMKeyServerDown
+        expr: up{job="drm-key-server"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "DRM key server is down"
+          description: "Content protection may be compromised"
+
+      - alert: TranscodeQueueBacklog
+        expr: |
+          transcode_queue_depth > 50
+        for: 5m
+        labels:
+          severity: warning
+          team: media
+        annotations:
+          summary: "Transcode queue backlog"
+          description: "{{ $value }} jobs pending in queue"
+
+  # ==================== IoT & SMART ROOM ====================
+  - name: iot-health
+    interval: 15s
+    rules:
+      - alert: IoTDeviceOffline
+        expr: |
+          iot_device_last_seen > 300
+        for: 1m
+        labels:
+          severity: warning
+          team: iot
+        annotations:
+          summary: "IoT device {{ $labels.device_id }} is offline"
+          description: "No telemetry received for 5 minutes"
+
+      - alert: HighTemperatureAnomaly
+        expr: |
+          iot_temperature > 30 or iot_temperature < 10
+        for: 5m
+        labels:
+          severity: warning
+          team: iot
+        annotations:
+          summary: "Temperature anomaly in room {{ $labels.room_id }}"
+          description: "Temperature is {{ $value }}°C"
+
+      - alert: WaterLeakDetected
+        expr: iot_water_leak == 1
+        for: 0s
+        labels:
+          severity: critical
+          team: maintenance
+        annotations:
+          summary: "WATER LEAK in room {{ $labels.room_id }}"
+          description: "Immediate attention required"
+
+      - alert: SmartLockBatteryLow
+        expr: iot_lock_battery < 20
+        for: 1h
+        labels:
+          severity: warning
+          team: iot
+        annotations:
+          summary: "Smart lock battery low"
+          description: "Battery at {{ $value }}% in room {{ $labels.room_id }}"
+
+  # ==================== PMS & OPERATIONS ====================
+  - name: pms-health
+    interval: 15s
+    rules:
+      - alert: CheckInQueueBuilding
+        expr: |
+          pms_checkin_queue_length > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: operations
+        annotations:
+          summary: "Check-in queue building up"
+          description: "{{ $value }} guests waiting to check in"
+
+      - alert: HousekeepingBacklog
+        expr: |
+          pms_dirty_rooms / pms_total_rooms > 0.3
+        for: 10m
+        labels:
+          severity: warning
+          team: housekeeping
+        annotations:
+          summary: "Housekeeping backlog"
+          description: "{{ $value | humanizePercentage }} of rooms are dirty"
+
+      - alert: MaintenanceSLABreach
+        expr: |
+          pms_maintenance_avg_resolution_time > 240
+        for: 15m
+        labels:
+          severity: warning
+          team: maintenance
+        annotations:
+          summary: "Maintenance SLA breach"
+          description: "Average resolution time is {{ $value }} minutes"
+
+      - alert: LowOccupancyForecast
+        expr: |
+          pms_forecasted_occupancy_7d < 0.5
+        for: 1h
+        labels:
+          severity: info
+          team: revenue
+        annotations:
+          summary: "Low occupancy forecast"
+          description: "7-day forecasted occupancy is {{ $value | humanizePercentage }}"
+
+  # ==================== AI PLATFORM ====================
+  - name: ai-health
+    interval: 15s
+    rules:
+      - alert: AIInferenceLatencyHigh
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(ai_inference_duration_seconds_bucket[5m])) by (le, model)
+          ) > 2
+        for: 3m
+        labels:
+          severity: warning
+          team: ai
+        annotations:
+          summary: "High AI inference latency for {{ $labels.model }}"
+          description: "P95 latency is {{ $value }}s"
+
+      - alert: AIHallucinationRateHigh
+        expr: |
+          rate(ai_hallucination_detected_total[5m]) 
+          / 
+          rate(ai_inference_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          team: ai
+        annotations:
+          summary: "High hallucination detection rate"
+          description: "{{ $value | humanizePercentage }} of inferences flagged"
+
+      - alert: ModelDriftDetected
+        expr: ai_model_drift_score > 0.3
+        for: 10m
+        labels:
+          severity: warning
+          team: ai
+        annotations:
+          summary: "Model drift detected for {{ $labels.model }}"
+          description: "Drift score is {{ $value }}"
+
+      - alert: GPUUtilizationCritical
+        expr: nvidia_gpu_utilization_gpu > 95
+        for: 2m
+        labels:
+          severity: critical
+          team: ai-infra
+        annotations:
+          summary: "GPU utilization critical"
+          description: "GPU {{ $labels.gpu }} at {{ $value }}%"
+
+  # ==================== SECURITY ====================
+  - name: security-alerts
+    interval: 15s
+    rules:
+      - alert: UnauthorizedDatabaseAccess
+        expr: |
+          rate(falco_events{rule="Unauthorized Database Access"}[5m]) > 0
+        for: 0s
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "Unauthorized database access detected"
+          description: "Falco detected unauthorized database access"
+
+      - alert: PIIDataExfiltration
+        expr: |
+          rate(falco_events{rule="PII Data Exfiltration"}[5m]) > 0
+        for: 0s
+        labels:
+          severity: critical
+          team: security
+          compliance: gdpr
+        annotations:
+          summary: "PII exfiltration detected"
+          description: "Potential data breach in progress"
+
+      - alert: TenantIsolationBreach
+        expr: |
+          rate(falco_events{rule="Tenant Isolation Breach"}[5m]) > 0
+        for: 0s
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "Tenant isolation breach"
+          description: "Cross-tenant data access detected"
+
+      - alert: CertificateExpiringSoon
+        expr: |
+          vault_cert_ttl_days < 7
+        for: 1h
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "Certificate expiring soon"
+          description: "Certificate for {{ $labels.common_name }} expires in {{ $value }} days"
+
+  # ==================== BUSINESS KPIs ====================
+  - name: business-kpis
+    interval: 1m
+    rules:
+      - alert: RevenueDrop
+        expr: |
+          (
+            sum(rate(nexus_revenue_total[1h])) 
+            / 
+            sum(rate(nexus_revenue_total[1h] offset 24h))
+          ) < 0.8
+        for: 15m
+        labels:
+          severity: warning
+          team: revenue
+        annotations:
+          summary: "Revenue drop detected"
+          description: "Revenue is {{ $value | humanizePercentage }} of same time yesterday"
+
+      - alert: GuestComplaintSpike
+        expr: |
+          rate(nexus_complaints_total[1h]) > 5
+        for: 10m
+        labels:
+          severity: warning
+          team: operations
+        annotations:
+          summary: "Guest complaint spike"
+          description: "{{ $value }} complaints per hour"
+
+      - alert: NPSDrop
+        expr: |
+          nexus_nps_score < 7
+        for: 1h
+        labels:
+          severity: warning
+          team: guest-experience
+        annotations:
+          summary: "NPS score dropped"
+          description: "Current NPS: {{ $value }}"
+
+      - alert: StaffOvertimeHigh
+        expr: |
+          nexus_staff_overtime_hours > 100
+        for: 1h
+        labels:
+          severity: info
+          team: hr
+        annotations:
+          summary: "High staff overtime"
+          description: "{{ $value }} overtime hours this week"
+
+  # ==================== SLOs ====================
+  - name: slo-compliance
+    interval: 1m
+    rules:
+      - record: slo:availability:ratio
+        expr: |
+          1 - (
+            sum(rate(http_requests_total{job=~"nexus-.*",status=~"5.."}[28d]))
+            /
+            sum(rate(http_requests_total{job=~"nexus-.*"}[28d]))
+          )
+
+      - record: slo:latency:p99
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{job=~"nexus-.*"}[28d])) by (le)
+          )
+
+      - alert: SLOAvailabilityBreach
+        expr: slo:availability:ratio < 0.999
+        for: 1m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "SLO breach: Availability"
+          description: "28-day availability is {{ $value | humanizePercentage }} (target: 99.9%)"
+
+      - alert: SLOLatencyBreach
+        expr: slo:latency:p99 > 0.5
+        for: 1m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "SLO breach: Latency"
+          description: "28-day P99 latency is {{ $value }}s (target: 500ms)"

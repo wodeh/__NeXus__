@@ -1,0 +1,71 @@
+# infrastructure/helm-charts/nexus-platform/values-development.yaml
+# Development environment configuration
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/nexus-platform
+  tag: latest
+  pullPolicy: IfNotPresent
+
+autoscaling:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+postgresql:
+  enabled: true
+  auth:
+    username: nexus
+    password: nexus_dev
+    database: nexus_platform
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+
+redis:
+  enabled: true
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: 5Gi
+
+kafka:
+  enabled: true
+  replicaCount: 1
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: api-dev.nexus-platform.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+monitoring:
+  enabled: false
+
+networkPolicy:
+  enabled: false
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL

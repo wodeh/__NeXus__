@@ -1,0 +1,90 @@
+# infrastructure/helm-charts/nexus-platform/values-staging.yaml
+# Staging environment configuration
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/nexus-platform
+  tag: staging
+  pullPolicy: Always
+
+autoscaling:
+  enabled: true
+  backend:
+    minReplicas: 2
+    maxReplicas: 10
+  iptv:
+    minReplicas: 1
+    maxReplicas: 5
+  ai:
+    minReplicas: 1
+    maxReplicas: 3
+  iot:
+    minReplicas: 2
+    maxReplicas: 10
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+postgresql:
+  enabled: true
+  auth:
+    username: nexus
+    password: nexus_staging
+    database: nexus_platform
+  primary:
+    persistence:
+      enabled: true
+      size: 50Gi
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: redis_staging
+  master:
+    persistence:
+      enabled: true
+      size: 10Gi
+
+kafka:
+  enabled: true
+  replicaCount: 3
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+  hosts:
+    - host: api-staging.nexus-platform.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: nexus-staging-tls
+      hosts:
+        - api-staging.nexus-platform.com
+
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+  grafana:
+    enabled: true
+
+networkPolicy:
+  enabled: true
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1

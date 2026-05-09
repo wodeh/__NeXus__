@@ -1,0 +1,477 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nexus-ai-platform.fullname" . }}-mlflow-tracking
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "nexus-ai-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mlflow-tracking
+spec:
+  replicas: {{ .Values.mlflow.replicas }}
+  selector:
+    matchLabels:
+      {{- include "nexus-ai-platform.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mlflow-tracking
+  template:
+    metadata:
+      labels:
+        {{- include "nexus-ai-platform.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: mlflow-tracking
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: {{ include "nexus-ai-platform.fullname" . }}-mlflow
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/component
+                    operator: In
+                    values:
+                      - mlflow-tracking
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: mlflow
+          image: "{{ .Values.mlflow.image.repository }}:{{ .Values.mlflow.image.tag }}"
+          imagePullPolicy: {{ .Values.mlflow.image.pullPolicy }}
+          command:
+            - mlflow
+            - server
+            - --backend-store-uri
+            - postgresql://$(DB_USER):$(DB_PASSWORD)@{{ include "nexus-ai-platform.fullname" . }}-mlflow-postgresql:5432/mlflow
+            - --default-artifact-root
+            - s3://{{ .Values.mlflow.artifactBucket }}/mlflow-artifacts
+            - --host
+            - 0.0.0.0
+            - --port
+            - "5000"
+            - --gunicorn-opts
+            - "--workers=4 --timeout=120"
+          ports:
+            - name: http
+              containerPort: 5000
+              protocol: TCP
+          env:
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "nexus-ai-platform.fullname" . }}-mlflow-db
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "nexus-ai-platform.fullname" . }}-mlflow-db
+                  key: password
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "nexus-ai-platform.fullname" . }}-s3
+                  key: access-key
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "nexus-ai-platform.fullname" . }}-s3
+                  key: secret-key
+            - name: MLFLOW_S3_ENDPOINT_URL
+              value: "https://s3.{{ .Values.global.region }}.amazonaws.com"
+            - name: MLFLOW_TRACKING_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "nexus-ai-platform.fullname" . }}-mlflow-auth
+                  key: username
+            - name: MLFLOW_TRACKING_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "nexus-ai-platform.fullname" . }}-mlflow-auth
+                  key: password
+            - name: MLFLOW_SQLALCHEMYPOOLRECYCLE
+              value: "3600"
+          resources:
+            {{- toYaml .Values.mlflow.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "nexus-ai-platform.fullname" . }}-mlflow-tracking
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "nexus-ai-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mlflow-tracking
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5000
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "nexus-ai-platform.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: mlflow-tracking
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "nexus-ai-platform.fullname" . }}-mlflow
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ .Values.global.certManager.issuer }}
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - mlflow.{{ .Values.global.domain }}
+      secretName: {{ include "nexus-ai-platform.fullname" . }}-mlflow-tls
+  rules:
+    - host: mlflow.{{ .Values.global.domain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "nexus-ai-platform.fullname" . }}-mlflow-tracking
+                port:
+                  number: 5000
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: nexus-model-training-pipeline
+  namespace: {{ .Release.Namespace }}
+spec:
+  serviceAccountName: {{ include "nexus-ai-platform.fullname" . }}-kubeflow
+  entrypoint: training-pipeline
+  templates:
+    - name: training-pipeline
+      dag:
+        tasks:
+          - name: data-preprocessing
+            template: data-preprocessing
+          - name: feature-engineering
+            template: feature-engineering
+            dependencies: [data-preprocessing]
+          - name: hyperparameter-tuning
+            template: hyperparameter-tuning
+            dependencies: [feature-engineering]
+          - name: model-training
+            template: model-training
+            dependencies: [hyperparameter-tuning]
+            withParam: "{{tasks.hyperparameter-tuning.outputs.parameters.best-params}}"
+          - name: model-evaluation
+            template: model-evaluation
+            dependencies: [model-training]
+            withParam: "{{tasks.model-training.outputs.parameters.model-metrics}}"
+          - name: model-registration
+            template: model-registration
+            dependencies: [model-evaluation]
+            when: "{{tasks.model-evaluation.outputs.parameters.passed-validation}} == true"
+          - name: model-deployment
+            template: model-deployment
+            dependencies: [model-registration]
+            when: "{{tasks.model-evaluation.outputs.parameters.deployment-approved}} == true"
+
+    - name: data-preprocessing
+      container:
+        image: "{{ .Values.mlflow.image.repository }}/nexus-ml-pipeline:data-preprocessing-{{ .Values.mlflow.image.tag }}"
+        command: [python, /app/preprocess.py]
+        env:
+          - name: INPUT_BUCKET
+            value: "{{ .Values.mlflow.dataBucket }}"
+          - name: OUTPUT_BUCKET
+            value: "{{ .Values.mlflow.processedDataBucket }}"
+          - name: TENANT_ID
+            value: "{{workflow.parameters.tenant-id}}"
+          - name: PROPERTY_IDS
+            value: "{{workflow.parameters.property-ids}}"
+        resources:
+          requests:
+            memory: "8Gi"
+            cpu: "4"
+          limits:
+            memory: "16Gi"
+            cpu: "8"
+        volumeMounts:
+          - name: data-volume
+            mountPath: /data
+      volumes:
+        - name: data-volume
+          persistentVolumeClaim:
+            claimName: {{ include "nexus-ai-platform.fullname" . }}-ml-data
+      outputs:
+        artifacts:
+          - name: processed-data
+            path: /data/processed
+            s3:
+              bucket: "{{ .Values.mlflow.processedDataBucket }}"
+              key: "processed/{{workflow.name}}/"
+
+    - name: feature-engineering
+      container:
+        image: "{{ .Values.mlflow.image.repository }}/nexus-ml-pipeline:feature-engineering-{{ .Values.mlflow.image.tag }}"
+        command: [python, /app/features.py]
+        env:
+          - name: INPUT_PATH
+            value: "{{inputs.artifacts.processed-data.path}}"
+          - name: OUTPUT_BUCKET
+            value: "{{ .Values.mlflow.featureStoreBucket }}"
+          - name: FEATURE_GROUP
+            value: "{{workflow.parameters.feature-group}}"
+        resources:
+          requests:
+            memory: "16Gi"
+            cpu: "8"
+          limits:
+            memory: "32Gi"
+            cpu: "16"
+      inputs:
+        artifacts:
+          - name: processed-data
+            path: /data/processed
+            s3:
+              bucket: "{{ .Values.mlflow.processedDataBucket }}"
+              key: "processed/{{workflow.name}}/"
+      outputs:
+        artifacts:
+          - name: feature-store
+            path: /data/features
+            s3:
+              bucket: "{{ .Values.mlflow.featureStoreBucket }}"
+              key: "features/{{workflow.name}}/"
+        parameters:
+          - name: feature-dimensions
+            valueFrom:
+              path: /data/features/dimensions.txt
+
+    - name: hyperparameter-tuning
+      container:
+        image: "{{ .Values.mlflow.image.repository }}/nexus-ml-pipeline:hpo-{{ .Values.mlflow.image.tag }}"
+        command: [python, /app/hpo.py]
+        env:
+          - name: MLFLOW_TRACKING_URI
+            value: "http://{{ include "nexus-ai-platform.fullname" . }}-mlflow-tracking:5000"
+          - name: EXPERIMENT_NAME
+            value: "{{workflow.parameters.experiment-name}}"
+          - name: MODEL_TYPE
+            value: "{{workflow.parameters.model-type}}"
+          - name: SEARCH_SPACE
+            value: "{{workflow.parameters.search-space}}"
+          - name: MAX_EVALS
+            value: "{{workflow.parameters.max-evals}}"
+          - name: FEATURE_PATH
+            value: "{{inputs.artifacts.feature-store.path}}"
+        resources:
+          requests:
+            memory: "8Gi"
+            cpu: "4"
+          limits:
+            memory: "16Gi"
+            cpu: "8"
+      inputs:
+        artifacts:
+          - name: feature-store
+            path: /data/features
+      outputs:
+        parameters:
+          - name: best-params
+            valueFrom:
+              path: /tmp/best_params.json
+
+    - name: model-training
+      inputs:
+        parameters:
+          - name: model-params
+        artifacts:
+          - name: feature-store
+            path: /data/features
+      container:
+        image: "{{ .Values.mlflow.image.repository }}/nexus-ml-pipeline:training-{{ .Values.mlflow.image.tag }}"
+        command: [python, /app/train.py]
+        env:
+          - name: MLFLOW_TRACKING_URI
+            value: "http://{{ include "nexus-ai-platform.fullname" . }}-mlflow-tracking:5000"
+          - name: EXPERIMENT_NAME
+            value: "{{workflow.parameters.experiment-name}}"
+          - name: MODEL_PARAMS
+            value: "{{inputs.parameters.model-params}}"
+          - name: FEATURE_PATH
+            value: "{{inputs.artifacts.feature-store.path}}"
+          - name: EPOCHS
+            value: "{{workflow.parameters.epochs}}"
+          - name: BATCH_SIZE
+            value: "{{workflow.parameters.batch-size}}"
+        resources:
+          requests:
+            memory: "32Gi"
+            cpu: "8"
+            nvidia.com/gpu: "1"
+          limits:
+            memory: "64Gi"
+            cpu: "16"
+            nvidia.com/gpu: "1"
+        volumeMounts:
+          - name: dshm
+            mountPath: /dev/shm
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Gi
+      nodeSelector:
+        nvidia.com/gpu.present: "true"
+      tolerations:
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+      outputs:
+        artifacts:
+          - name: model
+            path: /data/model
+            s3:
+              bucket: "{{ .Values.mlflow.artifactBucket }}"
+              key: "models/{{workflow.name}}/{{pod.name}}/"
+        parameters:
+          - name: model-metrics
+            valueFrom:
+              path: /tmp/metrics.json
+
+    - name: model-evaluation
+      inputs:
+        parameters:
+          - name: model-metrics
+        artifacts:
+          - name: model
+            path: /data/model
+      container:
+        image: "{{ .Values.mlflow.image.repository }}/nexus-ml-pipeline:evaluation-{{ .Values.mlflow.image.tag }}"
+        command: [python, /app/evaluate.py]
+        env:
+          - name: MLFLOW_TRACKING_URI
+            value: "http://{{ include "nexus-ai-platform.fullname" . }}-mlflow-tracking:5000"
+          - name: MODEL_PATH
+            value: "{{inputs.artifacts.model.path}}"
+          - name: EVALUATION_CONFIG
+            value: "{{workflow.parameters.evaluation-config}}"
+        resources:
+          requests:
+            memory: "16Gi"
+            cpu: "4"
+          limits:
+            memory: "32Gi"
+            cpu: "8"
+      outputs:
+        parameters:
+          - name: passed-validation
+            valueFrom:
+              path: /tmp/passed_validation.txt
+          - name: deployment-approved
+            valueFrom:
+              path: /tmp/deployment_approved.txt
+
+    - name: model-registration
+      inputs:
+        artifacts:
+          - name: model
+            path: /data/model
+      container:
+        image: "{{ .Values.mlflow.image.repository }}/nexus-ml-pipeline:register-{{ .Values.mlflow.image.tag }}"
+        command: [python, /app/register.py]
+        env:
+          - name: MLFLOW_TRACKING_URI
+            value: "http://{{ include "nexus-ai-platform.fullname" . }}-mlflow-tracking:5000"
+          - name: MODEL_NAME
+            value: "{{workflow.parameters.model-name}}"
+          - name: MODEL_PATH
+            value: "{{inputs.artifacts.model.path}}"
+          - name: STAGE
+            value: "Staging"
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2"
+          limits:
+            memory: "8Gi"
+            cpu: "4"
+
+    - name: model-deployment
+      container:
+        image: "{{ .Values.mlflow.image.repository }}/nexus-ml-pipeline:deploy-{{ .Values.mlflow.image.tag }}"
+        command: [python, /app/deploy.py]
+        env:
+          - name: MODEL_NAME
+            value: "{{workflow.parameters.model-name}}"
+          - name: DEPLOYMENT_ENV
+            value: "{{workflow.parameters.deployment-env}}"
+          - name: CANARY_PERCENTAGE
+            value: "{{workflow.parameters.canary-percentage}}"
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1"
+          limits:
+            memory: "4Gi"
+            cpu: "2"
+
+  arguments:
+    parameters:
+      - name: tenant-id
+        value: "default"
+      - name: property-ids
+        value: "*"
+      - name: experiment-name
+        value: "nexus-model-training"
+      - name: model-type
+        value: "xgboost"
+      - name: model-name
+        value: "nexus-predictive-model"
+      - name: search-space
+        value: "{}"
+      - name: max-evals
+        value: "50"
+      - name: epochs
+        value: "100"
+      - name: batch-size
+        value: "256"
+      - name: feature-group
+        value: "default"
+      - name: evaluation-config
+        value: "{}"
+      - name: deployment-env
+        value: "staging"
+      - name: canary-percentage
+        value: "10"
+
+  ttlStrategy:
+    secondsAfterCompletion: 86400
+    secondsAfterSuccess: 3600
+    secondsAfterFailure: 604800
+
+  podDisruptionBudget:
+    minAvailable: 1

@@ -1,0 +1,270 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: nhc-production
+    replica: '{{.ExternalURL}}'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager.nexus-observability.svc:9093']
+
+rule_files:
+  - /etc/prometheus/rules/*.yaml
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Kubernetes API server
+  - job_name: 'kubernetes-apiservers'
+    kubernetes_sd_configs:
+      - role: endpoints
+    scheme: https
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: default;kubernetes;https
+
+  # Kubernetes nodes
+  - job_name: 'kubernetes-nodes'
+    kubernetes_sd_configs:
+      - role: node
+    scheme: https
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+
+  # Kubernetes pods
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: kubernetes_pod_name
+
+  # Istio metrics
+  - job_name: 'istio-mesh'
+    kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+            - istio-system
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: istio-proxy;http-envoy-prom
+
+  # IPTV services
+  - job_name: 'iptv-session-manager'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - nexus-iptv
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: keep
+        regex: iptv-session-manager
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        target_label: __address__
+        regex: (.+)
+        replacement: $1:8081
+
+  - job_name: 'iptv-stream-controller'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - nexus-iptv
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: keep
+        regex: iptv-stream-controller
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        target_label: __address__
+        regex: (.+)
+        replacement: $1:8082
+
+  # Kafka metrics
+  - job_name: 'kafka-exporter'
+    static_configs:
+      - targets: ['kafka-exporter.nexus-data.svc:9308']
+
+  # Redis metrics
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter.nexus-data.svc:9121']
+
+  # CockroachDB metrics
+  - job_name: 'cockroachdb'
+    static_configs:
+      - targets: ['cockroachdb.nexus-data.svc:8080']
+
+# Recording rules for SLOs
+groups:
+  - name: nhc_slo_rules
+    interval: 30s
+    rules:
+      - record: nhc:availability:ratio_5m
+        expr: |
+          sum(rate(http_request_duration_seconds_count{status!~"5.."}[5m]))
+          /
+          sum(rate(http_request_duration_seconds_count[5m]))
+
+      - record: nhc:latency:p99_5m
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))
+
+      - record: nhc:error_rate:ratio_5m
+        expr: |
+          sum(rate(http_request_duration_seconds_count{status=~"5.."}[5m]))
+          /
+          sum(rate(http_request_duration_seconds_count[5m]))
+
+      - record: nhc:iptv:concurrent_streams
+        expr: |
+          sum(iptv_sessions_active) by (tenant_id, property_id)
+
+      - record: nhc:iptv:stream_start_latency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(iptv_stream_starts_total[5m])) by (le))
+
+  - name: nhc_business_rules
+    interval: 60s
+    rules:
+      - record: nhc:business:bookings_per_minute
+        expr: |
+          sum(rate(bookings_completed_total[1m]))
+
+      - record: nhc:business:revenue_per_hour
+        expr: |
+          sum(increase(folio_item_amount_total[1h]))
+
+      - record: nhc:business:conversion_rate
+        expr: |
+          sum(rate(bookings_completed_total[1h]))
+          /
+          sum(rate(booking_sessions_started_total[1h]))
+
+# Alerting rules
+groups:
+  - name: nhc_critical_alerts
+    rules:
+      - alert: HighErrorRate
+        expr: nhc:error_rate:ratio_5m > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.service }}"
+          runbook_url: "https://wiki.nexushc.com/runbooks/high-error-rate"
+
+      - alert: HighLatencyP99
+        expr: nhc:latency:p99_5m > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High P99 latency"
+          description: "P99 latency is {{ $value }}s for {{ $labels.service }}"
+
+      - alert: IPTVStreamFailures
+        expr: rate(iptv_stream_errors_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: critical
+          team: iptv
+        annotations:
+          summary: "IPTV stream failures spiking"
+          description: "{{ $value }} stream errors/minute for tenant {{ $labels.tenant_id }}"
+
+      - alert: DatabaseConnectionPoolExhausted
+        expr: |
+          cockroachdb_sql_connections > 0.9 * cockroachdb_sql_max_connections
+        for: 5m
+        labels:
+          severity: critical
+          team: data
+        annotations:
+          summary: "Database connection pool near exhaustion"
+          description: "{{ $value }} connections used out of {{ $labels.max }}"
+
+      - alert: KafkaConsumerLagHigh
+        expr: |
+          kafka_consumer_group_lag > 10000
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Kafka consumer lag high"
+          description: "Consumer group {{ $labels.group }} has {{ $value }} messages lagging"
+
+      - alert: CertificateExpiringSoon
+        expr: |
+          (certmanager_certificate_expiration_timestamp_seconds - time()) / 86400 < 30
+        for: 1h
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "TLS certificate expiring soon"
+          description: "Certificate {{ $labels.name }} expires in {{ $value }} days"
+
+      - alert: UnusualOutboundTraffic
+        expr: |
+          sum(rate(container_network_transmit_bytes_total[5m])) by (pod)
+          > 100 * avg_over_time(sum(rate(container_network_transmit_bytes_total[5m])) by (pod)[1d])
+        for: 5m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "Unusual outbound traffic detected"
+          description: "Pod {{ $labels.pod }} has unusually high outbound traffic"
+
+      - alert: PrivilegedContainerRunning
+        expr: |
+          kube_pod_container_info{container_security_context_privileged="true"} > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "Privileged container detected"
+          description: "Container {{ $labels.container }} in pod {{ $labels.pod }} is running privileged"

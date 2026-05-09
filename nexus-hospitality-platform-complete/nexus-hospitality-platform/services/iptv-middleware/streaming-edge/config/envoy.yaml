@@ -1,0 +1,301 @@
+static_resources:
+  listeners:
+    - name: media_listener
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 8080
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: media_ingress
+                codec_type: AUTO
+                route_config:
+                  name: media_routes
+                  virtual_hosts:
+                    - name: hls_service
+                      domains: ["*.nexus-streaming.com", "nexus-streaming.com"]
+                      routes:
+                        - match:
+                            prefix: "/hls/"
+                            headers:
+                              - name: ":path"
+                                string_match:
+                                  safe_regex:
+                                    regex: ".*\.m3u8$"
+                          route:
+                            cluster: hls_manifest_cluster
+                            timeout: 5s
+                            retry_policy:
+                              retry_on: gateway-error,connect-failure
+                              num_retries: 3
+                              per_try_timeout: 2s
+                            rate_limits:
+                              - actions:
+                                  - request_headers:
+                                      header_name: x-tenant-id
+                                      descriptor_key: tenant_id
+
+                        - match:
+                            prefix: "/hls/"
+                          route:
+                            cluster: hls_segment_cluster
+                            timeout: 30s
+                            hash_policy:
+                              - header:
+                                  header_name: x-stream-id
+                            weighted_clusters:
+                              clusters:
+                                - name: edge_local
+                                  weight: 80
+                                - name: edge_nearest
+                                  weight: 20
+
+                        - match:
+                            prefix: "/whip"
+                          route:
+                            cluster: webrtc_cluster
+                            upgrade_configs:
+                              - upgrade_type: websocket
+                                enabled: true
+
+                        - match:
+                            prefix: "/whep"
+                          route:
+                            cluster: webrtc_cluster
+                            upgrade_configs:
+                              - upgrade_type: websocket
+                                enabled: true
+
+                        - match:
+                            prefix: "/dvr/"
+                          route:
+                            cluster: dvr_cluster
+                            timeout: 10s
+
+                        - match:
+                            prefix: "/epg/"
+                          route:
+                            cluster: epg_cluster
+                            timeout: 5s
+
+                http_filters:
+                  - name: envoy.filters.http.ext_authz
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+                      grpc_service:
+                        envoy_grpc:
+                          cluster_name: authz_cluster
+                        timeout: 0.5s
+                      transport_api_version: V3
+                      include_peer_certificate: true
+
+                  - name: envoy.filters.http.local_ratelimit
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+                      stat_prefix: http_local_rate_limiter
+                      token_bucket:
+                        max_tokens: 10000
+                        tokens_per_fill: 10000
+                        fill_interval: 1s
+                      filter_enabled:
+                        runtime_key: local_rate_limit_enabled
+                        default_value:
+                          numerator: 100
+                          denominator: HUNDRED
+                      filter_enforced:
+                        runtime_key: local_rate_limit_enforced
+                        default_value:
+                          numerator: 100
+                          denominator: HUNDRED
+                      response_headers_to_add:
+                        - append_action: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: x-local-rate-limit
+                            value: 'true'
+
+                  - name: envoy.filters.http.compressor
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
+                      response_direction_config:
+                        common_config:
+                          min_content_length: 100
+                          content_type:
+                            - application/vnd.apple.mpegurl
+                            - application/dash+xml
+                            - text/xml
+                        disable_on_etag_header: true
+
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+  clusters:
+    - name: hls_manifest_cluster
+      connect_timeout: 5s
+      type: STRICT_DNS
+      lb_policy: LEAST_REQUEST
+      circuit_breakers:
+        thresholds:
+          - priority: DEFAULT
+            max_connections: 10000
+            max_pending_requests: 10000
+            max_requests: 10000
+      health_checks:
+        - timeout: 2s
+          interval: 5s
+          unhealthy_threshold: 3
+          healthy_threshold: 2
+          http_health_check:
+            path: /health
+      load_assignment:
+        cluster_name: hls_manifest_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: hls-origin-1.internal
+                      port_value: 8080
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: hls-origin-2.internal
+                      port_value: 8080
+
+    - name: hls_segment_cluster
+      connect_timeout: 30s
+      type: STRICT_DNS
+      lb_policy: RING_HASH
+      ring_hash_lb_config:
+        minimum_ring_size: 1024
+        maximum_ring_size: 8388608
+      circuit_breakers:
+        thresholds:
+          - priority: DEFAULT
+            max_connections: 50000
+            max_requests: 50000
+      load_assignment:
+        cluster_name: hls_segment_cluster
+        endpoints:
+          - locality:
+              region: us-east-1
+            lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: edge-us-east-1a.internal
+                      port_value: 8080
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: edge-us-east-1b.internal
+                      port_value: 8080
+          - locality:
+              region: us-west-2
+            lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: edge-us-west-2a.internal
+                      port_value: 8080
+
+    - name: webrtc_cluster
+      connect_timeout: 30s
+      type: STRICT_DNS
+      lb_policy: LEAST_REQUEST
+      typed_extension_protocol_options:
+        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+          "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+          upstream_protocol_options:
+            explicit_http_config:
+              http2_protocol_options: {}
+      load_assignment:
+        cluster_name: webrtc_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: webrtc-1.internal
+                      port_value: 8080
+
+    - name: authz_cluster
+      connect_timeout: 0.5s
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      typed_extension_protocol_options:
+        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+          "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+          upstream_protocol_options:
+            explicit_http_config:
+              http2_protocol_options: {}
+      load_assignment:
+        cluster_name: authz_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: authz-service.internal
+                      port_value: 50051
+
+    - name: dvr_cluster
+      connect_timeout: 10s
+      type: STRICT_DNS
+      lb_policy: LEAST_REQUEST
+      load_assignment:
+        cluster_name: dvr_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: dvr-service.internal
+                      port_value: 8080
+
+    - name: epg_cluster
+      connect_timeout: 5s
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: epg_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: epg-service.internal
+                      port_value: 8080
+
+  - name: ratelimit_service
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    typed_extension_protocol_options:
+      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+        "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+        upstream_protocol_options:
+          explicit_http_config:
+            http2_protocol_options: {}
+    load_assignment:
+      cluster_name: ratelimit_service
+      endpoints:
+        - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address:
+                    address: ratelimit.internal
+                    port_value: 8081
+
+admin:
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 9901
+  access_log:
+    - name: envoy.access_loggers.stdout
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog

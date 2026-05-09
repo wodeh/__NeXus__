@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+vendor/
+*.lock
+
+# Build outputs
+dist/
+build/
+*.tgz
+*.tar.gz
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+
+# Kubernetes
+*.kubeconfig
+
+# Secrets (managed by external-secrets/vault)
+secrets/
+!secrets/.gitkeep
+
+# Local development
+*.local
+docker-compose.override.yml
+
+# Cache
+.cache/
+*.cache

@@ -1,0 +1,67 @@
+name: CI — AI Platform
+on:
+  push:
+    branches: [main, release/*, hotfix/*]
+    paths:
+      - 'services/ai-platform/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'services/ai-platform/**'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run linters
+        run: |
+          cd services/ai-platform
+          golangci-lint run ./...
+          ruff check .
+          black --check .
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Run Go tests
+        run: |
+          cd services/ai-platform
+          go test -v -race ./...
+      - name: Run Python tests
+        run: |
+          cd services/ai-platform/ml-pipelines
+          pytest -v --cov=. --cov-report=xml
+
+  model-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate model configs
+        run: |
+          cd services/ai-platform
+          python -m mlflow.models.validate --model-path models/
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: services/ai-platform
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: |
+            ghcr.io/nexus-platform/ai-platform:${{ github.sha }}
+            ghcr.io/nexus-platform/ai-platform:latest

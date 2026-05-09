@@ -1,0 +1,76 @@
+syntax = "proto3";
+package nexus.ai.v1;
+option go_package = "github.com/nexushc/ai-proto/gen/go/ai/v1";
+
+service PricingService {
+  rpc GetOptimalRate(GetOptimalRateRequest) returns (GetOptimalRateResponse);
+  rpc GetDemandForecast(GetDemandForecastRequest) returns (GetDemandForecastResponse);
+}
+
+message GetOptimalRateRequest {
+  string tenant_id = 1;
+  string property_id = 2;
+  string room_type_id = 3;
+  string check_in_date = 4;
+  string check_out_date = 5;
+  double base_rate = 6;
+  double current_occupancy = 7;
+  map<string, double> competitor_rates = 8;
+}
+
+message GetOptimalRateResponse {
+  double recommended_rate = 1;
+  double confidence = 2;
+  double price_multiplier = 3;
+  double expected_revenue = 4;
+  double expected_occupancy = 5;
+  repeated string constraints_applied = 6;
+}
+
+message GetDemandForecastRequest {
+  string tenant_id = 1;
+  string property_id = 2;
+  string room_type_id = 3;
+  string forecast_date = 4;
+  int32 horizon_days = 5;
+}
+
+message GetDemandForecastResponse {
+  repeated DailyForecast forecasts = 1;
+  double overall_confidence = 2;
+}
+
+message DailyForecast {
+  string date = 1;
+  double predicted_occupancy = 2;
+  double predicted_demand = 3;
+  double confidence_lower = 4;
+  double confidence_upper = 5;
+}
+
+service ConciergeService {
+  rpc ProcessMessage(ConciergeMessageRequest) returns (ConciergeMessageResponse);
+  rpc StreamMessages(stream ConciergeMessageRequest) returns (stream ConciergeMessageResponse);
+}
+
+message ConciergeMessageRequest {
+  string session_id = 1;
+  string tenant_id = 2;
+  string guest_id = 3;
+  string message = 4;
+  string language = 5;
+  string channel = 6;
+}
+
+message ConciergeMessageResponse {
+  string response = 1;
+  repeated Action actions = 2;
+  bool requires_human = 3;
+  string sentiment = 4;
+  double confidence = 5;
+}
+
+message Action {
+  string action_type = 1;
+  map<string, string> parameters = 2;
+}

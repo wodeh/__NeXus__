@@ -1,0 +1,224 @@
+syntax = "proto3";
+
+package nexus.pms.events.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/nexus-platform/pms-integration/proto/events/v1";
+
+message DomainEvent {
+  string event_id = 1;
+  string event_type = 2;
+  string aggregate_id = 3;
+  string aggregate_type = 4;
+  int64 version = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+  string tenant_id = 7;
+  string region = 8;
+  string correlation_id = 9;
+  string causation_id = 10;
+  google.protobuf.Struct metadata = 11;
+  bytes payload = 12;
+}
+
+message ReservationCreated {
+  string reservation_id = 1;
+  string property_id = 2;
+  string room_id = 3;
+  string guest_id = 4;
+  string booking_source = 5;
+  google.protobuf.Timestamp check_in = 6;
+  google.protobuf.Timestamp check_out = 7;
+  int32 num_adults = 8;
+  int32 num_children = 9;
+  string rate_plan_id = 10;
+  repeated string special_requests = 11;
+  Money total_amount = 12;
+  string status = 13;
+}
+
+message ReservationModified {
+  string reservation_id = 1;
+  repeated FieldChange changes = 2;
+  string modified_by = 3;
+}
+
+message GuestCheckedIn {
+  string reservation_id = 1;
+  string room_id = 2;
+  google.protobuf.Timestamp checked_in_at = 3;
+  string checked_in_by = 4;
+  string key_card_id = 5;
+  repeated GuestPreference preferences = 6;
+}
+
+message GuestCheckedOut {
+  string reservation_id = 1;
+  google.protobuf.Timestamp checked_out_at = 2;
+  string checked_out_by = 3;
+  repeated Charge folio_charges = 4;
+}
+
+message RoomAssigned {
+  string reservation_id = 1;
+  string previous_room_id = 2;
+  string new_room_id = 3;
+  string reason = 4;
+}
+
+message HousekeepingTaskCreated {
+  string task_id = 1;
+  string room_id = 2;
+  string task_type = 3;
+  string priority = 4;
+  google.protobuf.Timestamp scheduled_at = 5;
+  string assigned_to = 6;
+  repeated string checklist_items = 7;
+}
+
+message HousekeepingTaskStarted {
+  string task_id = 1;
+  string started_by = 2;
+  google.protobuf.Timestamp started_at = 3;
+}
+
+message HousekeepingTaskCompleted {
+  string task_id = 1;
+  string completed_by = 2;
+  google.protobuf.Timestamp completed_at = 3;
+  int32 duration_minutes = 4;
+  repeated string completed_items = 5;
+  repeated string issues = 6;
+  RoomCondition room_condition = 7;
+}
+
+message RoomCondition {
+  bool damage_reported = 1;
+  repeated string damage_details = 2;
+  bool maintenance_required = 3;
+  repeated string maintenance_items = 4;
+  int32 linen_count = 5;
+  int32 amenity_restock_count = 6;
+}
+
+message MaintenanceRequestCreated {
+  string request_id = 1;
+  string room_id = 2;
+  string category = 3;
+  string priority = 4;
+  string description = 5;
+  string reported_by = 6;
+  google.protobuf.Timestamp reported_at = 7;
+  repeated string photos = 8;
+}
+
+message MaintenanceWorkOrderCreated {
+  string work_order_id = 1;
+  string request_id = 2;
+  string assigned_technician = 3;
+  google.protobuf.Timestamp scheduled_date = 4;
+  repeated string required_parts = 5;
+  Money estimated_cost = 6;
+}
+
+message MaintenanceCompleted {
+  string work_order_id = 1;
+  google.protobuf.Timestamp completed_at = 2;
+  string resolution_notes = 3;
+  repeated string parts_used = 4;
+  Money actual_cost = 5;
+  int32 downtime_minutes = 6;
+}
+
+message InventoryItemReserved {
+  string item_id = 1;
+  string sku = 2;
+  string room_id = 3;
+  int32 quantity = 4;
+  string reservation_id = 5;
+}
+
+message InventoryRestocked {
+  string item_id = 1;
+  int32 quantity_added = 2;
+  string location = 3;
+  string restocked_by = 4;
+  google.protobuf.Timestamp restocked_at = 5;
+}
+
+message InventoryAlertTriggered {
+  string item_id = 1;
+  string sku = 2;
+  string alert_type = 3;
+  int32 current_quantity = 4;
+  int32 threshold = 5;
+}
+
+message LoyaltyPointsEarned {
+  string member_id = 1;
+  string reservation_id = 2;
+  int64 points = 3;
+  string tier = 4;
+  string earning_category = 5;
+  google.protobuf.Timestamp earned_at = 6;
+}
+
+message LoyaltyPointsRedeemed {
+  string member_id = 1;
+  int64 points = 2;
+  string redemption_type = 3;
+  string reference_id = 4;
+}
+
+message TierStatusChanged {
+  string member_id = 1;
+  string previous_tier = 2;
+  string new_tier = 3;
+  string reason = 4;
+  google.protobuf.Timestamp effective_date = 5;
+}
+
+message RateUpdated {
+  string rate_plan_id = 1;
+  string room_type_id = 2;
+  google.protobuf.Timestamp date = 3;
+  Money previous_rate = 4;
+  Money new_rate = 5;
+  string reason = 6;
+  float confidence_score = 7;
+}
+
+message DemandForecastUpdated {
+  string property_id = 1;
+  google.protobuf.Timestamp date = 2;
+  int32 predicted_occupancy = 3;
+  float predicted_adr = 4;
+  float predicted_revpar = 5;
+  repeated string influencing_factors = 6;
+}
+
+message Money {
+  string currency_code = 1;
+  int64 amount_cents = 2;
+}
+
+message FieldChange {
+  string field_name = 1;
+  string old_value = 2;
+  string new_value = 3;
+}
+
+message GuestPreference {
+  string category = 1;
+  string key = 2;
+  string value = 3;
+}
+
+message Charge {
+  string charge_id = 1;
+  string description = 2;
+  Money amount = 3;
+  string category = 4;
+  google.protobuf.Timestamp charged_at = 5;
+}

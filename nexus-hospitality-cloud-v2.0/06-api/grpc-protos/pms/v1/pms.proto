@@ -1,0 +1,303 @@
+syntax = "proto3";
+package nexus.pms.v1;
+option go_package = "github.com/nexushc/pms-api/gen/go/pms/v1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/field_mask.proto";
+
+service GuestService {
+  rpc GetGuest(GetGuestRequest) returns (Guest);
+  rpc CreateGuest(CreateGuestRequest) returns (Guest);
+  rpc UpdateGuest(UpdateGuestRequest) returns (Guest);
+  rpc SearchGuests(SearchGuestsRequest) returns (stream Guest);
+  rpc GetGuestPreferences(GetGuestPreferencesRequest) returns (GuestPreferences);
+  rpc UpdateGuestPreferences(UpdateGuestPreferencesRequest) returns (GuestPreferences);
+  rpc VerifyIdentity(VerifyIdentityRequest) returns (IdentityVerificationResult);
+}
+
+message Guest {
+  string guest_id = 1;
+  string tenant_id = 2;
+  string property_id = 3;
+  string first_name = 4;
+  string last_name = 5;
+  string email = 6;
+  string phone = 7;
+  string language = 8;
+  string nationality = 9;
+  LoyaltyInfo loyalty = 10;
+  GuestPreferences preferences = 11;
+  bool identity_verified = 12;
+  bool gdpr_consent = 13;
+  int32 total_stays = 14;
+  double total_revenue = 15;
+  string vip_status = 16;
+  map<string, string> custom_fields = 17;
+  google.protobuf.Timestamp created_at = 18;
+  google.protobuf.Timestamp updated_at = 19;
+}
+
+message LoyaltyInfo {
+  string member_id = 1;
+  string tier = 2;
+  int32 points_balance = 3;
+  int32 lifetime_points = 4;
+}
+
+message GuestPreferences {
+  string room_type = 1;
+  string bed_type = 2;
+  bool high_floor = 3;
+  bool quiet_room = 4;
+  repeated string dietary_restrictions = 5;
+  string pillow_type = 6;
+  int32 preferred_temperature = 7;
+  repeated string interests = 8;
+}
+
+message GetGuestRequest {
+  string guest_id = 1;
+  string tenant_id = 2;
+}
+
+message CreateGuestRequest {
+  string tenant_id = 1;
+  string property_id = 2;
+  string first_name = 3;
+  string last_name = 4;
+  string email = 5;
+  string phone = 6;
+  string language = 7;
+  GuestPreferences preferences = 8;
+}
+
+message UpdateGuestRequest {
+  string guest_id = 1;
+  string tenant_id = 2;
+  Guest guest = 3;
+  google.protobuf.FieldMask update_mask = 4;
+}
+
+message SearchGuestsRequest {
+  string tenant_id = 1;
+  string property_id = 2;
+  string query = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message GetGuestPreferencesRequest {
+  string guest_id = 1;
+  string tenant_id = 2;
+}
+
+message UpdateGuestPreferencesRequest {
+  string guest_id = 1;
+  string tenant_id = 2;
+  GuestPreferences preferences = 3;
+}
+
+message VerifyIdentityRequest {
+  string guest_id = 1;
+  string tenant_id = 2;
+  string document_type = 3;
+  bytes document_image = 4;
+  string document_number = 5;
+}
+
+message IdentityVerificationResult {
+  bool verified = 1;
+  float confidence_score = 2;
+  string verification_method = 3;
+  repeated string flags = 4;
+}
+
+service ReservationService {
+  rpc CreateReservation(CreateReservationRequest) returns (Reservation);
+  rpc GetReservation(GetReservationRequest) returns (Reservation);
+  rpc UpdateReservation(UpdateReservationRequest) returns (Reservation);
+  rpc CancelReservation(CancelReservationRequest) returns (Reservation);
+  rpc SearchReservations(SearchReservationsRequest) returns (stream Reservation);
+  rpc CheckIn(CheckInRequest) returns (CheckInResponse);
+  rpc CheckOut(CheckOutRequest) returns (CheckOutResponse);
+  rpc GetAvailability(GetAvailabilityRequest) returns (AvailabilityResponse);
+}
+
+message Reservation {
+  string reservation_id = 1;
+  string tenant_id = 2;
+  string property_id = 3;
+  string confirmation_number = 4;
+  string status = 5;
+  string guest_id = 6;
+  string room_type_id = 7;
+  string room_id = 8;
+  string room_number = 9;
+  string check_in_date = 10;
+  string check_out_date = 11;
+  int32 adults = 12;
+  int32 children = 13;
+  string rate_code = 14;
+  double total_amount = 15;
+  double tax_amount = 16;
+  string currency = 17;
+  string source = 18;
+  string special_requests = 19;
+  string payment_status = 20;
+  string folio_id = 21;
+  google.protobuf.Timestamp created_at = 22;
+}
+
+message CreateReservationRequest {
+  string tenant_id = 1;
+  string property_id = 2;
+  string guest_id = 3;
+  string room_type_id = 4;
+  string check_in_date = 5;
+  string check_out_date = 6;
+  int32 adults = 7;
+  int32 children = 8;
+  string rate_code = 9;
+  string source = 10;
+}
+
+message GetReservationRequest {
+  string reservation_id = 1;
+  string tenant_id = 2;
+}
+
+message UpdateReservationRequest {
+  string reservation_id = 1;
+  string tenant_id = 2;
+  Reservation reservation = 3;
+  google.protobuf.FieldMask update_mask = 4;
+}
+
+message CancelReservationRequest {
+  string reservation_id = 1;
+  string tenant_id = 2;
+  string reason = 3;
+}
+
+message SearchReservationsRequest {
+  string tenant_id = 1;
+  string property_id = 2;
+  string status = 3;
+  string check_in_from = 4;
+  string check_in_to = 5;
+}
+
+message CheckInRequest {
+  string reservation_id = 1;
+  string tenant_id = 2;
+  string room_id = 3;
+  bool id_verified = 4;
+  bool payment_verified = 5;
+}
+
+message CheckInResponse {
+  string check_in_id = 1;
+  string room_number = 2;
+  string digital_key_url = 3;
+  string wifi_ssid = 4;
+  string folio_id = 5;
+}
+
+message CheckOutRequest {
+  string reservation_id = 1;
+  string tenant_id = 2;
+  string payment_method = 3;
+}
+
+message CheckOutResponse {
+  string checkout_id = 1;
+  double final_balance = 2;
+  string invoice_url = 3;
+}
+
+message GetAvailabilityRequest {
+  string tenant_id = 1;
+  string property_id = 2;
+  string check_in_date = 3;
+  string check_out_date = 4;
+  int32 adults = 5;
+  string room_type_id = 6;
+}
+
+message AvailabilityResponse {
+  string property_id = 1;
+  repeated RoomTypeAvailability results = 2;
+}
+
+message RoomTypeAvailability {
+  string room_type_id = 1;
+  string room_type_name = 2;
+  int32 available_rooms = 3;
+  int32 total_rooms = 4;
+  double rate = 5;
+  string currency = 6;
+}
+
+service BillingService {
+  rpc GetFolio(GetFolioRequest) returns (Folio);
+  rpc PostCharge(PostChargeRequest) returns (FolioItem);
+  rpc PostPayment(PostPaymentRequest) returns (FolioItem);
+  rpc GetFolioItems(GetFolioItemsRequest) returns (stream FolioItem);
+  rpc CloseFolio(CloseFolioRequest) returns (Folio);
+}
+
+message Folio {
+  string folio_id = 1;
+  string tenant_id = 2;
+  string reservation_id = 3;
+  string guest_id = 4;
+  string status = 5;
+  double balance = 6;
+  double total_charges = 7;
+  double total_payments = 8;
+  string currency = 9;
+  google.protobuf.Timestamp created_at = 10;
+}
+
+message FolioItem {
+  string folio_item_id = 1;
+  string folio_id = 2;
+  string item_type = 3;
+  string description = 4;
+  double amount = 5;
+  double tax_amount = 6;
+  string currency = 7;
+  string revenue_center = 8;
+  google.protobuf.Timestamp posted_at = 9;
+}
+
+message GetFolioRequest {
+  string folio_id = 1;
+  string tenant_id = 2;
+}
+
+message PostChargeRequest {
+  string folio_id = 1;
+  string tenant_id = 2;
+  string item_type = 3;
+  string description = 4;
+  double amount = 5;
+  string revenue_center = 6;
+}
+
+message PostPaymentRequest {
+  string folio_id = 1;
+  string tenant_id = 2;
+  double amount = 3;
+  string payment_method = 4;
+}
+
+message GetFolioItemsRequest {
+  string folio_id = 1;
+  string tenant_id = 2;
+}
+
+message CloseFolioRequest {
+  string folio_id = 1;
+  string tenant_id = 2;
+}
