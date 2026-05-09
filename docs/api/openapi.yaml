@@ -1,0 +1,794 @@
+openapi: 3.0.3
+info:
+  title: Nexus Hospitality Cloud API
+  description: |
+    Enterprise-grade hospitality platform API.
+    Supports PMS, CRS, IPTV, AI, and IoT operations.
+  version: 2.0.0
+  contact:
+    name: NHC API Support
+    email: api-support@nexushc.com
+  license:
+    name: Proprietary
+    url: https://nexushc.com/license
+
+servers:
+  - url: https://api.nexushc.com/v2
+    description: Production
+  - url: https://api-staging.nexushc.com/v2
+    description: Staging
+  - url: https://api-dev.nexushc.com/v2
+    description: Development
+
+security:
+  - bearerAuth: []
+  - apiKeyAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [Platform]
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /tenants/{tenantId}/guests:
+    get:
+      tags: [Guests]
+      summary: Search guests
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: email
+          in: query
+          schema:
+            type: string
+            format: email
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 500
+      responses:
+        '200':
+          description: Guest list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestListResponse'
+
+    post:
+      tags: [Guests]
+      summary: Create guest
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGuestRequest'
+      responses:
+        '201':
+          description: Guest created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Guest'
+
+  /tenants/{tenantId}/guests/{guestId}:
+    get:
+      tags: [Guests]
+      summary: Get guest by ID
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: guestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Guest details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Guest'
+
+    patch:
+      tags: [Guests]
+      summary: Update guest
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: guestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGuestRequest'
+      responses:
+        '200':
+          description: Guest updated
+
+  /tenants/{tenantId}/reservations:
+    post:
+      tags: [Reservations]
+      summary: Create reservation
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReservationRequest'
+      responses:
+        '201':
+          description: Reservation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+
+  /tenants/{tenantId}/reservations/{reservationId}/checkin:
+    post:
+      tags: [Reservations]
+      summary: Check in guest
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: reservationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckInRequest'
+      responses:
+        '200':
+          description: Check-in successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckInResponse'
+
+  /tenants/{tenantId}/availability:
+    get:
+      tags: [Reservations]
+      summary: Check room availability
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: propertyId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: checkIn
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: checkOut
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: adults
+          in: query
+          schema:
+            type: integer
+            default: 2
+        - name: children
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Availability results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityResponse'
+
+  /tenants/{tenantId}/iptv/sessions:
+    post:
+      tags: [IPTV]
+      summary: Create IPTV session
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIPTVSessionRequest'
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IPTVSession'
+
+  /tenants/{tenantId}/iptv/sessions/{sessionId}/stream:
+    post:
+      tags: [IPTV]
+      summary: Start stream
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartStreamRequest'
+      responses:
+        '200':
+          description: Stream URL generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StreamResponse'
+
+  /tenants/{tenantId}/pricing/optimize:
+    post:
+      tags: [AI Pricing]
+      summary: Get AI-optimized rate
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingOptimizationRequest'
+      responses:
+        '200':
+          description: Optimized rate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricingOptimizationResponse'
+
+  /tenants/{tenantId}/concierge/message:
+    post:
+      tags: [AI Concierge]
+      summary: Send message to AI concierge
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConciergeMessageRequest'
+      responses:
+        '200':
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConciergeMessageResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from Keycloak
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Service-to-service API key
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: healthy
+        version:
+          type: string
+          example: 2.3.1
+        timestamp:
+          type: string
+          format: date-time
+
+    Guest:
+      type: object
+      properties:
+        guest_id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        language:
+          type: string
+          example: en-US
+        loyalty:
+          $ref: '#/components/schemas/LoyaltyInfo'
+        preferences:
+          $ref: '#/components/schemas/GuestPreferences'
+        identity_verified:
+          type: boolean
+        gdpr_consent:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    LoyaltyInfo:
+      type: object
+      properties:
+        member_id:
+          type: string
+        tier:
+          type: string
+          enum: [member, silver, gold, platinum, diamond]
+        points_balance:
+          type: integer
+
+    GuestPreferences:
+      type: object
+      properties:
+        room_type:
+          type: string
+        bed_type:
+          type: string
+        high_floor:
+          type: boolean
+        quiet_room:
+          type: boolean
+        dietary_restrictions:
+          type: array
+          items:
+            type: string
+        preferred_temperature:
+          type: integer
+
+    CreateGuestRequest:
+      type: object
+      required: [first_name, last_name, email]
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        language:
+          type: string
+        preferences:
+          $ref: '#/components/schemas/GuestPreferences'
+
+    UpdateGuestRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        preferences:
+          $ref: '#/components/schemas/GuestPreferences'
+
+    GuestListResponse:
+      type: object
+      properties:
+        guests:
+          type: array
+          items:
+            $ref: '#/components/schemas/Guest'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    Reservation:
+      type: object
+      properties:
+        reservation_id:
+          type: string
+          format: uuid
+        confirmation_number:
+          type: string
+        status:
+          type: string
+          enum: [confirmed, checked_in, checked_out, cancelled, no_show]
+        guest_id:
+          type: string
+          format: uuid
+        room_type_id:
+          type: string
+        room_number:
+          type: string
+        check_in_date:
+          type: string
+          format: date
+        check_out_date:
+          type: string
+          format: date
+        adults:
+          type: integer
+        children:
+          type: integer
+        total_amount:
+          type: number
+        currency:
+          type: string
+
+    CreateReservationRequest:
+      type: object
+      required: [guest_id, room_type_id, check_in_date, check_out_date]
+      properties:
+        guest_id:
+          type: string
+          format: uuid
+        room_type_id:
+          type: string
+        check_in_date:
+          type: string
+          format: date
+        check_out_date:
+          type: string
+          format: date
+        adults:
+          type: integer
+          default: 2
+        children:
+          type: integer
+          default: 0
+        rate_code:
+          type: string
+        special_requests:
+          type: string
+
+    CheckInRequest:
+      type: object
+      required: [room_id]
+      properties:
+        room_id:
+          type: string
+          format: uuid
+        id_verified:
+          type: boolean
+        payment_verified:
+          type: boolean
+        digital_key_issued:
+          type: boolean
+
+    CheckInResponse:
+      type: object
+      properties:
+        check_in_id:
+          type: string
+        room_number:
+          type: string
+        digital_key_url:
+          type: string
+        wifi_ssid:
+          type: string
+        folio_id:
+          type: string
+
+    AvailabilityResponse:
+      type: object
+      properties:
+        property_id:
+          type: string
+        check_in_date:
+          type: string
+        check_out_date:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoomTypeAvailability'
+
+    RoomTypeAvailability:
+      type: object
+      properties:
+        room_type_id:
+          type: string
+        room_type_name:
+          type: string
+        available_rooms:
+          type: integer
+        total_rooms:
+          type: integer
+        rate:
+          type: number
+        currency:
+          type: string
+
+    CreateIPTVSessionRequest:
+      type: object
+      required: [guest_id, room_id, device_type]
+      properties:
+        guest_id:
+          type: string
+        room_id:
+          type: string
+        device_type:
+          type: string
+          enum: [android_tv, webos, tizen, stb, mobile, tablet]
+        device_model:
+          type: string
+        mac_address:
+          type: string
+
+    IPTVSession:
+      type: object
+      properties:
+        session_id:
+          type: string
+        token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        entitlements:
+          type: array
+          items:
+            type: string
+        max_concurrent:
+          type: integer
+
+    StartStreamRequest:
+      type: object
+      required: [content_id, content_type]
+      properties:
+        content_id:
+          type: string
+        content_type:
+          type: string
+          enum: [live_channel, vod, catchup]
+        quality:
+          type: string
+          enum: [4k, 1080p, 720p, 480p, 360p, auto]
+
+    StreamResponse:
+      type: object
+      properties:
+        stream_url:
+          type: string
+        manifest_url:
+          type: string
+        drm_license_url:
+          type: string
+        quality_options:
+          type: array
+          items:
+            type: string
+        expires_in:
+          type: integer
+
+    PricingOptimizationRequest:
+      type: object
+      required: [property_id, room_type_id, check_in_date, check_out_date, base_rate]
+      properties:
+        property_id:
+          type: string
+        room_type_id:
+          type: string
+        check_in_date:
+          type: string
+        check_out_date:
+          type: string
+        base_rate:
+          type: number
+        current_occupancy:
+          type: number
+
+    PricingOptimizationResponse:
+      type: object
+      properties:
+        recommended_rate:
+          type: number
+        confidence:
+          type: number
+        price_multiplier:
+          type: number
+        expected_revenue:
+          type: number
+        expected_occupancy:
+          type: number
+        constraints_applied:
+          type: array
+          items:
+            type: string
+
+    ConciergeMessageRequest:
+      type: object
+      required: [message]
+      properties:
+        guest_id:
+          type: string
+        message:
+          type: string
+        language:
+          type: string
+        channel:
+          type: string
+          enum: [mobile_app, web, whatsapp, voice]
+
+    ConciergeMessageResponse:
+      type: object
+      properties:
+        response:
+          type: string
+        actions:
+          type: array
+          items:
+            type: object
+        requires_human:
+          type: boolean
+        sentiment:
+          type: string
+        confidence:
+          type: number
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    TooManyRequests:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

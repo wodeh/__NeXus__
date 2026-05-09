@@ -1,0 +1,52 @@
+syntax = "proto3";
+package nexus.iptv.v1;
+option go_package = "github.com/nexushc/iptv-proto/gen/go/iptv/v1";
+
+service StreamController {
+  rpc GetStreamURL(StreamRequest) returns (StreamResponse);
+  rpc ReleaseStream(ReleaseRequest) returns (ReleaseResponse);
+}
+
+message StreamRequest {
+  string session_id = 1;
+  string content_id = 2;
+  string content_type = 3;
+  string quality = 4;
+  string tenant_id = 5;
+  string property_id = 6;
+  string device_type = 7;
+}
+
+message StreamResponse {
+  string stream_url = 1;
+  string manifest_url = 2;
+  string drm_license_url = 3;
+  repeated string quality_options = 4;
+  int64 expires_in = 5;
+}
+
+message ReleaseRequest {
+  string session_id = 1;
+}
+
+message ReleaseResponse {
+  bool success = 1;
+}
+
+service DRMService {
+  rpc IssueLicense(DRMLicenseRequest) returns (DRMLicenseResponse);
+}
+
+message DRMLicenseRequest {
+  string session_id = 1;
+  string content_id = 2;
+  string drm_type = 3;
+  string tenant_id = 4;
+  bytes pssh_data = 5;
+}
+
+message DRMLicenseResponse {
+  bytes license = 1;
+  string drm_type = 2;
+  int64 expires_at = 3;
+}
