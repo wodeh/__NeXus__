@@ -1,0 +1,463 @@
+openapi: 3.1.0
+info:
+  title: Guru Hospitality Platform — NeXus PMS API
+  description: |
+    All-in-one property management system for modern hotels.
+    All endpoints are prefixed with `/api/v1`.
+  version: 1.0.0
+  contact:
+    name: Guru Hospitality
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development
+  - url: https://api.nexus.hotel/api/v1
+    description: Production
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: Service is healthy
+
+  /auth/register:
+    post:
+      summary: Register tenant and admin user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenant_slug, tenant_name, tenant_email, email, password, first_name, last_name]
+              properties:
+                tenant_slug: { type: string, example: "grand-hotel" }
+                tenant_name: { type: string, example: "Grand Hotel" }
+                tenant_email: { type: string, format: email }
+                currency_code: { type: string, default: "USD" }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                first_name: { type: string }
+                last_name: { type: string }
+                phone: { type: string }
+      responses:
+        "201":
+          description: Tenant and user created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  refresh_token: { type: string }
+                  token_type: { type: string, example: "Bearer" }
+                  expires_in: { type: integer }
+                  user:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      email: { type: string }
+                      first_name: { type: string }
+                      last_name: { type: string }
+                      role: { type: string }
+                      tenant_id: { type: string }
+
+  /auth/login:
+    post:
+      summary: Authenticate user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  refresh_token: { type: string }
+                  token_type: { type: string }
+                  expires_in: { type: integer }
+                  user:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      email: { type: string }
+                      first_name: { type: string }
+                      last_name: { type: string }
+                      role: { type: string }
+                      tenant_id: { type: string }
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        "200":
+          description: New access token issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  token_type: { type: string }
+                  expires_in: { type: integer }
+
+  /auth/me:
+    get:
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user profile
+
+  /tenants/{tenantId}/dashboard/stats:
+    get:
+      summary: Dashboard statistics
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Dashboard metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_properties: { type: integer }
+                  total_rooms: { type: integer }
+                  occupied_rooms: { type: integer }
+                  available_rooms: { type: integer }
+                  today_check_ins: { type: integer }
+                  today_check_outs: { type: integer }
+                  pending_housekeeping: { type: integer }
+                  open_work_orders: { type: integer }
+                  revenue_today: { type: number }
+                  occupancy_rate: { type: number }
+
+  /tenants/{tenantId}/properties:
+    get:
+      summary: List properties
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of properties
+    post:
+      summary: Create property
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, code]
+              properties:
+                name: { type: string }
+                code: { type: string }
+                address: { type: string }
+                city: { type: string }
+                country: { type: string }
+                phone: { type: string }
+                email: { type: string, format: email }
+                timezone: { type: string, default: "UTC" }
+      responses:
+        "201":
+          description: Property created
+
+  /tenants/{tenantId}/rooms:
+    get:
+      summary: List rooms
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: List of rooms
+
+  /tenants/{tenantId}/reservations:
+    get:
+      summary: List reservations
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of reservations
+    post:
+      summary: Create reservation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [guest_id, room_id, check_in_date, check_out_date]
+              properties:
+                guest_id: { type: string }
+                room_id: { type: string }
+                check_in_date: { type: string, format: date }
+                check_out_date: { type: string, format: date }
+                adults: { type: integer, default: 1 }
+                children: { type: integer, default: 0 }
+                rate_plan_id: { type: string }
+                source: { type: string }
+                notes: { type: string }
+      responses:
+        "201":
+          description: Reservation created
+
+  /tenants/{tenantId}/rate-plans:
+    get:
+      summary: List rate plans
+      responses:
+        "200":
+          description: List of rate plans
+    post:
+      summary: Create rate plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, room_type_id, base_rate]
+              properties:
+                name: { type: string }
+                room_type_id: { type: string }
+                base_rate: { type: number }
+                min_nights: { type: integer, default: 1 }
+                max_nights: { type: integer }
+                advance_booking_days: { type: integer }
+                is_active: { type: boolean, default: true }
+      responses:
+        "201":
+          description: Rate plan created
+
+  /tenants/{tenantId}/folios:
+    get:
+      summary: List folios
+      responses:
+        "200":
+          description: List of folios
+    post:
+      summary: Create folio
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reservation_id]
+              properties:
+                reservation_id: { type: string }
+      responses:
+        "201":
+          description: Folio created
+
+  /tenants/{tenantId}/charges:
+    post:
+      summary: Create charge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [folio_id, amount, description]
+              properties:
+                folio_id: { type: string }
+                amount: { type: number }
+                description: { type: string }
+                charge_date: { type: string, format: date }
+      responses:
+        "201":
+          description: Charge created
+
+  /tenants/{tenantId}/payments:
+    post:
+      summary: Create payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [folio_id, amount, payment_method]
+              properties:
+                folio_id: { type: string }
+                amount: { type: number }
+                payment_method: { type: string, enum: [cash, credit_card, debit_card, bank_transfer, mobile_money, gift_card, comp] }
+      responses:
+        "201":
+          description: Payment recorded
+
+  /tenants/{tenantId}/housekeeping-tasks:
+    get:
+      summary: List housekeeping tasks
+      responses:
+        "200":
+          description: List of tasks
+    post:
+      summary: Create housekeeping task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [room_id, task_type]
+              properties:
+                room_id: { type: string }
+                task_type: { type: string, enum: [departure_clean, stay_over, deep_clean, turndown, inspection, maintenance_prep] }
+                priority: { type: string, enum: [low, normal, high, urgent] }
+                notes: { type: string }
+      responses:
+        "201":
+          description: Task created
+
+  /tenants/{tenantId}/work-orders:
+    get:
+      summary: List work orders
+      responses:
+        "200":
+          description: List of work orders
+    post:
+      summary: Create work order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, description, property_id]
+              properties:
+                title: { type: string }
+                description: { type: string }
+                property_id: { type: string }
+                room_id: { type: string }
+                category: { type: string, enum: [plumbing, electrical, hvac, appliance, structural, it, safety, cosmetic, other] }
+                priority: { type: string, enum: [low, normal, high, urgent, emergency] }
+      responses:
+        "201":
+          description: Work order created
+
+  /tenants/{tenantId}/smart-locks:
+    get:
+      summary: List smart locks
+      responses:
+        "200":
+          description: List of smart locks
+    post:
+      summary: Register smart lock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, vendor, vendor_device_id, room_id]
+              properties:
+                name: { type: string }
+                vendor: { type: string, enum: [orbita, salto, assa_abloy, other] }
+                vendor_device_id: { type: string }
+                room_id: { type: string }
+      responses:
+        "201":
+          description: Smart lock registered
+
+  /tenants/{tenantId}/digital-keys:
+    post:
+      summary: Create digital key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [smart_lock_id, guest_phone, valid_from, valid_until]
+              properties:
+                smart_lock_id: { type: string }
+                guest_phone: { type: string }
+                guest_email: { type: string, format: email }
+                valid_from: { type: string, format: date-time }
+                valid_until: { type: string, format: date-time }
+      responses:
+        "201":
+          description: Digital key created
+
+  /webhooks/tenants/{tenantId}/lock-events:
+    post:
+      summary: Receive lock event webhook
+      security: []
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_type, vendor_device_id, timestamp]
+              properties:
+                event_type: { type: string, enum: [unlocked, locked, low_battery, tamper_alert, forced_entry, auto_locked, key_error] }
+                vendor_device_id: { type: string }
+                timestamp: { type: string, format: date-time }
+                key_code: { type: string }
+                guest_phone: { type: string }
+                battery_level: { type: integer }
+      responses:
+        "200":
+          description: Event received
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
