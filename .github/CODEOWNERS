@@ -1,0 +1,51 @@
+# Global maintainers
+* @nexus-platform/global-maintainers
+
+# Backend Services
+/services/backend-core/ @nexus-platform/backend-team
+/services/backend-core/**/auth* @nexus-platform/security-team
+/services/backend-core/**/billing* @nexus-platform/finops-team
+/services/pms-integration/ @nexus-platform/hospitality-domain-team
+/services/notification-engine/ @nexus-platform/backend-team
+
+# IPTV & Streaming
+/services/iptv-middleware/ @nexus-platform/iptv-team
+/services/iptv-middleware/**/drm* @nexus-platform/security-team
+/services/iptv-middleware/**/transcode* @nexus-platform/media-team
+/infrastructure/helm-charts/iptv*/ @nexus-platform/iptv-team
+
+# AI Platform
+/services/ai-platform/ @nexus-platform/ai-team
+/services/ai-platform/**/inference* @nexus-platform/ai-infra-team
+/services/ai-platform/**/training* @nexus-platform/ml-team
+
+# IoT & Smart Room
+/services/iot-gateway/ @nexus-platform/iot-team
+/services/iot-gateway/**/firmware* @nexus-platform/embedded-team
+
+# Client Applications
+/clients/mobile-apps/ @nexus-platform/mobile-team
+/clients/tv-apps/ @nexus-platform/tv-team
+/clients/web-portal/ @nexus-platform/frontend-team
+/clients/staff-console/ @nexus-platform/frontend-team @nexus-platform/hospitality-domain-team
+
+# Infrastructure & Platform
+/infrastructure/terraform/ @nexus-platform/platform-team
+/infrastructure/helm-charts/ @nexus-platform/platform-team
+/infrastructure/gitops/ @nexus-platform/sre-team
+/infrastructure/policies/ @nexus-platform/security-team @nexus-platform/platform-team
+
+# Security & Compliance
+/security/ @nexus-platform/security-team
+/security/**/compliance/ @nexus-platform/compliance-team
+
+# Observability
+/observability/ @nexus-platform/sre-team
+/observability/**/slo* @nexus-platform/sre-team @nexus-platform/product-team
+
+# SDKs
+/sdk/ @nexus-platform/developer-experience-team
+
+# Documentation
+/docs/ @nexus-platform/technical-writers
+/docs/architecture/ @nexus-platform/global-maintainers
