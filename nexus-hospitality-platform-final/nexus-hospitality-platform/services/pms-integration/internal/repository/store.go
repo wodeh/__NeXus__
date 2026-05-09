@@ -10,11 +10,14 @@ import (
 
 // Store is the root repository aggregating all PMS repositories.
 type Store struct {
-	pool        *db.Pool
+	pool         *db.Pool
 	Reservations ReservationRepository
 	Guests       GuestRepository
 	Folios       FolioRepository
-	metrics     *RepositoryMetrics
+	Properties   PropertyRepository
+	RoomTypes    RoomTypeRepository
+	Rooms        RoomRepository
+	metrics      *RepositoryMetrics
 }
 
 // NewStore creates a repository store backed by a PostgreSQL pool.
@@ -25,6 +28,9 @@ func NewStore(pool *db.Pool) *Store {
 		Reservations: NewReservationRepository(pool, m),
 		Guests:       NewGuestRepository(pool, m),
 		Folios:       NewFolioRepository(pool, m),
+		Properties:   NewPropertyRepository(pool, m),
+		RoomTypes:    NewRoomTypeRepository(pool, m),
+		Rooms:        NewRoomRepository(pool, m),
 		metrics:      m,
 	}
 }

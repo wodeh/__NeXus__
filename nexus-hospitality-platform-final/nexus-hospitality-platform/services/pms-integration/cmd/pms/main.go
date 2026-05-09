@@ -12,6 +12,7 @@ import (
 	"time"
 
 	bcEvents "github.com/nexus-platform/backend-core/internal/events"
+	"github.com/nexus-platform/pms-integration/internal/api"
 	"github.com/nexus-platform/pms-integration/internal/config"
 	"github.com/nexus-platform/pms-integration/internal/db"
 	"github.com/nexus-platform/pms-integration/internal/events"
@@ -131,62 +132,12 @@ func main() {
 	}
 
 	// HTTP router.
-	mux := http.NewServeMux()
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "healthy", "service": "pms-integration"})
-	})
-	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
-		status := "ready"
-		if repoStore != nil {
-			if err := repoStore.Ping(r.Context()); err != nil {
-				status = "not_ready"
-			}
-		}
-		writeJSON(w, http.StatusOK, map[string]string{"status": status})
-	})
-	mux.HandleFunc("/live", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "alive"})
-	})
-	mux.HandleFunc("/v1/sagas", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		var req struct {
-			Type          string                 `json:"type"`
-			TenantID      string                 `json:"tenant_id"`
-			CorrelationID string                 `json:"correlation_id"`
-			Context       map[string]interface{} `json:"context"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "invalid request", http.StatusBadRequest)
-			return
-		}
-		ctx := context.WithValue(r.Context(), "tenant_id", req.TenantID)
-		ctx = context.WithValue(ctx, "correlation_id", req.CorrelationID)
-
-		var def saga.SagaDefinition
-		switch req.Type {
-		case "guest_checkin":
-			def = saga.GuestCheckInSaga
-		case "room_change":
-			def = saga.RoomChangeSaga
-		default:
-			http.Error(w, "unknown saga type", http.StatusBadRequest)
-			return
-		}
-
-		inst, err := orchestrator.StartSaga(ctx, def, req.Context)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		writeJSON(w, http.StatusAccepted, inst)
-	})
+	handler := api.NewHandler(repoStore)
+	router := handler.Router()
 
 	server := &http.Server{
 		Addr:    ":" + cfg.HTTPPort,
-		Handler: mux,
+		Handler: router,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
