@@ -1,0 +1,169 @@
+# Guru Hospitality Platform — Full-Stack Docker Compose
+version: "3.8"
+
+services:
+  # PostgreSQL — primary database with tenant isolation
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexus-postgres
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: nexus_secret_2024
+      POSTGRES_DB: nexus_pms
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./services/pms-integration/sql/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus -d nexus_pms"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexus-network
+
+  # Redis — caching, sessions, async job queue
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - nexus-network
+
+  # PMS Integration API — Go backend
+  pms-api:
+    build:
+      context: ./services/pms-integration
+      dockerfile: Dockerfile
+    container_name: nexus-pms-api
+    environment:
+      - DATABASE_URL=postgres://nexus:nexus_secret_2024@postgres:5432/nexus_pms?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-nexus-platform-jwt-secret-change-in-production}
+      - ORBITA_API_KEY=${ORBITA_API_KEY:-}
+      - ORBITA_API_URL=${ORBITA_API_URL:-https://api.orbita.com}
+      - PORT=8080
+      - LOG_LEVEL=info
+      - METRICS_ENABLED=true
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexus-network
+    restart: unless-stopped
+
+  # Frontend — Next.js 15 web app
+  frontend:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: nexus-frontend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - pms-api
+    networks:
+      - nexus-network
+    restart: unless-stopped
+
+  # Nginx — reverse proxy + static assets
+  nginx:
+    image: nginx:alpine
+    container_name: nexus-nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - pms-api
+      - frontend
+    networks:
+      - nexus-network
+    restart: unless-stopped
+
+  # Prometheus — metrics collection
+  prometheus:
+    image: prom/prometheus:v2.50.0
+    container_name: nexus-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - nexus-network
+    restart: unless-stopped
+
+  # Grafana — dashboards and alerting
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: nexus-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-nexus_admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - nexus-network
+    restart: unless-stopped
+
+  # Background Worker — Redis Streams consumer
+  worker:
+    build:
+      context: ./services/pms-integration
+      dockerfile: Dockerfile.worker
+    container_name: nexus-worker
+    environment:
+      - DATABASE_URL=postgres://nexus:nexus_secret_2024@postgres:5432/nexus_pms?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-nexus-platform-jwt-secret-change-in-production}
+      - ORBITA_API_KEY=${ORBITA_API_KEY:-}
+      - ORBITA_API_URL=${ORBITA_API_URL:-https://api.orbita.com}
+      - LOG_LEVEL=info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nexus-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  nexus-network:
+    driver: bridge
