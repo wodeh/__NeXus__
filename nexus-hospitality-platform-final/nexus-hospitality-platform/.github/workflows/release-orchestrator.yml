@@ -20,10 +20,6 @@ jobs:
     strategy:
       matrix:
         service:
-          - backend-core
-          - iptv-middleware
-          - ai-platform
-          - iot-gateway
           - pms-integration
     steps:
       - uses: actions/checkout@v4
