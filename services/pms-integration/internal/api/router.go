@@ -7,17 +7,21 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/nexus-platform/pms-integration/internal/domain"
+	"github.com/nexus-platform/pms-integration/internal/license"
+	apiMiddleware "github.com/nexus-platform/pms-integration/internal/api/middleware"
 	"github.com/nexus-platform/pms-integration/internal/repository"
 )
 
 // Handler holds all HTTP handlers.
 type Handler struct {
-	store *repository.Store
+	store      *repository.Store
+	licenseSvc *license.Service
 }
 
-// NewHandler creates a new HTTP handler with the given store.
-func NewHandler(store *repository.Store) *Handler {
-	return &Handler{store: store}
+// NewHandler creates a new HTTP handler with the given store and license service.
+func NewHandler(store *repository.Store, licenseSvc *license.Service) *Handler {
+	return &Handler{store: store, licenseSvc: licenseSvc}
 }
 
 // Router builds the chi router with all routes.
@@ -35,8 +39,18 @@ func (h *Handler) Router() chi.Router {
 	// Demo / test endpoints (no DB required)
 	r.Get("/demo/info", h.demoInfo)
 
+	// Tenant configuration (no license check needed for reading config)
+	th := NewTenantHandler(h.licenseSvc)
+	r.Route("/tenants/{tenantId}", func(r chi.Router) {
+		r.Get("/config", th.getTenantConfig)
+	})
+	r.Get("/property-types", th.listPropertyTypes)
+	r.Get("/license-tiers", th.listLicenseTiers)
+	r.Get("/capabilities", th.listCapabilities)
+
 	// Guests
 	r.Route("/tenants/{tenantId}/guests", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapGuests))
 		r.Get("/", h.listGuests)
 		r.Post("/", h.createGuest)
 		r.Get("/{guestId}", h.getGuest)
@@ -45,6 +59,7 @@ func (h *Handler) Router() chi.Router {
 
 	// Reservations
 	r.Route("/tenants/{tenantId}/reservations", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapReservations))
 		r.Post("/", h.createReservation)
 		r.Get("/{reservationId}", h.getReservation)
 		r.Post("/{reservationId}/checkin", h.checkIn)
@@ -57,6 +72,7 @@ func (h *Handler) Router() chi.Router {
 
 	// Properties
 	r.Route("/tenants/{tenantId}/properties", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapProperties))
 		r.Get("/", h.listProperties)
 		r.Post("/", h.createProperty)
 		r.Get("/{propertyId}", h.getProperty)
@@ -65,6 +81,7 @@ func (h *Handler) Router() chi.Router {
 
 	// Room Types
 	r.Route("/tenants/{tenantId}/properties/{propertyId}/room-types", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapRooms))
 		r.Get("/", h.listRoomTypes)
 		r.Post("/", h.createRoomType)
 		r.Get("/{roomTypeId}", h.getRoomType)
@@ -72,6 +89,7 @@ func (h *Handler) Router() chi.Router {
 
 	// Rooms
 	r.Route("/tenants/{tenantId}/properties/{propertyId}/rooms", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapRooms))
 		r.Get("/", h.listRooms)
 		r.Post("/", h.createRoom)
 		r.Get("/{roomId}", h.getRoom)
@@ -82,6 +100,7 @@ func (h *Handler) Router() chi.Router {
 
 	// Audit Logs
 	r.Route("/tenants/{tenantId}/audit", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapAuditLogs))
 		r.Get("/", h.listAuditLogs)
 		r.Post("/", h.createAuditLog)
 		r.Get("/resource/{resourceType}/{resourceId}", h.getResourceAuditTrail)
@@ -89,6 +108,7 @@ func (h *Handler) Router() chi.Router {
 
 	// GDPR
 	r.Route("/tenants/{tenantId}/gdpr", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapAuditLogs))
 		r.Post("/requests", h.createGDPRRequest)
 		r.Get("/guests/{guestId}/export", h.getGuestDataExport)
 		r.Delete("/guests/{guestId}", h.deleteGuestData)
@@ -96,6 +116,7 @@ func (h *Handler) Router() chi.Router {
 
 	// Revenue Management
 	r.Route("/tenants/{tenantId}/revenue", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapDynamicPricing, domain.CapRevenueForecast))
 		r.Get("/forecasts", h.listRevenueForecasts)
 		r.Post("/pricing-rules", h.createDynamicPricingRule)
 		r.Get("/pricing-rules", h.listDynamicPricingRules)

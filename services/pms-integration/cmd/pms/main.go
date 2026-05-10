@@ -15,6 +15,7 @@ import (
 	"github.com/nexus-platform/pms-integration/internal/db"
 	"github.com/nexus-platform/pms-integration/internal/domain"
 	"github.com/nexus-platform/pms-integration/internal/events"
+	"github.com/nexus-platform/pms-integration/internal/license"
 	"github.com/nexus-platform/pms-integration/internal/metrics"
 	"github.com/nexus-platform/pms-integration/internal/repository"
 	"github.com/nexus-platform/pms-integration/internal/saga"
@@ -97,8 +98,11 @@ func main() {
 		orchestrator.SetCompensationExecutor(compExecutor)
 	}
 
+	// Initialize license service.
+	licenseSvc := license.NewService()
+
 	// HTTP router.
-	handler := api.NewHandler(repoStore)
+	handler := api.NewHandler(repoStore, licenseSvc)
 	router := handler.Router()
 
 	server := &http.Server{
