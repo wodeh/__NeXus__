@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/nexus-platform/pms-integration/internal/domain"
-	"github.com/nexus-platform/pms-integration/internal/middleware"
 )
 
 func (h *Handler) listAuditLogs(w http.ResponseWriter, r *http.Request) {
@@ -46,11 +46,6 @@ func (h *Handler) createAuditLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.TenantID = tenantID
-	
-	claims := middleware.ClaimsFromContext(r.Context())
-	if claims != nil {
-		log.UserID = &claims.UserID
-	}
 	log.IPAddress = r.RemoteAddr
 	log.UserAgent = r.UserAgent()
 

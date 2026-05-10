@@ -22,14 +22,14 @@ func TestReservationLifecycle(t *testing.T) {
 		t.Fatalf("expected confirmed, got %s", r.Status)
 	}
 
-	if err := r.CheckIn(); err != nil {
+	if err := r.DoCheckIn(); err != nil {
 		t.Fatalf("check in failed: %v", err)
 	}
 	if r.Status != ReservationStatusCheckedIn {
 		t.Fatalf("expected checked_in, got %s", r.Status)
 	}
 
-	if err := r.CheckOut(); err != nil {
+	if err := r.DoCheckOut(); err != nil {
 		t.Fatalf("check out failed: %v", err)
 	}
 	if r.Status != ReservationStatusCheckedOut {
@@ -43,7 +43,7 @@ func TestReservation_InvalidTransitions(t *testing.T) {
 		time.Now().Add(48*time.Hour),
 	)
 
-	if err := r.CheckIn(); err == nil {
+	if err := r.DoCheckIn(); err == nil {
 		t.Fatal("expected error checking in pending reservation")
 	}
 

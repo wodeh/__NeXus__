@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -11,12 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	bcEvents "github.com/nexus-platform/backend-core/internal/events"
 	"github.com/nexus-platform/pms-integration/internal/api"
 	"github.com/nexus-platform/pms-integration/internal/config"
 	"github.com/nexus-platform/pms-integration/internal/db"
+	"github.com/nexus-platform/pms-integration/internal/domain"
 	"github.com/nexus-platform/pms-integration/internal/events"
-	"github.com/nexus-platform/pms-integration/internal/events/handlers"
 	"github.com/nexus-platform/pms-integration/internal/metrics"
 	"github.com/nexus-platform/pms-integration/internal/repository"
 	"github.com/nexus-platform/pms-integration/internal/saga"
@@ -67,25 +65,18 @@ func main() {
 		logger.Info("database connected")
 	}
 
-	// Initialize Kafka producer.
+	// Initialize event store.
 	var eventStore events.Store
-	var producer *bcEvents.ProducerManager
 	if len(cfg.KafkaBrokers) > 0 {
-		var err error
-		producer, err = bcEvents.NewProducerManager(bcEvents.ProducerConfig{
-			Brokers: cfg.KafkaBrokers,
-			Topic:   cfg.KafkaTopic,
-			Source:  "pms-integration",
-		})
+		mapper := events.NewDomainEventMapper("pms-integration")
+		kafkaStore, err := events.NewKafkaEventStore(cfg.KafkaBrokers, cfg.KafkaTopic, mapper)
 		if err != nil {
-			logger.Error("failed to create event producer", slog.String("error", err.Error()))
+			logger.Error("failed to create kafka event store", slog.String("error", err.Error()))
 			os.Exit(1)
 		}
-		defer producer.Close()
-
-		mapper := events.NewDomainEventMapper("pms-integration")
-		eventStore = events.NewKafkaEventStore(producer, mapper)
-		logger.Info("event producer initialized", slog.Any("brokers", cfg.KafkaBrokers))
+		defer kafkaStore.Close()
+		eventStore = kafkaStore
+		logger.Info("kafka event store initialized", slog.Any("brokers", cfg.KafkaBrokers))
 	} else {
 		eventStore = &inMemoryEventStore{}
 	}
@@ -106,31 +97,6 @@ func main() {
 		orchestrator.SetCompensationExecutor(compExecutor)
 	}
 
-	// Initialize Kafka consumer if brokers are configured.
-	var consumer *bcEvents.ConsumerManager
-	if len(cfg.KafkaBrokers) > 0 && repoStore != nil {
-		handlerRegistry := handlers.NewRegistry(repoStore)
-		consumer, err = bcEvents.NewConsumerManager(bcEvents.ConsumerConfig{
-			Brokers:  cfg.KafkaBrokers,
-			Topic:    cfg.KafkaTopic,
-			GroupID:  cfg.KafkaGroupID,
-			Handler:  bcEvents.HandlerFunc(func(ctx context.Context, event bcEvents.Event) error {
-				h, ok := handlerRegistry.Get(event.Type)
-				if !ok {
-					logger.Warn("no handler for event type", slog.String("type", event.Type))
-					return nil
-				}
-				return h.Handle(ctx, event)
-			}),
-			Metrics:  bcEvents.NewEventMetrics(metricsCollector.Registry()),
-			DLQTopic: cfg.KafkaDLQTopic,
-		})
-		if err != nil {
-			logger.Error("failed to create event consumer", slog.String("error", err.Error()))
-			os.Exit(1)
-		}
-	}
-
 	// HTTP router.
 	handler := api.NewHandler(repoStore)
 	router := handler.Router()
@@ -143,11 +109,6 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// Start consumer.
-	if consumer != nil {
-		consumer.Start(ctx)
-	}
-
 	go func() {
 		logger.Info("pms integration starting", slog.String("port", cfg.HTTPPort))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -157,12 +118,6 @@ func main() {
 
 	<-ctx.Done()
 	stop()
-
-	if consumer != nil {
-		if err := consumer.Shutdown(15 * time.Second); err != nil {
-			logger.Error("consumer shutdown error", slog.String("error", err.Error()))
-		}
-	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()

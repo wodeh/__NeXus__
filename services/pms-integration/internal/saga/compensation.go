@@ -50,7 +50,7 @@ func (ce *CompensationExecutor) Execute(ctx context.Context, sagaID string, step
 	idempotencyKey := fmt.Sprintf("compensation:%s:%s:%s", sagaID, step.Name, step.CompensateAction)
 
 	// Idempotency check
-	processed, err := ce.idempotency.IsProcessed(ctx, idempotencyKey)
+	processed, err := ce.idempotency.IsProcessed(ctx, domain.IdempotencyKey(idempotencyKey))
 	if err != nil {
 		slog.Warn("idempotency check failed", slog.String("saga_id", sagaID), slog.String("error", err.Error()))
 	}
@@ -107,7 +107,7 @@ func (ce *CompensationExecutor) Execute(ctx context.Context, sagaID string, step
 	}
 
 	// Mark as processed
-	if markErr := ce.idempotency.MarkProcessed(ctx, idempotencyKey, 24*time.Hour); markErr != nil {
+	if markErr := ce.idempotency.MarkProcessed(ctx, domain.IdempotencyKey(idempotencyKey), 24*time.Hour); markErr != nil {
 		slog.Warn("failed to mark compensation processed", slog.String("saga_id", sagaID), slog.String("error", markErr.Error()))
 	}
 

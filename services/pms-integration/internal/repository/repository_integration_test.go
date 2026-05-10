@@ -253,7 +253,7 @@ func TestTransaction_Rollback(t *testing.T) {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO reservations (id, tenant_id, property_id, guest_id, room_id, check_in_date, check_out_date, status, created_at, updated_at, version)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-		`, res.ID, res.TenantID, res.PropertyID, res.GuestID, res.RoomID, res.CheckIn, res.CheckOut, res.Status, res.CreatedAt, res.UpdatedAt, res.Version); err != nil {
+		`, res.ID, res.TenantID, res.PropertyID, res.GuestID, res.RoomID, res.CheckInDate, res.CheckOutDate, res.Status, res.CreatedAt, res.UpdatedAt, res.Version); err != nil {
 			return err
 		}
 		// Force rollback

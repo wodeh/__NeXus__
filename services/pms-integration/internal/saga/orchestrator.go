@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nexus-platform/pms-integration/internal/domain"
 	"github.com/nexus-platform/pms-integration/internal/events"
 )
 

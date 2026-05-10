@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/nexus-platform/pms-integration/internal/domain"
 )
@@ -78,12 +77,12 @@ func NewInMemorySearchIndexer() SearchIndexer {
 }
 
 func (m *InMemorySearchIndexer) IndexReservation(ctx context.Context, res *domain.Reservation) error {
-	m.reservations[res.ID] = res
+	m.reservations[string(res.ID)] = res
 	return nil
 }
 
 func (m *InMemorySearchIndexer) IndexGuest(ctx context.Context, guest *domain.Guest) error {
-	m.guests[guest.ID] = guest
+	m.guests[string(guest.ID)] = guest
 	return nil
 }
 
@@ -92,7 +91,7 @@ func (m *InMemorySearchIndexer) Search(ctx context.Context, tenantID, query stri
 	for _, g := range m.guests {
 		if g.TenantID == tenantID && (query == "" || contains(g.FirstName, query) || contains(g.LastName, query) || contains(g.Email, query)) {
 			results = append(results, SearchResult{
-				ID:       g.ID,
+				ID:       string(g.ID),
 				Type:     "guest",
 				Title:    fmt.Sprintf("%s %s", g.FirstName, g.LastName),
 				Subtitle: g.Email,
@@ -103,11 +102,11 @@ func (m *InMemorySearchIndexer) Search(ctx context.Context, tenantID, query stri
 	for _, res := range m.reservations {
 		if res.TenantID == tenantID {
 			results = append(results, SearchResult{
-				ID:       res.ID,
+				ID:       string(res.ID),
 				Type:     "reservation",
 				Title:    fmt.Sprintf("Reservation %s", res.ID[:8]),
-				Subtitle: fmt.Sprintf("%s - %s", res.CheckIn.Format("2006-01-02"), res.CheckOut.Format("2006-01-02")),
-				Data:     map[string]interface{}{"status": res.Status, "total": res.TotalAmount},
+				Subtitle: fmt.Sprintf("%s - %s", res.CheckInDate.Format("2006-01-02"), res.CheckOutDate.Format("2006-01-02")),
+				Data:     map[string]interface{}{"status": res.Status},
 			})
 		}
 	}

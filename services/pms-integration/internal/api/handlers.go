@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/nexus-platform/pms-integration/internal/domain"
@@ -219,7 +220,7 @@ func (h *Handler) checkIn(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := res.CheckIn(); err != nil {
+	if err := res.DoCheckIn(); err != nil {
 		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -246,7 +247,7 @@ func (h *Handler) checkOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := res.CheckOut(); err != nil {
+	if err := res.DoCheckOut(); err != nil {
 		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}

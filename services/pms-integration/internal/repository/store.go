@@ -10,28 +10,42 @@ import (
 
 // Store is the root repository aggregating all PMS repositories.
 type Store struct {
-	pool         *db.Pool
-	Reservations ReservationRepository
-	Guests       GuestRepository
-	Folios       FolioRepository
-	Properties   PropertyRepository
-	RoomTypes    RoomTypeRepository
-	Rooms        RoomRepository
-	metrics      *RepositoryMetrics
+	pool                  *db.Pool
+	Reservations          ReservationRepository
+	Guests                GuestRepository
+	Folios                FolioRepository
+	Properties            PropertyRepository
+	RoomTypes             RoomTypeRepository
+	Rooms                 RoomRepository
+	AuditLogs             AuditLogRepository
+	RevenueForecasts      RevenueForecastRepository
+	DynamicPricingRules   DynamicPricingRuleRepository
+	PriceRecommendations  PriceRecommendationRepository
+	MobileDevices         MobileDeviceRepository
+	GuestSelfServices     GuestSelfServiceRepository
+	Search                SearchIndexer
+	metrics               *RepositoryMetrics
 }
 
 // NewStore creates a repository store backed by a PostgreSQL pool.
 func NewStore(pool *db.Pool) *Store {
 	m := NewRepositoryMetrics()
 	return &Store{
-		pool:         pool,
-		Reservations: NewReservationRepository(pool, m),
-		Guests:       NewGuestRepository(pool, m),
-		Folios:       NewFolioRepository(pool, m),
-		Properties:   NewPropertyRepository(pool, m),
-		RoomTypes:    NewRoomTypeRepository(pool, m),
-		Rooms:        NewRoomRepository(pool, m),
-		metrics:      m,
+		pool:                 pool,
+		Reservations:         NewReservationRepository(pool, m),
+		Guests:               NewGuestRepository(pool, m),
+		Folios:               NewFolioRepository(pool, m),
+		Properties:           NewPropertyRepository(pool, m),
+		RoomTypes:            NewRoomTypeRepository(pool, m),
+		Rooms:                NewRoomRepository(pool, m),
+		AuditLogs:            NewAuditLogRepository(pool, m),
+		RevenueForecasts:     NewRevenueForecastRepository(pool, m),
+		DynamicPricingRules:  NewDynamicPricingRuleRepository(pool, m),
+		PriceRecommendations: NewPriceRecommendationRepository(pool, m),
+		MobileDevices:        NewMobileDeviceRepository(pool, m),
+		GuestSelfServices:    NewGuestSelfServiceRepository(pool, m),
+		Search:               NewInMemorySearchIndexer(),
+		metrics:              m,
 	}
 }
 

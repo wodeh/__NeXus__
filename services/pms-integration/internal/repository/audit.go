@@ -33,7 +33,7 @@ func (r *PostgresAuditLogRepository) Create(ctx context.Context, log *domain.Aud
 	oldJSON, _ := json.Marshal(log.OldValues)
 	newJSON, _ := json.Marshal(log.NewValues)
 	query := `INSERT INTO audit_logs (tenant_id, user_id, guest_id, action, resource, resource_id, old_values, new_values, ip_address, user_agent) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, created_at`
-	return r.pool.QueryRowContext(ctx, query, log.TenantID, log.UserID, log.GuestID, log.Action, log.Resource, log.ResourceID, oldJSON, newJSON, log.IPAddress, log.UserAgent).Scan(&log.ID, &log.CreatedAt)
+	return r.pool.QueryRow(ctx, query, log.TenantID, log.UserID, log.GuestID, log.Action, log.Resource, log.ResourceID, oldJSON, newJSON, log.IPAddress, log.UserAgent).Scan(&log.ID, &log.CreatedAt)
 }
 
 func (r *PostgresAuditLogRepository) List(ctx context.Context, tenantID string, resource, action string, limit, offset int) ([]*domain.AuditLog, error) {
@@ -55,7 +55,7 @@ func (r *PostgresAuditLogRepository) List(ctx context.Context, tenantID string, 
 	query += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", argCount, argCount+1)
 	args = append(args, limit, offset)
 
-	rows, err := r.pool.QueryContext(ctx, query, args...)
+	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (r *PostgresAuditLogRepository) List(ctx context.Context, tenantID string, 
 func (r *PostgresAuditLogRepository) GetByResourceID(ctx context.Context, tenantID, resource, resourceID string) ([]*domain.AuditLog, error) {
 	defer r.metrics.ObserveQuery("audit_log_by_resource")()
 	query := `SELECT id, tenant_id, user_id, guest_id, action, resource, resource_id, old_values, new_values, ip_address, user_agent, created_at FROM audit_logs WHERE tenant_id = $1 AND resource = $2 AND resource_id = $3 ORDER BY created_at DESC`
-	rows, err := r.pool.QueryContext(ctx, query, tenantID, resource, resourceID)
+	rows, err := r.pool.Query(ctx, query, tenantID, resource, resourceID)
 	if err != nil {
 		return nil, err
 	}

@@ -2,6 +2,8 @@
 package repository
 
 import (
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -43,6 +45,14 @@ func (m *RepositoryMetrics) IncQuery(entity, operation string) {
 // IncError increments the error counter.
 func (m *RepositoryMetrics) IncError(entity, operation, errorType string) {
 	m.queryErrors.WithLabelValues(entity, operation, errorType).Inc()
+}
+
+// ObserveQuery returns a function that records query duration when called.
+func (m *RepositoryMetrics) ObserveQuery(operation string) func() {
+	start := time.Now()
+	return func() {
+		m.ObserveDuration("repository", operation, time.Since(start).Seconds())
+	}
 }
 
 // ObserveDuration records query duration.

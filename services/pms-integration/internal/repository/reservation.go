@@ -62,7 +62,7 @@ func (r *PostgresReservationRepository) GetByID(ctx context.Context, tenantID, i
 		WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
 	`, id, tenantID).Scan(
 		&res.ID, &res.TenantID, &res.PropertyID, &res.GuestID, &res.RoomID,
-		&res.CheckIn, &res.CheckOut, &res.Status, &specialRequests, &res.CreatedAt, &res.UpdatedAt, &res.Version,
+		&res.CheckInDate, &res.CheckOutDate, &res.Status, &specialRequests, &res.CreatedAt, &res.UpdatedAt, &res.Version,
 	)
 	if err != nil {
 		r.metrics.IncError("reservation", "get_by_id", "query")
@@ -89,7 +89,7 @@ func (r *PostgresReservationRepository) Create(ctx context.Context, res *domain.
 	_, err := r.pool.Exec(ctx, `
 		INSERT INTO reservations (id, tenant_id, property_id, guest_id, room_id, check_in_date, check_out_date, status, special_requests, created_at, updated_at, version)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-	`, res.ID, res.TenantID, res.PropertyID, res.GuestID, res.RoomID, res.CheckIn, res.CheckOut, res.Status, res.SpecialRequests, res.CreatedAt, res.UpdatedAt, res.Version)
+	`, res.ID, res.TenantID, res.PropertyID, res.GuestID, res.RoomID, res.CheckInDate, res.CheckOutDate, res.Status, res.SpecialRequests, res.CreatedAt, res.UpdatedAt, res.Version)
 	if err != nil {
 		r.metrics.IncError("reservation", "create", "query")
 		return fmt.Errorf("create reservation: %w", err)
@@ -116,7 +116,7 @@ func (r *PostgresReservationRepository) Update(ctx context.Context, res *domain.
 		UPDATE reservations
 		SET property_id = $1, guest_id = $2, room_id = $3, check_in_date = $4, check_out_date = $5, status = $6, special_requests = $7, updated_at = $8, version = version + 1
 		WHERE id = $9 AND tenant_id = $10 AND version = $11 AND deleted_at IS NULL
-	`, res.PropertyID, res.GuestID, res.RoomID, res.CheckIn, res.CheckOut, res.Status, res.SpecialRequests, res.UpdatedAt, res.ID, res.TenantID, res.Version)
+	`, res.PropertyID, res.GuestID, res.RoomID, res.CheckInDate, res.CheckOutDate, res.Status, res.SpecialRequests, res.UpdatedAt, res.ID, res.TenantID, res.Version)
 	if err != nil {
 		r.metrics.IncError("reservation", "update", "query")
 		return fmt.Errorf("update reservation: %w", err)
@@ -262,7 +262,7 @@ func scanReservations(rows pgx.Rows) ([]*domain.Reservation, error) {
 		var specialRequests []string
 		if err := rows.Scan(
 			&res.ID, &res.TenantID, &res.PropertyID, &res.GuestID, &res.RoomID,
-			&res.CheckIn, &res.CheckOut, &res.Status, &specialRequests, &res.CreatedAt, &res.UpdatedAt, &res.Version,
+			&res.CheckInDate, &res.CheckOutDate, &res.Status, &specialRequests, &res.CreatedAt, &res.UpdatedAt, &res.Version,
 		); err != nil {
 			return nil, fmt.Errorf("scan reservation: %w", err)
 		}

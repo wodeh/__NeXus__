@@ -17,8 +17,10 @@ type Reservation struct {
 	PropertyID      string
 	GuestID         string
 	RoomID          string
-	CheckIn         time.Time
-	CheckOut        time.Time
+// CheckInDate is the arrival date.
+	CheckInDate  time.Time
+	// CheckOutDate is the departure date.
+	CheckOutDate time.Time
 	Status          ReservationStatus
 	SpecialRequests []string
 	CreatedAt       time.Time
@@ -46,8 +48,8 @@ func NewReservation(tenantID, propertyID, guestID, roomID string, checkIn, check
 		PropertyID: propertyID,
 		GuestID:    guestID,
 		RoomID:     roomID,
-		CheckIn:    checkIn,
-		CheckOut:   checkOut,
+		CheckInDate:    checkIn,
+		CheckOutDate:   checkOut,
 		Status:     ReservationStatusPending,
 		CreatedAt:  now,
 		UpdatedAt:  now,
@@ -65,8 +67,8 @@ func (r *Reservation) Confirm() error {
 	return nil
 }
 
-// CheckIn transitions a confirmed reservation to checked-in.
-func (r *Reservation) CheckIn() error {
+// DoCheckIn transitions a confirmed reservation to checked-in.
+func (r *Reservation) DoCheckIn() error {
 	if r.Status != ReservationStatusConfirmed {
 		return fmt.Errorf("cannot check in reservation in status %s", r.Status)
 	}
@@ -75,8 +77,8 @@ func (r *Reservation) CheckIn() error {
 	return nil
 }
 
-// CheckOut transitions a checked-in reservation to checked-out.
-func (r *Reservation) CheckOut() error {
+// DoCheckOut transitions a checked-in reservation to checked-out.
+func (r *Reservation) DoCheckOut() error {
 	if r.Status != ReservationStatusCheckedIn {
 		return fmt.Errorf("cannot check out reservation in status %s", r.Status)
 	}

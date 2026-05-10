@@ -7,19 +7,24 @@ import (
 	"fmt"
 	"log/slog"
 
-	bcEvents "github.com/nexus-platform/backend-core/internal/events"
 	"github.com/nexus-platform/pms-integration/internal/domain"
+	"github.com/nexus-platform/pms-integration/internal/events"
 	"github.com/nexus-platform/pms-integration/internal/repository"
 )
 
+// Handler processes a transport event.
+type Handler interface {
+	Handle(ctx context.Context, event events.TransportEvent) error
+}
+
 // Registry maps event types to their handlers.
 type Registry struct {
-	handlers map[string]bcEvents.Handler
+	handlers map[string]Handler
 }
 
 // NewRegistry creates a handler registry with all PMS event handlers.
 func NewRegistry(store *repository.Store) *Registry {
-	r := &Registry{handlers: make(map[string]bcEvents.Handler)}
+	r := &Registry{handlers: make(map[string]Handler)}
 	r.handlers["ReservationCreated"] = &ReservationCreatedHandler{store: store}
 	r.handlers["ReservationUpdated"] = &ReservationUpdatedHandler{store: store}
 	r.handlers["GuestCreated"] = &GuestCreatedHandler{store: store}
@@ -27,7 +32,7 @@ func NewRegistry(store *repository.Store) *Registry {
 }
 
 // Get returns the handler for a given event type.
-func (r *Registry) Get(eventType string) (bcEvents.Handler, bool) {
+func (r *Registry) Get(eventType string) (Handler, bool) {
 	h, ok := r.handlers[eventType]
 	return h, ok
 }
@@ -37,8 +42,8 @@ type ReservationCreatedHandler struct {
 	store *repository.Store
 }
 
-// Handle implements bcEvents.Handler.
-func (h *ReservationCreatedHandler) Handle(ctx context.Context, event bcEvents.Event) error {
+// Handle implements Handler.
+func (h *ReservationCreatedHandler) Handle(ctx context.Context, event events.TransportEvent) error {
 	slog.Info("handling ReservationCreated", slog.String("event_id", event.ID), slog.String("tenant", event.TenantID))
 
 	var payload domain.ReservationCreatedEvent
@@ -66,8 +71,8 @@ type ReservationUpdatedHandler struct {
 	store *repository.Store
 }
 
-// Handle implements bcEvents.Handler.
-func (h *ReservationUpdatedHandler) Handle(ctx context.Context, event bcEvents.Event) error {
+// Handle implements Handler.
+func (h *ReservationUpdatedHandler) Handle(ctx context.Context, event events.TransportEvent) error {
 	slog.Info("handling ReservationUpdated", slog.String("event_id", event.ID), slog.String("tenant", event.TenantID))
 
 	var payload struct {
@@ -91,11 +96,11 @@ func (h *ReservationUpdatedHandler) Handle(ctx context.Context, event bcEvents.E
 			return fmt.Errorf("confirm reservation: %w", err)
 		}
 	case "checked_in":
-		if err := res.CheckIn(); err != nil {
+		if err := res.DoCheckIn(); err != nil {
 			return fmt.Errorf("check in reservation: %w", err)
 		}
 	case "checked_out":
-		if err := res.CheckOut(); err != nil {
+		if err := res.DoCheckOut(); err != nil {
 			return fmt.Errorf("check out reservation: %w", err)
 		}
 	case "cancelled":
@@ -116,15 +121,15 @@ type GuestCreatedHandler struct {
 	store *repository.Store
 }
 
-// Handle implements bcEvents.Handler.
-func (h *GuestCreatedHandler) Handle(ctx context.Context, event bcEvents.Event) error {
+// Handle implements Handler.
+func (h *GuestCreatedHandler) Handle(ctx context.Context, event events.TransportEvent) error {
 	slog.Info("handling GuestCreated", slog.String("event_id", event.ID), slog.String("tenant", event.TenantID))
 
 	var payload struct {
-		GuestID   string `json:"guest_id"`
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
-		Email     string `json:"email"`
+		GuestID    string `json:"guest_id"`
+		FirstName  string `json:"first_name"`
+		LastName   string `json:"last_name"`
+		Email      string `json:"email"`
 		PropertyID string `json:"property_id"`
 	}
 	if err := json.Unmarshal(event.Payload, &payload); err != nil {
