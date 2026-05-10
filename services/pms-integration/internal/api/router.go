@@ -26,9 +26,14 @@ func (h *Handler) Router() chi.Router {
 	r.Use(recoverer)
 	r.Use(requestLogger)
 
+	// Root API info
+	r.Get("/", h.apiInfo)
 	r.Get("/health", h.health)
 	r.Get("/ready", h.ready)
 	r.Get("/live", h.live)
+
+	// Demo / test endpoints (no DB required)
+	r.Get("/demo/info", h.demoInfo)
 
 	// Guests
 	r.Route("/tenants/{tenantId}/guests", func(r chi.Router) {
@@ -73,6 +78,29 @@ func (h *Handler) Router() chi.Router {
 		r.Put("/{roomId}", h.updateRoom)
 		r.Patch("/{roomId}/status", h.updateRoomStatus)
 		r.Patch("/{roomId}/housekeeping", h.updateHousekeeping)
+	})
+
+	// Audit Logs
+	r.Route("/tenants/{tenantId}/audit", func(r chi.Router) {
+		r.Get("/", h.listAuditLogs)
+		r.Post("/", h.createAuditLog)
+		r.Get("/resource/{resourceType}/{resourceId}", h.getResourceAuditTrail)
+	})
+
+	// GDPR
+	r.Route("/tenants/{tenantId}/gdpr", func(r chi.Router) {
+		r.Post("/requests", h.createGDPRRequest)
+		r.Get("/guests/{guestId}/export", h.getGuestDataExport)
+		r.Delete("/guests/{guestId}", h.deleteGuestData)
+	})
+
+	// Revenue Management
+	r.Route("/tenants/{tenantId}/revenue", func(r chi.Router) {
+		r.Get("/forecasts", h.listRevenueForecasts)
+		r.Post("/pricing-rules", h.createDynamicPricingRule)
+		r.Get("/pricing-rules", h.listDynamicPricingRules)
+		r.Get("/recommendations", h.getPriceRecommendations)
+		r.Post("/recommendations/{recommendationId}/apply", h.applyPriceRecommendation)
 	})
 
 	return r
@@ -134,4 +162,42 @@ func (h *Handler) ready(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) live(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, map[string]string{"status": "alive"})
+}
+
+func (h *Handler) apiInfo(w http.ResponseWriter, r *http.Request) {
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"service":    "pms-integration",
+		"version":    "1.0.0",
+		"health":     "/health",
+		"ready":      "/ready",
+		"live":       "/live",
+		"demo":       "/demo/info",
+		"endpoints": map[string]string{
+			"guests":        "GET/POST /tenants/{tenantId}/guests",
+			"reservations":  "GET/POST /tenants/{tenantId}/reservations",
+			"properties":    "GET/POST /tenants/{tenantId}/properties",
+			"room_types":    "GET/POST /tenants/{tenantId}/properties/{propertyId}/room-types",
+			"rooms":         "GET/POST /tenants/{tenantId}/properties/{propertyId}/rooms",
+			"audit_logs":    "GET/POST /tenants/{tenantId}/audit",
+			"gdpr":          "GET/POST/DELETE /tenants/{tenantId}/gdpr",
+			"revenue":       "GET/POST /tenants/{tenantId}/revenue",
+			"metrics":       "GET /metrics (port 9090)",
+		},
+	})
+}
+
+func (h *Handler) demoInfo(w http.ResponseWriter, r *http.Request) {
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"message": "Demo endpoints for live testing",
+		"examples": []map[string]string{
+			{"method": "GET",  "url": "http://localhost:8080/",                       "desc": "API info"},
+			{"method": "GET",  "url": "http://localhost:8080/health",                  "desc": "Health check"},
+			{"method": "GET",  "url": "http://localhost:8080/ready",                   "desc": "Readiness check"},
+			{"method": "GET",  "url": "http://localhost:8080/demo/info",               "desc": "This endpoint"},
+			{"method": "GET",  "url": "http://localhost:8080/tenants/demo/guests",      "desc": "List guests (needs DB)"},
+			{"method": "GET",  "url": "http://localhost:8080/tenants/demo/properties", "desc": "List properties (needs DB)"},
+			{"method": "GET",  "url": "http://localhost:9090/metrics",                 "desc": "Prometheus metrics"},
+		},
+		"note": "Replace 'demo' with a real tenant_id. These endpoints require PostgreSQL. Set DATABASE_URL env var.",
+	})
 }
