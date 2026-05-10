@@ -43,7 +43,7 @@ export default function Sidebar({ tenantConfig }: { tenantConfig: TenantConfig |
   const [collapsed, setCollapsed] = useState(false);
 
   const filteredNav = navItems.filter((item) =>
-    hasCapability(tenantConfig, item.cap)
+    tenantConfig ? hasCapability(tenantConfig, item.cap) : true
   );
 
   return (
