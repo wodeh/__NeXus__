@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  LayoutGrid,
   CalendarDays,
   Users,
   Building2,
@@ -28,6 +29,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard, cap: CAPABILITIES.CORE.RESERVATIONS },
+  { label: "Floor Plan", href: "/floor", icon: LayoutGrid, cap: CAPABILITIES.OPERATIONS.FLOOR_DASHBOARD },
   { label: "Reservations", href: "/reservations", icon: CalendarDays, cap: CAPABILITIES.CORE.RESERVATIONS },
   { label: "Guests", href: "/guests", icon: Users, cap: CAPABILITIES.CORE.GUESTS },
   { label: "Properties", href: "/properties", icon: Building2, cap: CAPABILITIES.CORE.PROPERTIES },
