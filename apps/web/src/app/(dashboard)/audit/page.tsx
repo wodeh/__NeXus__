@@ -1,18 +1,33 @@
 "use client";
 
 import { useState } from "react";
-import { ShieldCheck, Search, FileText, Trash2, Download } from "lucide-react";
-
-const mockAudit = [
-  { id: "a-001", action: "reservation_created", resource: "Reservation r-001", user: "frontdesk@demo.com", time: "2026-05-10 08:23:00" },
-  { id: "a-002", action: "guest_updated", resource: "Guest g-002", user: "manager@demo.com", time: "2026-05-10 09:15:00" },
-  { id: "a-003", action: "room_status_changed", resource: "Room 412", user: "housekeeping@demo.com", time: "2026-05-10 10:05:00" },
-  { id: "a-004", action: "pricing_rule_applied", resource: "Recommendation rec-001", user: "revenue@demo.com", time: "2026-05-10 11:30:00" },
-];
+import { useTenant } from "@/hooks/useTenant";
+import { hasCapability, CAPABILITIES } from "@/lib/tenant";
+import { ShieldCheck, Search, FileText, Trash2, Download, Lock, ArrowUpRight } from "lucide-react";
 
 export default function AuditPage() {
+  const { config } = useTenant();
   const [search, setSearch] = useState("");
-  const filtered = mockAudit.filter((a) => a.action.includes(search.toLowerCase()) || a.resource.toLowerCase().includes(search.toLowerCase()));
+
+  const hasAudit = hasCapability(config, CAPABILITIES.CORE.AUDIT_LOGS);
+
+  if (!hasAudit) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-800">
+          <Lock className="h-8 w-8 text-slate-500" />
+        </div>
+        <h2 className="mt-6 text-xl font-bold text-white">Audit Logs Locked</h2>
+        <p className="mt-2 max-w-md text-sm text-slate-400">
+          Audit logging requires a higher license tier.
+        </p>
+        <button className="btn-primary mt-6">
+          <ArrowUpRight className="h-4 w-4" />
+          Upgrade License
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -36,32 +51,8 @@ export default function AuditPage() {
         <input className="input w-full max-w-md pl-9" placeholder="Search audit logs..." value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      <div className="card overflow-hidden p-0">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-800 text-xs uppercase text-slate-400">
-            <tr>
-              <th className="px-4 py-3">Action</th>
-              <th className="px-4 py-3">Resource</th>
-              <th className="px-4 py-3">User</th>
-              <th className="px-4 py-3">Time</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800">
-            {filtered.map((a) => (
-              <tr key={a.id} className="hover:bg-slate-800/50">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-nexus-400" />
-                    <span className="font-medium text-white">{a.action.replace(/_/g, " ")}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-slate-300">{a.resource}</td>
-                <td className="px-4 py-3 text-slate-300">{a.user}</td>
-                <td className="px-4 py-3 text-slate-400">{a.time}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="card">
+        <p className="text-sm text-slate-500">No audit logs to display.</p>
       </div>
     </div>
   );

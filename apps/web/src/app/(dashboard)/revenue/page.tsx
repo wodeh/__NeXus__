@@ -1,23 +1,34 @@
 "use client";
 
 import { useState } from "react";
-import { TrendingUp, DollarSign, BarChart3, Zap, ChevronRight } from "lucide-react";
-
-const mockForecasts = [
-  { date: "2026-05-10", occupancy: 78, adr: 185, revpar: 144 },
-  { date: "2026-05-11", occupancy: 82, adr: 190, revpar: 156 },
-  { date: "2026-05-12", occupancy: 75, adr: 180, revpar: 135 },
-  { date: "2026-05-13", occupancy: 88, adr: 210, revpar: 185 },
-  { date: "2026-05-14", occupancy: 92, adr: 225, revpar: 207 },
-];
-
-const mockRecommendations = [
-  { id: "rec-001", room_type: "Deluxe King", date: "2026-05-12", current: 185, suggested: 210, reason: "High demand forecast" },
-  { id: "rec-002", room_type: "Suite", date: "2026-05-13", current: 320, suggested: 350, reason: "Weekend premium" },
-];
+import { useTenant } from "@/hooks/useTenant";
+import { hasCapability, CAPABILITIES } from "@/lib/tenant";
+import { TrendingUp, DollarSign, Zap, Lock, ArrowUpRight } from "lucide-react";
 
 export default function RevenuePage() {
+  const { config } = useTenant();
   const [tab, setTab] = useState<"forecasts" | "pricing" | "recommendations">("forecasts");
+
+  const hasRevenue = hasCapability(config, CAPABILITIES.REVENUE.DYNAMIC_PRICING);
+
+  if (!hasRevenue) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-800">
+          <Lock className="h-8 w-8 text-slate-500" />
+        </div>
+        <h2 className="mt-6 text-xl font-bold text-white">Revenue Management Locked</h2>
+        <p className="mt-2 max-w-md text-sm text-slate-400">
+          Revenue management features require the Revenue or Enterprise license tier.
+          Upgrade to unlock dynamic pricing, OTA integration, and revenue forecasting.
+        </p>
+        <button className="btn-primary mt-6">
+          <ArrowUpRight className="h-4 w-4" />
+          Upgrade to Revenue
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -37,23 +48,7 @@ export default function RevenuePage() {
       {tab === "forecasts" && (
         <div className="card">
           <h3 className="text-sm font-semibold text-slate-200">5-Day Forecast</h3>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase text-slate-400">
-                <tr><th className="px-3 py-2">Date</th><th className="px-3 py-2">Occupancy %</th><th className="px-3 py-2">ADR ($)</th><th className="px-3 py-2">RevPAR ($)</th></tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {mockForecasts.map((f) => (
-                  <tr key={f.date} className="hover:bg-slate-800/50">
-                    <td className="px-3 py-2 text-white">{f.date}</td>
-                    <td className="px-3 py-2 text-slate-300">{f.occupancy}%</td>
-                    <td className="px-3 py-2 text-slate-300">${f.adr}</td>
-                    <td className="px-3 py-2 text-slate-300">${f.revpar}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <p className="mt-4 text-sm text-slate-500">Forecast data will appear here when backend is connected.</p>
         </div>
       )}
 
@@ -70,23 +65,7 @@ export default function RevenuePage() {
 
       {tab === "recommendations" && (
         <div className="space-y-4">
-          {mockRecommendations.map((rec) => (
-            <div key={rec.id} className="card-hover flex items-center justify-between">
-              <div>
-                <p className="font-medium text-white">{rec.room_type} — {rec.date}</p>
-                <p className="text-sm text-slate-400">{rec.reason}</p>
-                <div className="mt-1 flex items-center gap-3 text-sm">
-                  <span className="text-slate-500">Current: <span className="text-slate-300">${rec.current}</span></span>
-                  <span className="text-nexus-400">Suggested: <span className="font-medium">${rec.suggested}</span></span>
-                  <span className="badge-green">+{Math.round((rec.suggested - rec.current) / rec.current * 100)}%</span>
-                </div>
-              </div>
-              <button className="btn-primary">
-                <DollarSign className="h-4 w-4" />
-                Apply
-              </button>
-            </div>
-          ))}
+          <p className="text-sm text-slate-500">No price recommendations pending.</p>
         </div>
       )}
     </div>

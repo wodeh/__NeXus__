@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -8,59 +9,103 @@ import {
   Users,
   Building2,
   DoorOpen,
-  ClipboardList,
+  Sparkles,
   TrendingUp,
   ShieldCheck,
   Settings,
-  LogOut,
-  Hotel,
+  Crown,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+import { TenantConfig, hasCapability, CAPABILITIES } from "@/lib/tenant";
 
-const nav = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/reservations", label: "Reservations", icon: CalendarDays },
-  { href: "/guests", label: "Guests", icon: Users },
-  { href: "/properties", label: "Properties", icon: Building2 },
-  { href: "/rooms", label: "Rooms", icon: DoorOpen },
-  { href: "/housekeeping", label: "Housekeeping", icon: ClipboardList },
-  { href: "/revenue", label: "Revenue", icon: TrendingUp },
-  { href: "/audit", label: "Audit", icon: ShieldCheck },
-  { href: "/settings", label: "Settings", icon: Settings },
+interface NavItem {
+  label: string;
+  href: string;
+  icon: React.ElementType;
+  cap: string;
+}
+
+const navItems: NavItem[] = [
+  { label: "Dashboard", href: "/", icon: LayoutDashboard, cap: CAPABILITIES.CORE.RESERVATIONS },
+  { label: "Reservations", href: "/reservations", icon: CalendarDays, cap: CAPABILITIES.CORE.RESERVATIONS },
+  { label: "Guests", href: "/guests", icon: Users, cap: CAPABILITIES.CORE.GUESTS },
+  { label: "Properties", href: "/properties", icon: Building2, cap: CAPABILITIES.CORE.PROPERTIES },
+  { label: "Rooms", href: "/rooms", icon: DoorOpen, cap: CAPABILITIES.CORE.ROOMS },
+  { label: "Housekeeping", href: "/housekeeping", icon: Sparkles, cap: CAPABILITIES.CORE.HOUSEKEEPING },
+  { label: "Revenue", href: "/revenue", icon: TrendingUp, cap: CAPABILITIES.REVENUE.DYNAMIC_PRICING },
+  { label: "Audit", href: "/audit", icon: ShieldCheck, cap: CAPABILITIES.CORE.AUDIT_LOGS },
+  { label: "Settings", href: "/settings", icon: Settings, cap: CAPABILITIES.CORE.SETTINGS },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ tenantConfig }: { tenantConfig: TenantConfig | null }) {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
+
+  const filteredNav = navItems.filter((item) =>
+    hasCapability(tenantConfig, item.cap)
+  );
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-60 flex-col border-r border-slate-800 bg-slate-950">
-      <div className="flex items-center gap-3 px-5 py-5">
-        <Hotel className="h-7 w-7 text-nexus-400" />
-        <span className="text-lg font-bold tracking-tight text-white">NeXus</span>
+    <aside
+      className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-slate-800 bg-slate-900 transition-all duration-300 ${
+        collapsed ? "w-16" : "w-60"
+      }`}
+    >
+      <div className="flex h-16 items-center justify-between border-b border-slate-800 px-4">
+        {!collapsed && (
+          <Link href="/" className="flex items-center gap-2">
+            <Crown className="h-6 w-6 text-nexus-400" />
+            <span className="text-lg font-bold text-white">NeXus</span>
+          </Link>
+        )}
+        {collapsed && <Crown className="h-6 w-6 text-nexus-400" />}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="rounded p-1 text-slate-500 hover:bg-slate-800 hover:text-white"
+        >
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
+        </button>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3 py-2">
-        {nav.map((item) => {
+      <nav className="flex-1 space-y-1 p-3">
+        {filteredNav.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          const active = pathname === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={isActive ? "nav-link-active" : "nav-link"}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                active
+                  ? "bg-slate-800 text-white"
+                  : "text-slate-400 hover:bg-slate-800 hover:text-white"
+              } ${collapsed ? "justify-center" : ""}`}
+              title={collapsed ? item.label : undefined}
             >
-              <Icon className="h-4 w-4" />
-              {item.label}
+              <Icon className="h-5 w-5 flex-shrink-0" />
+              {!collapsed && <span>{item.label}</span>}
             </Link>
           );
         })}
       </nav>
 
-      <div className="border-t border-slate-800 p-3">
-        <button className="nav-link w-full">
-          <LogOut className="h-4 w-4" />
-          Sign Out
-        </button>
-      </div>
+      {!collapsed && tenantConfig && (
+        <div className="border-t border-slate-800 p-4">
+          <p className="text-xs text-slate-500">License</p>
+          <p className="text-sm font-medium text-nexus-400 capitalize">
+            {tenantConfig.license_tier}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            {tenantConfig.property_type.replace("-", " ")} &middot;{" "}
+            {tenantConfig.max_rooms} rooms max
+          </p>
+        </div>
+      )}
     </aside>
   );
 }
