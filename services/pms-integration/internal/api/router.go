@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/nexus-platform/pms-integration/internal/auth"
 	"github.com/nexus-platform/pms-integration/internal/domain"
 	"github.com/nexus-platform/pms-integration/internal/license"
 	apiMiddleware "github.com/nexus-platform/pms-integration/internal/api/middleware"
@@ -47,6 +48,20 @@ func (h *Handler) Router() chi.Router {
 	r.Get("/property-types", th.listPropertyTypes)
 	r.Get("/license-tiers", th.listLicenseTiers)
 	r.Get("/capabilities", th.listCapabilities)
+
+	// Auth (no license check for registration/login)
+	jwtSvc := auth.NewService(auth.DefaultConfig())
+	r.Route("/tenants/{tenantId}/auth", func(r chi.Router) {
+		r.Post("/register", h.register)
+		r.Post("/login", h.login)
+		r.With(apiMiddleware.Auth(jwtSvc)).Get("/me", h.me)
+	})
+
+	// Users (requires auth)
+	r.Route("/tenants/{tenantId}/users", func(r chi.Router) {
+		r.Use(apiMiddleware.Auth(jwtSvc))
+		r.Get("/", h.listUsers)
+	})
 
 	// Guests
 	r.Route("/tenants/{tenantId}/guests", func(r chi.Router) {
