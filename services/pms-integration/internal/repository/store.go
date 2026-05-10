@@ -35,6 +35,7 @@ type Store struct {
 }
 
 // NewStore creates a repository store backed by a PostgreSQL pool.
+// It runs migrations automatically on startup.
 func NewStore(pool *db.Pool) *Store {
 	m := NewRepositoryMetrics()
 	s := &Store{
@@ -61,14 +62,17 @@ func NewStore(pool *db.Pool) *Store {
 		Search:               NewInMemorySearchIndexer(),
 		metrics:              m,
 	}
-	// Seed demo data for in-memory repositories
-	s.RoomBlocks.SeedRoomBlocks()
-	s.GroupReservations.SeedGroupReservations()
-	s.GuestProfiles.SeedGuestProfiles()
-	s.Agents.SeedAgents()
-	s.RatePlans.SeedRatePlans()
-	s.Invoices.SeedInvoices()
 	return s
+}
+
+// RunMigrations executes all pending database migrations.
+func (s *Store) RunMigrations(ctx context.Context) error {
+	migrator := db.NewMigrator(s.pool)
+	migrations, err := db.LoadMigrationsFromDir("internal/db/migrations")
+	if err != nil {
+		return fmt.Errorf("load migrations: %w", err)
+	}
+	return migrator.Up(ctx, migrations)
 }
 
 // Ping verifies database connectivity.

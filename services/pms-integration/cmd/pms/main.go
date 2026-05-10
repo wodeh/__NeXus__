@@ -51,19 +51,20 @@ func main() {
 			os.Exit(1)
 		}
 
-		migrator, err := db.NewMigrator(cfg.DatabaseURL, "file://sql/migrations")
+		repoStore = repository.NewStore(pool)
+
+		// Run database migrations
+		migrator := db.NewMigrator(pool)
+		migrations, err := db.LoadMigrationsFromDir("internal/db/migrations")
 		if err != nil {
-			logger.Error("failed to create migrator", slog.String("error", err.Error()))
+			logger.Error("failed to load migrations", slog.String("error", err.Error()))
 			os.Exit(1)
 		}
-		if err := migrator.Up(ctx); err != nil {
+		if err := migrator.Up(ctx, migrations); err != nil {
 			logger.Error("failed to run migrations", slog.String("error", err.Error()))
 			os.Exit(1)
 		}
-		migrator.Close()
-
-		repoStore = repository.NewStore(pool)
-		logger.Info("database connected")
+		logger.Info("database connected and migrations applied")
 	}
 
 	// Initialize event store.
