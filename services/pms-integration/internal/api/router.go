@@ -203,14 +203,44 @@ func (h *Handler) Router() chi.Router {
 		r.Delete("/{invoiceId}", h.deleteInvoice)
 	})
 
-	// Revenue Management
-	r.Route("/tenants/{tenantId}/revenue", func(r chi.Router) {
-		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapDynamicPricing, domain.CapRevenueForecast))
-		r.Get("/forecasts", h.listRevenueForecasts)
-		r.Post("/pricing-rules", h.createDynamicPricingRule)
-		r.Get("/pricing-rules", h.listDynamicPricingRules)
-		r.Get("/recommendations", h.getPriceRecommendations)
-		r.Post("/recommendations/{recommendationId}/apply", h.applyPriceRecommendation)
+	// IPTV Module
+	r.Route("/tenants/{tenantId}/iptv", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapIPTVBasic))
+		r.Get("/channels", h.listIPTVChannels)
+		r.Post("/channels", h.createIPTVChannel)
+		r.Get("/channels/{channelId}", h.getIPTVChannel)
+		r.Patch("/channels/{channelId}", h.updateIPTVChannel)
+		r.Delete("/channels/{channelId}", h.deleteIPTVChannel)
+		r.Get("/content", h.listIPTVContent)
+		r.Post("/content", h.createIPTVContent)
+		r.Get("/content/{contentId}", h.getIPTVContent)
+		r.Patch("/content/{contentId}", h.updateIPTVContent)
+		r.Delete("/content/{contentId}", h.deleteIPTVContent)
+		r.Get("/room-bindings", h.listIPTVRoomBindings)
+		r.Post("/room-bindings", h.createIPTVRoomBinding)
+		r.Get("/room-bindings/{bindingId}", h.getIPTVRoomBinding)
+		r.Patch("/room-bindings/{bindingId}", h.updateIPTVRoomBinding)
+		r.Delete("/room-bindings/{bindingId}", h.deleteIPTVRoomBinding)
+		r.Get("/rooms/{roomId}/welcome", h.getIPTVWelcomeScreen)
+		r.Get("/analytics", h.getIPTVAnalytics)
+	})
+
+	// Smart Lock Module
+	r.Route("/tenants/{tenantId}/locks", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapSmartLocks))
+		r.Get("/overview", h.getLockOverview)
+		r.Get("/", h.listSmartLocks)
+		r.Post("/", h.createSmartLock)
+		r.Get("/{lockId}", h.getSmartLock)
+		r.Patch("/{lockId}", h.updateSmartLock)
+		r.Delete("/{lockId}", h.deleteSmartLock)
+		r.Post("/{lockId}/unlock", h.remoteUnlock)
+		r.Post("/{lockId}/lock", h.remoteLock)
+		r.Get("/{lockId}/access-codes", h.listAccessCodes)
+		r.Post("/{lockId}/access-codes", h.createAccessCode)
+		r.Post("/{lockId}/access-codes/{codeId}/revoke", h.revokeAccessCode)
+		r.Get("/{lockId}/events", h.listLockEvents)
+		r.Get("/by-room/{roomId}", h.getLockByRoom)
 	})
 
 	return r
@@ -283,15 +313,23 @@ func (h *Handler) apiInfo(w http.ResponseWriter, r *http.Request) {
 		"live":       "/live",
 		"demo":       "/demo/info",
 		"endpoints": map[string]string{
-			"guests":        "GET/POST /tenants/{tenantId}/guests",
-			"reservations":  "GET/POST /tenants/{tenantId}/reservations",
-			"properties":    "GET/POST /tenants/{tenantId}/properties",
-			"room_types":    "GET/POST /tenants/{tenantId}/properties/{propertyId}/room-types",
-			"rooms":         "GET/POST /tenants/{tenantId}/properties/{propertyId}/rooms",
-			"audit_logs":    "GET/POST /tenants/{tenantId}/audit",
-			"gdpr":          "GET/POST/DELETE /tenants/{tenantId}/gdpr",
-			"revenue":       "GET/POST /tenants/{tenantId}/revenue",
-			"metrics":       "GET /metrics (port 9090)",
+			"guests":           "GET/POST /tenants/{tenantId}/guests",
+			"reservations":     "GET/POST /tenants/{tenantId}/reservations",
+			"properties":       "GET/POST /tenants/{tenantId}/properties",
+			"room_types":       "GET/POST /tenants/{tenantId}/properties/{propertyId}/room-types",
+			"rooms":            "GET/POST /tenants/{tenantId}/properties/{propertyId}/rooms",
+			"audit_logs":       "GET/POST /tenants/{tenantId}/audit",
+			"gdpr":             "GET/POST/DELETE /tenants/{tenantId}/gdpr",
+			"revenue":          "GET/POST /tenants/{tenantId}/revenue",
+			"iptv_channels":    "GET/POST /tenants/{tenantId}/iptv/channels",
+			"iptv_content":     "GET/POST /tenants/{tenantId}/iptv/content",
+			"iptv_bindings":    "GET/POST /tenants/{tenantId}/iptv/room-bindings",
+			"iptv_welcome":     "GET /tenants/{tenantId}/iptv/rooms/{roomId}/welcome",
+			"smart_locks":      "GET/POST /tenants/{tenantId}/locks",
+			"lock_unlock":      "POST /tenants/{tenantId}/locks/{lockId}/unlock",
+			"lock_codes":       "GET/POST /tenants/{tenantId}/locks/{lockId}/access-codes",
+			"lock_events":      "GET /tenants/{tenantId}/locks/{lockId}/events",
+			"metrics":          "GET /metrics (port 9090)",
 		},
 	})
 }

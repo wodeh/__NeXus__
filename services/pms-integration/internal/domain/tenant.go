@@ -55,6 +55,9 @@ const (
 	CapGroupReservations  Capability = "operations:group_reservations"
 	CapMaintenance        Capability = "operations:maintenance"
 	CapFrontDeskWorkflow  Capability = "operations:front_desk"
+	CapIPTVBasic          Capability = "operations:iptv_basic"
+	CapSmartLocks         Capability = "operations:smart_locks"
+	CapRemoteUnlock       Capability = "operations:remote_unlock"
 )
 
 // Revenue capabilities.
@@ -63,6 +66,10 @@ const (
 	CapOTAIntegration    Capability = "revenue:ota_integration"
 	CapRevenueForecast   Capability = "revenue:revenue_forecasting"
 	CapAgentManagement   Capability = "revenue:agent_management"
+	CapIPTVPremium       Capability = "revenue:iptv_premium"
+	CapIPTVWelcome       Capability = "revenue:iptv_welcome"
+	CapIPTVContent       Capability = "revenue:iptv_content"
+	CapAccessCodes       Capability = "revenue:access_codes"
 )
 
 // Enterprise capabilities.
@@ -158,6 +165,7 @@ func ComputeCapabilities(pt PropertyType, tier LicenseTier) []Capability {
 	caps = append(caps,
 		CapFloorDashboard, CapRoomBlocks, CapGroupReservations,
 		CapMaintenance, CapFrontDeskWorkflow,
+		CapIPTVBasic, CapSmartLocks, CapRemoteUnlock,
 	)
 
 	if tier == LicenseTierOperations {
@@ -168,6 +176,8 @@ func ComputeCapabilities(pt PropertyType, tier LicenseTier) []Capability {
 	caps = append(caps,
 		CapDynamicPricing, CapOTAIntegration,
 		CapRevenueForecast, CapAgentManagement,
+		CapIPTVPremium, CapIPTVWelcome, CapIPTVContent,
+		CapAccessCodes,
 	)
 
 	if tier == LicenseTierRevenue {

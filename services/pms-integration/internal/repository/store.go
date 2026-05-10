@@ -30,6 +30,8 @@ type Store struct {
 	RatePlans             *RatePlanRepository
 	CheckIns              *CheckInRepository
 	Invoices              *InvoiceRepository
+	IPTV                  *IPTVRepository
+	SmartLocks            *SmartLockRepository
 	Search                SearchIndexer
 	metrics               *RepositoryMetrics
 }
@@ -59,6 +61,8 @@ func NewStore(pool *db.Pool) *Store {
 		RatePlans:            NewRatePlanRepository(),
 		CheckIns:             NewCheckInRepository(),
 		Invoices:             NewInvoiceRepository(),
+		IPTV:                 NewIPTVRepository(pool, m),
+		SmartLocks:           NewSmartLockRepository(pool, m),
 		Search:               NewInMemorySearchIndexer(),
 		metrics:              m,
 	}
