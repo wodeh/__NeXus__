@@ -154,6 +154,40 @@ func (h *Handler) Router() chi.Router {
 		r.Delete("/{agentId}", h.deleteAgent)
 	})
 
+	// Rate Plans
+	r.Route("/tenants/{tenantId}/rate-plans", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapDynamicPricing))
+		r.Get("/", h.listRatePlans)
+		r.Post("/", h.createRatePlan)
+		r.Get("/{planId}", h.getRatePlan)
+		r.Patch("/{planId}", h.updateRatePlan)
+		r.Delete("/{planId}", h.deleteRatePlan)
+	})
+
+	// Check-In / Check-Out
+	r.Route("/tenants/{tenantId}/checkins", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapReservations))
+		r.Post("/", h.createCheckIn)
+		r.Get("/{checkinId}", h.getCheckIn)
+		r.Patch("/{checkinId}", h.updateCheckIn)
+	})
+	r.Route("/tenants/{tenantId}/checkouts", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapReservations))
+		r.Post("/", h.createCheckOut)
+		r.Get("/{checkoutId}", h.getCheckOut)
+		r.Patch("/{checkoutId}", h.updateCheckOut)
+	})
+
+	// Invoices
+	r.Route("/tenants/{tenantId}/invoices", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapReservations))
+		r.Get("/", h.listInvoices)
+		r.Post("/", h.createInvoice)
+		r.Get("/{invoiceId}", h.getInvoice)
+		r.Patch("/{invoiceId}", h.updateInvoice)
+		r.Delete("/{invoiceId}", h.deleteInvoice)
+	})
+
 	// Revenue Management
 	r.Route("/tenants/{tenantId}/revenue", func(r chi.Router) {
 		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapDynamicPricing, domain.CapRevenueForecast))

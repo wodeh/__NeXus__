@@ -27,6 +27,9 @@ type Store struct {
 	GroupReservations     *GroupReservationRepository
 	GuestProfiles         *GuestProfileRepository
 	Agents                *AgentRepository
+	RatePlans             *RatePlanRepository
+	CheckIns              *CheckInRepository
+	Invoices              *InvoiceRepository
 	Search                SearchIndexer
 	metrics               *RepositoryMetrics
 }
@@ -52,6 +55,9 @@ func NewStore(pool *db.Pool) *Store {
 		GroupReservations:    NewGroupReservationRepository(),
 		GuestProfiles:        NewGuestProfileRepository(),
 		Agents:               NewAgentRepository(),
+		RatePlans:            NewRatePlanRepository(),
+		CheckIns:             NewCheckInRepository(),
+		Invoices:             NewInvoiceRepository(),
 		Search:               NewInMemorySearchIndexer(),
 		metrics:              m,
 	}
@@ -60,6 +66,8 @@ func NewStore(pool *db.Pool) *Store {
 	s.GroupReservations.SeedGroupReservations()
 	s.GuestProfiles.SeedGuestProfiles()
 	s.Agents.SeedAgents()
+	s.RatePlans.SeedRatePlans()
+	s.Invoices.SeedInvoices()
 	return s
 }
 
