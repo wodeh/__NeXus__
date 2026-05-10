@@ -114,6 +114,46 @@ func (h *Handler) Router() chi.Router {
 		r.Delete("/guests/{guestId}", h.deleteGuestData)
 	})
 
+	// Room Blocks
+	r.Route("/tenants/{tenantId}/room-blocks", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapRoomBlocks))
+		r.Get("/", h.listRoomBlocks)
+		r.Post("/", h.createRoomBlock)
+		r.Get("/{blockId}", h.getRoomBlock)
+		r.Patch("/{blockId}/status", h.updateRoomBlockStatus)
+		r.Delete("/{blockId}", h.deleteRoomBlock)
+	})
+
+	// Group Reservations
+	r.Route("/tenants/{tenantId}/groups", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapGroupReservations))
+		r.Get("/", h.listGroups)
+		r.Post("/", h.createGroup)
+		r.Get("/{groupId}", h.getGroup)
+		r.Patch("/{groupId}", h.updateGroup)
+		r.Delete("/{groupId}", h.deleteGroup)
+	})
+
+	// Guest CRM / Profiles
+	r.Route("/tenants/{tenantId}/guest-profiles", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapAdvancedCRM))
+		r.Get("/", h.listGuestProfiles)
+		r.Post("/", h.createGuestProfile)
+		r.Get("/{profileId}", h.getGuestProfile)
+		r.Patch("/{profileId}", h.updateGuestProfile)
+		r.Post("/{profileId}/communications", h.addCommunication)
+	})
+
+	// Agents / Partners
+	r.Route("/tenants/{tenantId}/agents", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapAgentManagement))
+		r.Get("/", h.listAgents)
+		r.Post("/", h.createAgent)
+		r.Get("/{agentId}", h.getAgent)
+		r.Patch("/{agentId}", h.updateAgent)
+		r.Delete("/{agentId}", h.deleteAgent)
+	})
+
 	// Revenue Management
 	r.Route("/tenants/{tenantId}/revenue", func(r chi.Router) {
 		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapDynamicPricing, domain.CapRevenueForecast))

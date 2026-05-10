@@ -23,6 +23,10 @@ type Store struct {
 	PriceRecommendations  PriceRecommendationRepository
 	MobileDevices         MobileDeviceRepository
 	GuestSelfServices     GuestSelfServiceRepository
+	RoomBlocks            *RoomBlockRepository
+	GroupReservations     *GroupReservationRepository
+	GuestProfiles         *GuestProfileRepository
+	Agents                *AgentRepository
 	Search                SearchIndexer
 	metrics               *RepositoryMetrics
 }
@@ -30,7 +34,7 @@ type Store struct {
 // NewStore creates a repository store backed by a PostgreSQL pool.
 func NewStore(pool *db.Pool) *Store {
 	m := NewRepositoryMetrics()
-	return &Store{
+	s := &Store{
 		pool:                 pool,
 		Reservations:         NewReservationRepository(pool, m),
 		Guests:               NewGuestRepository(pool, m),
@@ -44,9 +48,19 @@ func NewStore(pool *db.Pool) *Store {
 		PriceRecommendations: NewPriceRecommendationRepository(pool, m),
 		MobileDevices:        NewMobileDeviceRepository(pool, m),
 		GuestSelfServices:    NewGuestSelfServiceRepository(pool, m),
+		RoomBlocks:           NewRoomBlockRepository(),
+		GroupReservations:    NewGroupReservationRepository(),
+		GuestProfiles:        NewGuestProfileRepository(),
+		Agents:               NewAgentRepository(),
 		Search:               NewInMemorySearchIndexer(),
 		metrics:              m,
 	}
+	// Seed demo data for in-memory repositories
+	s.RoomBlocks.SeedRoomBlocks()
+	s.GroupReservations.SeedGroupReservations()
+	s.GuestProfiles.SeedGuestProfiles()
+	s.Agents.SeedAgents()
+	return s
 }
 
 // Ping verifies database connectivity.
