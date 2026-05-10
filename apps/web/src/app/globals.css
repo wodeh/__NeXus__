@@ -35,7 +35,7 @@
     @apply rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-sm;
   }
   .card-hover {
-    @apply card transition-colors hover:border-slate-700;
+    @apply rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-sm transition-colors hover:border-slate-700;
   }
   .btn-primary {
     @apply inline-flex items-center gap-2 rounded-lg bg-nexus-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-nexus-500;
@@ -50,21 +50,21 @@
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
   .badge-green {
-    @apply badge bg-emerald-500/10 text-emerald-400;
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-500/10 text-emerald-400;
   }
   .badge-amber {
-    @apply badge bg-amber-500/10 text-amber-400;
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-500/10 text-amber-400;
   }
   .badge-red {
-    @apply badge bg-red-500/10 text-red-400;
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-red-500/10 text-red-400;
   }
   .badge-blue {
-    @apply badge bg-nexus-500/10 text-nexus-400;
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-nexus-500/10 text-nexus-400;
   }
   .nav-link {
     @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800 hover:text-white;
   }
   .nav-link-active {
-    @apply nav-link bg-slate-800 text-white;
+    @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium bg-slate-800 text-white;
   }
 }
