@@ -95,12 +95,12 @@ export default function Sidebar({ tenantConfig }: { tenantConfig: TenantConfig |
       </nav>
 
       {!collapsed && tenantConfig && (
-        <div className="border-t border-slate-800 p-4">
-          <p className="text-xs text-slate-500">License</p>
-          <p className="text-sm font-medium text-nexus-400 capitalize">
+        <div className="border-t border-slate-800 p-3">
+          <p className="text-[10px] uppercase tracking-wider text-slate-500">License</p>
+          <p className="mt-0.5 text-xs font-semibold text-nexus-400 capitalize">
             {tenantConfig.license_tier}
           </p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-0.5 text-[10px] text-slate-500 leading-tight">
             {tenantConfig.property_type.replace("-", " ")} &middot;{" "}
             {tenantConfig.max_rooms} rooms max
           </p>
