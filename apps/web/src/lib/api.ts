@@ -15,7 +15,22 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   return res.json();
 }
 
-/* ─── Reservations ─── */
+/* ─── Legacy axios-compatible client for existing hooks ─── */
+export const apiClient = {
+  async get<T>(path: string): Promise<T> {
+    return api<T>(path);
+  },
+  async post<T>(path: string, payload: unknown): Promise<T> {
+    return api<T>(path, { method: "POST", body: JSON.stringify(payload) });
+  },
+  async patch<T>(path: string, payload: unknown): Promise<T> {
+    return api<T>(path, { method: "PATCH", body: JSON.stringify(payload) });
+  },
+  async delete<T>(path: string): Promise<T> {
+    return api<T>(path, { method: "DELETE" });
+  },
+};
+
 export interface Reservation {
   id: string;
   guest_name: string;
