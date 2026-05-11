@@ -75,6 +75,10 @@ export default function ReservationsPage() {
 
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
+  function normalizeDate(d: string): string {
+    return d.split("T")[0];
+  }
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -536,7 +540,7 @@ function TapechartView({ reservations, rooms, today, onRefresh }: { reservations
                         const isToday = date === today;
                         const isHovered = hoveredCell?.room === room.number && hoveredCell?.date === date;
                         const isDropTarget = draggingRes && isHovered && resList.length === 0;
-                        const spanRes = resList.find((r) => normalizeDate(r.check_in) === date);
+                        const spanRes = resList.find((r) =>> normalizeDate(r.check_in) === date);
                         return (
                           <div
                             key={`${room.number}-${date}`}
@@ -610,23 +614,6 @@ function TapechartView({ reservations, rooms, today, onRefresh }: { reservations
         />
       )}
 
-      {/* Quick Book Modal */}
-      {showQuickBook && (
-        <QuickBookModal
-          rooms={rooms}
-          onClose={() => setShowQuickBook(false)}
-          onCreate={async (payload) => {
-            try {
-              await createReservation(payload);
-              fetchData();
-              setShowQuickBook(false);
-            } catch (e: any) {
-              alert(e.message);
-            }
-          }}
-        />
-      )}
-
       {/* Reservation Detail Modal */}
       {selectedRes && (
         <ReservationDetailModal
@@ -649,110 +636,6 @@ function TapechartView({ reservations, rooms, today, onRefresh }: { reservations
           loading={actionLoading}
         />
       )}
-    </div>
-  );
-}
-
-
-/* ─── Quick Book Modal ─── */
-function QuickBookModal({ rooms, onClose, onCreate }: { rooms: Room[]; onClose: () => void; onCreate: (payload: any) => Promise<void> }) {
-  const [form, setForm] = useState({ guest_name: "", email: "", phone: "", nights: 1, adults: 2, children: 0, special_requests: "", room_number: "", check_in: new Date().toISOString().split("T")[0] });
-  const [loading, setLoading] = useState(false);
-
-  const roomData = rooms.find((r) => r.number === form.room_number);
-  const rate = roomData?.type === "Suite" ? 229 : roomData?.type === "Deluxe" || roomData?.type === "Deluxe King" ? 129 : 89;
-  const total = form.nights * rate;
-  const checkOut = addDays(form.check_in, form.nights);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-white">Quick Book</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="h-5 w-5" /></button>
-        </div>
-        <div className="mt-4 space-y-3">
-          <div>
-            <label className="mb-1 block text-xs text-slate-400">Guest Name *</label>
-            <input className="input w-full" value={form.guest_name} onChange={(e) => setForm({ ...form, guest_name: e.target.value })} placeholder="Full name" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-xs text-slate-400">Email</label>
-              <input className="input w-full" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="guest@email.com" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-slate-400">Phone</label>
-              <input className="input w-full" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+1-555-0000" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-xs text-slate-400">Check In</label>
-              <input type="date" className="input w-full" value={form.check_in} onChange={(e) => setForm({ ...form, check_in: e.target.value })} />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-slate-400">Nights</label>
-              <input type="number" min={1} max={30} className="input w-full" value={form.nights} onChange={(e) => setForm({ ...form, nights: parseInt(e.target.value) || 1 })} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-xs text-slate-400">Room</label>
-              <select className="input w-full" value={form.room_number} onChange={(e) => setForm({ ...form, room_number: e.target.value })}>
-                <option value="">Select room...</option>
-                {rooms.filter((r) => r.status === "vacant_clean").map((r) => (
-                  <option key={r.number} value={r.number}>{r.number} · {r.type}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-slate-400">Guests</label>
-              <div className="flex items-center gap-2">
-                <input type="number" min={1} max={6} className="input w-16" value={form.adults} onChange={(e) => setForm({ ...form, adults: parseInt(e.target.value) || 1 })} />
-                <span className="text-xs text-slate-500">+</span>
-                <input type="number" min={0} max={4} className="input w-16" value={form.children} onChange={(e) => setForm({ ...form, children: parseInt(e.target.value) || 0 })} />
-              </div>
-            </div>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-slate-400">Special Requests</label>
-            <textarea className="input w-full" rows={2} value={form.special_requests} onChange={(e) => setForm({ ...form, special_requests: e.target.value })} placeholder="Any special needs..." />
-          </div>
-        </div>
-        <div className="mt-4 flex items-center justify-between border-t border-slate-700 pt-4">
-          <div className="text-sm text-slate-400">{form.nights} nights · <span className="font-bold text-white">${total}</span></div>
-          <div className="flex gap-2">
-            <button onClick={onClose} className="btn-secondary text-xs">Cancel</button>
-            <button
-              onClick={async () => {
-                if (!form.guest_name) return alert("Guest name is required");
-                if (!form.room_number) return alert("Room is required");
-                setLoading(true);
-                await onCreate({
-                  guest_name: form.guest_name,
-                  email: form.email,
-                  phone: form.phone,
-                  room_type: roomData?.type || "Standard",
-                  room_number: form.room_number,
-                  check_in: form.check_in,
-                  check_out: checkOut,
-                  adults: form.adults,
-                  children: form.children,
-                  source: "direct",
-                  special_requests: form.special_requests,
-                });
-                setLoading(false);
-              }}
-              disabled={loading}
-              className="btn-primary text-xs disabled:opacity-50"
-            >
-              <Save className="h-4 w-4" />
-              {loading ? "Creating..." : "Create Booking"}
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
