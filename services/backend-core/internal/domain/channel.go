@@ -6,63 +6,99 @@ import (
 	"github.com/google/uuid"
 )
 
-// Channel represents an OTA or booking channel connection.
-type Channel struct {
-	ID             uuid.UUID `json:"id"`
-	TenantID       uuid.UUID `json:"tenant_id"`
-	Source         string    `json:"source"`          // booking_com, expedia, airbnb, direct, whatsapp
-	DisplayName    string    `json:"display_name"`
-	IsActive       bool      `json:"is_active"`
-	CommissionPct  int       `json:"commission_pct"`
-	LastSyncAt     *time.Time `json:"last_sync_at,omitempty"`
-	LastSyncStatus string    `json:"last_sync_status"` // success, warning, error, n/a
-	Config         map[string]interface{} `json:"config,omitempty"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
-}
-
-// ChannelCreateRequest is the payload for creating a channel.
-type ChannelCreateRequest struct {
-	Source        string `json:"source"`
-	DisplayName   string `json:"display_name"`
-	CommissionPct int    `json:"commission_pct"`
-}
-
-// ChannelUpdateRequest is the payload for updating a channel.
-type ChannelUpdateRequest struct {
-	DisplayName   string `json:"display_name,omitempty"`
-	IsActive      *bool  `json:"is_active,omitempty"`
-	CommissionPct *int   `json:"commission_pct,omitempty"`
-}
-
-// ChannelSyncLog represents a sync operation log.
-type ChannelSyncLog struct {
-	ID        uuid.UUID `json:"id"`
-	TenantID  uuid.UUID `json:"tenant_id"`
-	ChannelID uuid.UUID `json:"channel_id"`
-	ChannelSource string `json:"channel_source"`
-	Direction string    `json:"direction"` // pull, push
-	Status    string    `json:"status"`    // success, partial, error
-	Records   int       `json:"records"`
-	Duration  string    `json:"duration"`
-	Error     *string   `json:"error,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
-// ChannelReservation represents a reservation that came through a channel.
+// ChannelReservation represents a reservation originating from an external channel.
 type ChannelReservation struct {
-	ID            uuid.UUID `json:"id"`
-	TenantID      uuid.UUID `json:"tenant_id"`
-	ChannelID     uuid.UUID `json:"channel_id"`
-	ExternalRef   string    `json:"external_ref"`
-	GuestName     string    `json:"guest_name"`
-	RoomType      string    `json:"room_type"`
-	CheckIn       string    `json:"check_in"`
-	CheckOut      string    `json:"check_out"`
-	Nights        int       `json:"nights"`
-	Total         int       `json:"total"`
-	Commission    int       `json:"commission"`
-	NetAmount     int       `json:"net_amount"`
-	Status        string    `json:"status"`
-	CreatedAt     time.Time `json:"created_at"`
+	ID             uuid.UUID              `json:"id"`
+	TenantID       uuid.UUID              `json:"tenant_id"`
+	ChannelSource  string                 `json:"channel_source"` // booking_com, expedia, airbnb, email, whatsapp, walk_in
+	ExternalRef    string                 `json:"external_ref"`   // OTA confirmation number, email thread id, etc.
+	GuestName      string                 `json:"guest_name"`
+	GuestEmail     string                 `json:"guest_email,omitempty"`
+	GuestPhone     string                 `json:"guest_phone,omitempty"`
+	RoomType       string                 `json:"room_type"`
+	RoomNumber     string                 `json:"room_number,omitempty"`
+	CheckIn        time.Time              `json:"check_in"`
+	CheckOut       time.Time              `json:"check_out"`
+	Adults         int                    `json:"adults"`
+	Children       int                    `json:"children"`
+	Total          float64                `json:"total"`
+	Currency       string                 `json:"currency"`
+	Status         string                 `json:"status"` // pending, confirmed, cancelled, no_show
+	SpecialRequests string                `json:"special_requests,omitempty"`
+	RawPayload     map[string]interface{} `json:"raw_payload,omitempty"` // Original channel data
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
+}
+
+// Channel represents an integrated OTA or booking source.
+type Channel struct {
+	ID             uuid.UUID              `json:"id"`
+	TenantID       uuid.UUID              `json:"tenant_id"`
+	Source         string                 `json:"source"`          // booking_com, expedia, airbnb
+	DisplayName    string                 `json:"display_name"`
+	IsActive       bool                   `json:"is_active"`
+	CommissionPct  float64                `json:"commission_pct"`
+	APIKey         string                 `json:"-"`             // excluded from JSON
+	APISecret      string                 `json:"-"`             // excluded from JSON
+	WebhookURL     string                 `json:"webhook_url,omitempty"`
+	LastSyncAt     *time.Time             `json:"last_sync_at,omitempty"`
+	LastSyncStatus string                 `json:"last_sync_status"` // success, warning, error, n/a
+	Config         map[string]interface{} `json:"config,omitempty"`
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
+}
+
+// EmailReservationRequest represents a reservation parsed from an incoming email.
+type EmailReservationRequest struct {
+	From        string    `json:"from"`
+	Subject     string    `json:"subject"`
+	Body        string    `json:"body"`
+	ReceivedAt  time.Time `json:"received_at"`
+	Attachments []string  `json:"attachments,omitempty"`
+}
+
+// WhatsAppBotReservation represents a reservation initiated via WhatsApp bot.
+type WhatsAppBotReservation struct {
+	GuestPhone     string    `json:"guest_phone"`
+	GuestName      string    `json:"guest_name"`
+	RoomType       string    `json:"room_type"`
+	CheckIn        string    `json:"check_in"` // YYYY-MM-DD
+	CheckOut       string    `json:"check_out"` // YYYY-MM-DD
+	Adults         int       `json:"adults"`
+	Children       int       `json:"children"`
+	SpecialRequests string   `json:"special_requests,omitempty"`
+	ConversationID string   `json:"conversation_id"`
+}
+
+// FrontDeskWalkIn represents a walk-in reservation created at the front desk.
+type FrontDeskWalkIn struct {
+	GuestName       string  `json:"guest_name"`
+	GuestEmail      string  `json:"guest_email,omitempty"`
+	GuestPhone      string  `json:"guest_phone,omitempty"`
+	RoomType        string  `json:"room_type"`
+	RoomNumber      string  `json:"room_number,omitempty"`
+	CheckIn         string  `json:"check_in"` // YYYY-MM-DD
+	CheckOut        string  `json:"check_out"` // YYYY-MM-DD
+	Adults          int     `json:"adults"`
+	Children        int     `json:"children"`
+	Total           float64 `json:"total"`
+	Deposit         float64 `json:"deposit,omitempty"`
+	PaymentMethod   string  `json:"payment_method"` // cash, card, transfer
+	SpecialRequests string  `json:"special_requests,omitempty"`
+	IDRequired      bool    `json:"id_required"`
+	IDType          string  `json:"id_type,omitempty"`
+	IDNumber        string  `json:"id_number,omitempty"`
+}
+
+// ChannelAvailability tracks real-time room availability per channel.
+type ChannelAvailability struct {
+	TenantID     uuid.UUID `json:"tenant_id"`
+	RoomType     string    `json:"room_type"`
+	Date         time.Time `json:"date"`
+	TotalRooms   int       `json:"total_rooms"`
+	BookedRooms  int       `json:"booked_rooms"`
+	BlockedRooms int       `json:"blocked_rooms"`
+	Available    int       `json:"available"`
+	Rate         float64   `json:"rate"`
+	Currency     string    `json:"currency"`
 }

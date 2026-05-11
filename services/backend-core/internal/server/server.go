@@ -58,6 +58,7 @@ func (s *Server) Start(ctx context.Context) error {
 	s.registerRoomHandlers(mux)
 	s.registerPropertyHandlers(mux)
 	s.registerAdminHandlers(mux)
+	s.registerChannelManagerHandlers(mux)
 	s.registerAgentHandlers(mux)
 	s.registerChannelHandlers(mux)
 	s.registerLockHandlers(mux)
