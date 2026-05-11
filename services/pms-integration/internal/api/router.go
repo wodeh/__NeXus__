@@ -243,7 +243,85 @@ func (h *Handler) Router() chi.Router {
 		r.Get("/by-room/{roomId}", h.getLockByRoom)
 	})
 
-	return r
+	// Channel Manager
+	r.Route("/tenants/{tenantId}/channels", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapChannelManager))
+		r.Get("/", h.listChannelConnections)
+		r.Post("/", h.createChannelConnection)
+		r.Get("/health", h.getChannelHealth)
+		r.Get("/sync-logs", h.listSyncLogs)
+		r.Get("/reservations", h.listChannelReservations)
+		r.Post("/reservations", h.createChannelReservation)
+		r.Route("/{connId}", func(r chi.Router) {
+			r.Patch("/", h.updateChannelConnection)
+			r.Delete("/", h.deleteChannelConnection)
+			r.Post("/sync", h.syncChannelConnection)
+		})
+	})
+
+	// WhatsApp Bot
+	r.Route("/tenants/{tenantId}/whatsapp", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapWhatsAppBot))
+		r.Get("/config", h.getWhatsAppConfig)
+		r.Post("/config", h.saveWhatsAppConfig)
+		r.Get("/conversations", h.listWhatsAppConversations)
+		r.Get("/conversations/{phone}", h.getWhatsAppConversation)
+		r.Get("/conversations/{convId}/messages", h.listWhatsAppMessages)
+	})
+	r.Post("/webhooks/whatsapp/{tenantId}", h.whatsAppWebhook)
+
+	// Booking Engine
+	r.Route("/tenants/{tenantId}/booking", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapDirectBooking))
+		r.Get("/promo-codes", h.listPromoCodes)
+		r.Post("/promo-codes", h.createPromoCode)
+		r.Get("/promo-codes/{code}/validate", h.validatePromoCode)
+		r.Delete("/promo-codes/{codeId}", h.deletePromoCode)
+		r.Get("/widget-config", h.getWidgetConfig)
+		r.Post("/widget-config", h.saveWidgetConfig)
+		r.Get("/upsells", h.listUpsells)
+		r.Post("/upsells", h.createUpsell)
+		r.Post("/sessions", h.createBookingSession)
+		r.Get("/sessions/{sessionId}", h.getBookingSession)
+		r.Post("/sessions/{sessionId}/confirm", h.confirmBookingSession)
+	})
+
+	// Public booking widget (no auth)
+	r.Route("/public/{tenantId}/booking", func(r chi.Router) {
+		r.Get("/widget-config", h.publicGetWidgetConfig)
+		r.Get("/availability", h.publicCheckAvailability)
+		r.Post("/", h.publicCreateBooking)
+	})
+
+	// Reviews
+	r.Route("/tenants/{tenantId}/reviews", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapGuestReviews))
+		r.Get("/", h.listReviews)
+		r.Post("/", h.createReview)
+		r.Get("/snapshot", h.getRatingSnapshot)
+		r.Get("/requests", h.listReviewRequests)
+		r.Post("/requests", h.createReviewRequest)
+		r.Post("/{reviewId}/respond", h.respondToReview)
+	})
+	r.Post("/public/{tenantId}/reviews", h.publicSubmitReview)
+
+	// Communications
+	r.Route("/tenants/{tenantId}/communications", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapCommunications))
+		r.Get("/templates", h.listTemplates)
+		r.Post("/templates", h.createTemplate)
+		r.Patch("/templates/{templateId}", h.updateTemplate)
+		r.Delete("/templates/{templateId}", h.deleteTemplate)
+		r.Get("/sequences", h.listSequences)
+		r.Post("/sequences", h.createSequence)
+		r.Get("/sequences/{seqId}/steps", h.getSequenceSteps)
+		r.Post("/sequences/{seqId}/steps", h.addSequenceStep)
+		r.Get("/scheduled", h.listScheduledCommunications)
+		r.Post("/scheduled", h.scheduleCommunication)
+		r.Post("/scheduled/{commId}/cancel", h.cancelScheduledCommunication)
+		r.Get("/logs", h.listCommunicationLogs)
+		r.Post("/send", h.sendImmediate)
+	})
 }
 
 // ==================== MIDDLEWARE ====================

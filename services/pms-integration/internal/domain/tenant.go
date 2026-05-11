@@ -69,7 +69,12 @@ const (
 	CapIPTVPremium       Capability = "revenue:iptv_premium"
 	CapIPTVWelcome       Capability = "revenue:iptv_welcome"
 	CapIPTVContent       Capability = "revenue:iptv_content"
-	CapAccessCodes       Capability = "revenue:access_codes"
+	CapChannelManager   Capability = "revenue:channel_manager"
+	CapWhatsAppBot      Capability = "revenue:whatsapp_bot"
+	CapDirectBooking    Capability = "revenue:direct_booking"
+	CapGuestReviews     Capability = "revenue:guest_reviews"
+	CapCommunications   Capability = "revenue:communications"
+
 )
 
 // Enterprise capabilities.

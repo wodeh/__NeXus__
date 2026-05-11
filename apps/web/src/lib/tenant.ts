@@ -56,6 +56,11 @@ export const CAPABILITIES = {
   REVENUE: {
     DYNAMIC_PRICING: "revenue:dynamic_pricing",
     OTA_INTEGRATION: "revenue:ota_integration",
+    CHANNEL_MANAGER: "revenue:channel_manager",
+    WHATSAPP_BOT: "revenue:whatsapp_bot",
+    DIRECT_BOOKING: "revenue:direct_booking",
+    GUEST_REVIEWS: "revenue:guest_reviews",
+    COMMUNICATIONS: "revenue:communications",
     REVENUE_FORECAST: "revenue:revenue_forecasting",
     AGENT_MANAGEMENT: "revenue:agent_management",
     IPTV_PREMIUM: "revenue:iptv_premium",

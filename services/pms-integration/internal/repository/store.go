@@ -32,8 +32,12 @@ type Store struct {
 	Invoices              *InvoiceRepository
 	IPTV                  *IPTVRepository
 	SmartLocks            *SmartLockRepository
-	Search                SearchIndexer
-	metrics               *RepositoryMetrics
+	ChannelManager        *ChannelManagerRepository
+	WhatsApp              *WhatsAppRepository
+	BookingEngine         *BookingEngineRepository
+	Reviews               *ReviewsRepository
+	Communications        *CommunicationsRepository
+
 }
 
 // NewStore creates a repository store backed by a PostgreSQL pool.
@@ -63,8 +67,11 @@ func NewStore(pool *db.Pool) *Store {
 		Invoices:             NewInvoiceRepository(),
 		IPTV:                 NewIPTVRepository(pool, m),
 		SmartLocks:           NewSmartLockRepository(pool, m),
-		Search:               NewInMemorySearchIndexer(),
-		metrics:              m,
+		ChannelManager:       NewChannelManagerRepository(pool, m),
+		WhatsApp:             NewWhatsAppRepository(pool, m),
+		BookingEngine:        NewBookingEngineRepository(pool, m),
+		Reviews:              NewReviewsRepository(pool, m),
+		Communications:       NewCommunicationsRepository(pool, m),
 	}
 	return s
 }

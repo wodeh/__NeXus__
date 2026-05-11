@@ -17,8 +17,11 @@ import {
   Crown,
   ChevronLeft,
   ChevronRight,
-  Tv,
-  Lock,
+  Globe,
+  MessageCircle,
+  ExternalLink,
+  Star,
+  Mail,
 } from "lucide-react";
 import { TenantConfig, hasCapability, CAPABILITIES } from "@/lib/tenant";
 
@@ -44,6 +47,11 @@ const navItems: NavItem[] = [
   { label: "Housekeeping", href: "/housekeeping", icon: Sparkles, cap: CAPABILITIES.CORE.HOUSEKEEPING },
   { label: "IPTV", href: "/iptv", icon: Tv, cap: CAPABILITIES.OPERATIONS.IPTV_BASIC },
   { label: "Smart Locks", href: "/locks", icon: Lock, cap: CAPABILITIES.OPERATIONS.SMART_LOCKS },
+  { label: "Channel Manager", href: "/channel-manager", icon: Globe, cap: CAPABILITIES.REVENUE.CHANNEL_MANAGER },
+  { label: "WhatsApp Bot", href: "/whatsapp", icon: MessageCircle, cap: CAPABILITIES.REVENUE.WHATSAPP_BOT },
+  { label: "Booking Engine", href: "/booking-engine", icon: ExternalLink, cap: CAPABILITIES.REVENUE.DIRECT_BOOKING },
+  { label: "Reviews", href: "/reviews", icon: Star, cap: CAPABILITIES.REVENUE.GUEST_REVIEWS },
+  { label: "Communications", href: "/communications", icon: Mail, cap: CAPABILITIES.REVENUE.COMMUNICATIONS },
   { label: "Revenue", href: "/revenue", icon: TrendingUp, cap: CAPABILITIES.REVENUE.DYNAMIC_PRICING },
   { label: "Audit", href: "/audit", icon: ShieldCheck, cap: CAPABILITIES.CORE.AUDIT_LOGS },
   { label: "Settings", href: "/settings", icon: Settings, cap: CAPABILITIES.CORE.SETTINGS },
