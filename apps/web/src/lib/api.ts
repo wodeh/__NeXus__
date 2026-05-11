@@ -418,3 +418,251 @@ export async function getChannelSyncLogs(channelId: string): Promise<ChannelSync
   const data = await api<{ logs: ChannelSyncLog[] }>(`/v1/channels/${channelId}/sync-logs`);
   return data.logs;
 }
+
+/* ─── Smart Lock API ─── */
+
+export interface SmartLock {
+  id: string;
+  tenant_id: string;
+  room_id: string;
+  room_number: string;
+  serial_number: string;
+  model: string;
+  manufacturer: string;
+  status: "online" | "offline" | "low_battery" | "warning";
+  battery_level: number;
+  last_communication_at?: string;
+  last_unlock_at?: string;
+  last_lock_at?: string;
+  firmware_version: string;
+  remote_unlock_enabled: boolean;
+  auto_lock_enabled: boolean;
+}
+
+export interface LockEvent {
+  id: string;
+  lock_id: string;
+  room_number: string;
+  event_type: string;
+  event_source: string;
+  details: string;
+  occurred_at: string;
+}
+
+export interface AccessCode {
+  id: string;
+  lock_id: string;
+  code: string;
+  label: string;
+  is_active: boolean;
+  valid_from: string;
+  valid_until?: string;
+  max_uses?: number;
+  use_count: number;
+}
+
+export async function getLocks(): Promise<SmartLock[]> {
+  const data = await api<{ locks: SmartLock[] }>("/v1/locks");
+  return data.locks;
+}
+
+export async function createLock(payload: Partial<SmartLock>): Promise<SmartLock> {
+  return api<SmartLock>("/v1/locks", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateLock(id: string, payload: Partial<SmartLock>): Promise<SmartLock> {
+  return api<SmartLock>(`/v1/locks/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getLockEvents(lockId: string): Promise<LockEvent[]> {
+  const data = await api<{ events: LockEvent[] }>(`/v1/locks/${lockId}/events`);
+  return data.events;
+}
+
+export async function getLockAccessCodes(lockId: string): Promise<AccessCode[]> {
+  const data = await api<{ codes: AccessCode[] }>(`/v1/locks/${lockId}/access-codes`);
+  return data.codes;
+}
+
+export async function createAccessCode(lockId: string, payload: { code: string; label: string; valid_from: string; valid_until?: string; max_uses?: number }): Promise<AccessCode> {
+  return api<AccessCode>(`/v1/locks/${lockId}/access-codes`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function remoteUnlock(lockId: string): Promise<{ status: string }> {
+  return api<{ status: string }>(`/v1/locks/${lockId}/unlock`, {
+    method: "POST",
+  });
+}
+
+/* ─── WhatsApp API ─── */
+
+export interface WhatsAppConversation {
+  id: string;
+  tenant_id: string;
+  guest_phone: string;
+  guest_name?: string;
+  current_state: string;
+  booking_created: boolean;
+  messages: number;
+  last_message_at: string;
+}
+
+export interface WhatsAppMessage {
+  id: string;
+  conversation_id: string;
+  direction: "inbound" | "outbound";
+  body: string;
+  status: string;
+  sent_at: string;
+}
+
+export interface WhatsAppBotConfig {
+  tenant_id: string;
+  bot_enabled: boolean;
+  booking_enabled: boolean;
+  auto_reply_enabled: boolean;
+  welcome_message: string;
+  phone_number_id: string;
+  webhook_url: string;
+}
+
+export interface WhatsAppTemplate {
+  id: string;
+  trigger: string;
+  response: string;
+}
+
+export async function getWhatsAppConversations(): Promise<WhatsAppConversation[]> {
+  const data = await api<{ conversations: WhatsAppConversation[] }>("/v1/whatsapp/conversations");
+  return data.conversations;
+}
+
+export async function getWhatsAppMessages(conversationId: string): Promise<WhatsAppMessage[]> {
+  const data = await api<{ messages: WhatsAppMessage[] }>(`/v1/whatsapp/conversations/${conversationId}/messages`);
+  return data.messages;
+}
+
+export async function sendWhatsAppMessage(conversationId: string, body: string): Promise<WhatsAppMessage> {
+  return api<WhatsAppMessage>(`/v1/whatsapp/conversations/${conversationId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ body }),
+  });
+}
+
+export async function getWhatsAppConfig(): Promise<WhatsAppBotConfig> {
+  return api<WhatsAppBotConfig>("/v1/whatsapp/config");
+}
+
+export async function updateWhatsAppConfig(payload: Partial<WhatsAppBotConfig>): Promise<WhatsAppBotConfig> {
+  return api<WhatsAppBotConfig>("/v1/whatsapp/config", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getWhatsAppTemplates(): Promise<WhatsAppTemplate[]> {
+  const data = await api<{ templates: WhatsAppTemplate[] }>("/v1/whatsapp/templates");
+  return data.templates;
+}
+
+/* ─── Review API ─── */
+
+export interface Review {
+  id: string;
+  tenant_id: string;
+  reservation_id: string;
+  guest_name: string;
+  room_number: string;
+  rating: number;
+  cleanliness: number;
+  service: number;
+  location: number;
+  value: number;
+  comment: string;
+  staff_reply?: string;
+  replied_at?: string;
+  is_published: boolean;
+  source: string;
+}
+
+export interface ReviewStats {
+  tenant_id: string;
+  total_reviews: number;
+  average_rating: number;
+  average_cleanliness: number;
+  average_service: number;
+  average_location: number;
+  average_value: number;
+  five_star_count: number;
+  four_star_count: number;
+  three_star_count: number;
+  two_star_count: number;
+  one_star_count: number;
+}
+
+export async function getReviews(): Promise<Review[]> {
+  const data = await api<{ reviews: Review[] }>("/v1/reviews");
+  return data.reviews;
+}
+
+export async function getReviewStats(): Promise<ReviewStats> {
+  return api<ReviewStats>("/v1/reviews/stats");
+}
+
+export async function replyToReview(id: string, staffReply: string): Promise<{ status: string }> {
+  return api<{ status: string }>(`/v1/reviews/${id}/reply`, {
+    method: "POST",
+    body: JSON.stringify({ staff_reply: staffReply }),
+  });
+}
+
+export async function publishReview(id: string, published: boolean): Promise<{ status: string }> {
+  return api<{ status: string }>(`/v1/reviews/${id}/publish`, {
+    method: "PATCH",
+    body: JSON.stringify({ published }),
+  });
+}
+
+/* ─── Audit API ─── */
+
+export interface AuditLog {
+  id: string;
+  tenant_id: string;
+  user_id?: string;
+  user_email?: string;
+  action: string;
+  resource: string;
+  resource_id?: string;
+  details?: Record<string, unknown>;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
+}
+
+export interface AuditStats {
+  tenant_id: string;
+  total_events: number;
+  today_events: number;
+  user_actions: number;
+  system_actions: number;
+  failed_actions: number;
+}
+
+export async function getAuditLogs(): Promise<AuditLog[]> {
+  const data = await api<{ logs: AuditLog[] }>("/v1/audit/logs");
+  return data.logs;
+}
+
+export async function getAuditStats(): Promise<AuditStats> {
+  return api<AuditStats>("/v1/audit/stats");
+}
+

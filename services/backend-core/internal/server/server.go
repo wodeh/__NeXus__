@@ -60,6 +60,10 @@ func (s *Server) Start(ctx context.Context) error {
 	s.registerAdminHandlers(mux)
 	s.registerAgentHandlers(mux)
 	s.registerChannelHandlers(mux)
+	s.registerLockHandlers(mux)
+	s.registerWhatsAppHandlers(mux)
+	s.registerReviewHandlers(mux)
+	s.registerAuditHandlers(mux)
 
 	s.httpServer = &http.Server{
 		Addr:         ":" + s.cfg.HTTPPort,
