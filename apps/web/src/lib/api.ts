@@ -78,6 +78,7 @@ export interface Room {
   bed_type?: string;
   status: "occupied" | "vacant_clean" | "vacant_dirty" | "blocked" | "maintenance";
   rate_night: number;
+  config?: Record<string, unknown>;
 }
 
 export interface Property {

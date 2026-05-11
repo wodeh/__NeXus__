@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { hasCapability, CAPABILITIES } from "@/lib/tenant";
 import {
@@ -30,6 +30,17 @@ import {
   ChevronRight,
   Crown,
 } from "lucide-react";
+import {
+  getRooms,
+  getReservations,
+  getLocks,
+  getHousekeepingTasks,
+  remoteUnlock,
+  Room,
+  Reservation,
+  SmartLock,
+  HousekeepingTask,
+} from "@/lib/api";
 
 interface RoomControl {
   id: string;
@@ -50,24 +61,6 @@ interface RoomControl {
   notes?: string;
 }
 
-const mockRooms: RoomControl[] = [
-  { id: "r-101", number: "101", floor: "1", type: "Standard", status: "occupied", guest: "Alice Chen", arrival: "2026-05-10", departure: "2026-05-14", nights: 4, balance: 516.00, lockStatus: "locked", batteryLevel: 87, housekeepingStatus: "clean", iptvOnline: true, vip: true, notes: "Late checkout requested" },
-  { id: "r-102", number: "102", floor: "1", type: "Standard", status: "vacant_clean", lockStatus: "locked", batteryLevel: 92, housekeepingStatus: "clean", iptvOnline: true },
-  { id: "r-103", number: "103", floor: "1", type: "Deluxe", status: "vacant_dirty", lockStatus: "locked", batteryLevel: 45, housekeepingStatus: "dirty", iptvOnline: true },
-  { id: "r-104", number: "104", floor: "1", type: "Standard", status: "blocked", lockStatus: "locked", batteryLevel: 98, housekeepingStatus: "clean", iptvOnline: false, notes: "VIP Hold - Mr. Smith arriving tomorrow" },
-  { id: "r-105", number: "105", floor: "1", type: "Accessible", status: "maintenance", lockStatus: "offline", batteryLevel: 12, housekeepingStatus: "dirty", iptvOnline: false, notes: "Plumbing repair - ETA 2hrs" },
-  { id: "r-201", number: "201", floor: "2", type: "Deluxe King", status: "occupied", guest: "Bob Jones", arrival: "2026-05-08", departure: "2026-05-11", nights: 3, balance: 387.00, lockStatus: "locked", batteryLevel: 76, housekeepingStatus: "clean", iptvOnline: true },
-  { id: "r-202", number: "202", floor: "2", type: "Deluxe King", status: "vacant_clean", lockStatus: "locked", batteryLevel: 88, housekeepingStatus: "inspected", iptvOnline: true },
-  { id: "r-203", number: "203", floor: "2", type: "Suite", status: "occupied", guest: "Carol White", arrival: "2026-05-09", departure: "2026-05-12", nights: 3, balance: 945.00, lockStatus: "unlocked", batteryLevel: 95, housekeepingStatus: "clean", iptvOnline: true, vip: true },
-  { id: "r-204", number: "204", floor: "2", type: "Deluxe King", status: "out_of_order", lockStatus: "offline", batteryLevel: 0, housekeepingStatus: "dirty", iptvOnline: false, notes: "Renovation - blocked until June" },
-  { id: "r-205", number: "205", floor: "2", type: "Standard", status: "vacant_dirty", lockStatus: "locked", batteryLevel: 67, housekeepingStatus: "dirty", iptvOnline: true },
-  { id: "r-301", number: "301", floor: "3", type: "Suite", status: "vacant_clean", lockStatus: "locked", batteryLevel: 91, housekeepingStatus: "inspected", iptvOnline: true },
-  { id: "r-302", number: "302", floor: "3", type: "Suite", status: "blocked", lockStatus: "locked", batteryLevel: 83, housekeepingStatus: "clean", iptvOnline: true, notes: "Group Block - Wedding Party" },
-  { id: "r-303", number: "303", floor: "3", type: "Deluxe King", status: "occupied", guest: "David Lee", arrival: "2026-05-10", departure: "2026-05-15", nights: 5, balance: 645.00, lockStatus: "locked", batteryLevel: 72, housekeepingStatus: "clean", iptvOnline: true },
-  { id: "r-304", number: "304", floor: "3", type: "Standard", status: "vacant_clean", lockStatus: "locked", batteryLevel: 89, housekeepingStatus: "clean", iptvOnline: true },
-  { id: "r-305", number: "305", floor: "3", type: "Standard", status: "vacant_dirty", lockStatus: "locked", batteryLevel: 54, housekeepingStatus: "dirty", iptvOnline: false },
-];
-
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType; bg: string }> = {
   vacant_clean: { label: "Vacant Clean", color: "text-emerald-400", icon: CheckCircle2, bg: "bg-emerald-500/5 border-emerald-500/10" },
   vacant_dirty: { label: "Vacant Dirty", color: "text-rose-400", icon: Sparkles, bg: "bg-rose-500/5 border-rose-500/10" },
@@ -82,7 +75,86 @@ export default function CommandCenterPage() {
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [selectedRoom, setSelectedRoom] = useState<RoomControl | null>(null);
-  const [actionPanel, setActionPanel] = useState<string | null>(null);
+  const [rooms, setRooms] = useState<RoomControl[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    setLoading(true);
+    try {
+      const [roomList, reservations, locks, hkTasks] = await Promise.all([
+        getRooms(),
+        getReservations(),
+        getLocks(),
+        getHousekeepingTasks(),
+      ]);
+
+      const today = new Date().toISOString().split("T")[0];
+      const activeReservations = reservations.filter((r) =>
+        r.status === "confirmed" || r.status === "checked_in"
+      );
+
+      const merged: RoomControl[] = roomList.map((room) => {
+        const res = activeReservations.find((r) => r.room_number === room.number);
+        const lock = locks.find((l) => l.room_number === room.number);
+        const hk = hkTasks.find((t) => t.room_number === room.number);
+
+        const checkIn = res?.check_in;
+        const checkOut = res?.check_out;
+        const nights = checkIn && checkOut
+          ? Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24))
+          : undefined;
+
+        return {
+          id: room.id,
+          number: room.number,
+          floor: room.floor,
+          type: room.type,
+          status: (room.status as RoomControl["status"]) || "vacant_clean",
+          guest: res?.guest_name,
+          arrival: checkIn,
+          departure: checkOut,
+          nights,
+          balance: res?.total,
+          lockStatus: lock
+            ? lock.status === "offline"
+              ? "offline"
+              : "locked"
+            : undefined,
+          batteryLevel: lock?.battery_level,
+          housekeepingStatus: (hk?.status as RoomControl["housekeepingStatus"]) || undefined,
+          iptvOnline: true, // TODO: wire IPTV status
+          vip: room.config?.vip === true,
+          notes: (room.config?.notes as string) || res?.special_requests || undefined,
+        };
+      });
+
+      setRooms(merged);
+    } catch (e) {
+      console.error("Failed to load command center data", e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRemoteUnlock() {
+    if (!selectedRoom) return;
+    const lock = await getLocks().then((locks) => locks.find((l) => l.room_number === selectedRoom.number));
+    if (!lock) return;
+    setUnlocking(true);
+    try {
+      await remoteUnlock(lock.id);
+      await loadData();
+    } catch (e) {
+      console.error("Failed to unlock", e);
+    } finally {
+      setUnlocking(false);
+    }
+  }
 
   const hasCommand = hasCapability(config, CAPABILITIES.OPERATIONS.FRONT_DESK);
 
@@ -96,13 +168,17 @@ export default function CommandCenterPage() {
         <p className="mt-2 max-w-md text-sm text-slate-400">
           The hotel command center requires the Operations or Enterprise license tier.
         </p>
+        <button className="btn-primary mt-6">
+          <ArrowRightLeft className="h-4 w-4" />
+          Upgrade License
+        </button>
       </div>
     );
   }
 
-  const floors = Array.from(new Set(mockRooms.map((r) => r.floor))).sort();
-  
-  const filteredRooms = mockRooms.filter((r) => {
+  const floors = Array.from(new Set(rooms.map((r) => r.floor))).sort();
+
+  const filteredRooms = rooms.filter((r) => {
     if (filter !== "all" && r.status !== filter) return false;
     if (search) {
       const q = search.toLowerCase();
@@ -116,26 +192,26 @@ export default function CommandCenterPage() {
     return true;
   });
 
+  const todayStr = new Date().toISOString().split("T")[0];
   const stats = {
-    total: mockRooms.length,
-    occupied: mockRooms.filter((r) => r.status === "occupied").length,
-    vacantClean: mockRooms.filter((r) => r.status === "vacant_clean").length,
-    vacantDirty: mockRooms.filter((r) => r.status === "vacant_dirty").length,
-    blocked: mockRooms.filter((r) => r.status === "blocked").length,
-    maintenance: mockRooms.filter((r) => ["maintenance", "out_of_order"].includes(r.status)).length,
-    arrivalsToday: mockRooms.filter((r) => r.arrival === "2026-05-10").length,
-    departuresToday: mockRooms.filter((r) => r.departure === "2026-05-10").length,
-    lowBattery: mockRooms.filter((r) => (r.batteryLevel || 100) < 20).length,
-    offlineLocks: mockRooms.filter((r) => r.lockStatus === "offline").length,
-    revenueAtRisk: mockRooms.filter((r) => r.status === "vacant_dirty").length * 129,
+    total: rooms.length,
+    occupied: rooms.filter((r) => r.status === "occupied").length,
+    vacantClean: rooms.filter((r) => r.status === "vacant_clean").length,
+    vacantDirty: rooms.filter((r) => r.status === "vacant_dirty").length,
+    blocked: rooms.filter((r) => r.status === "blocked").length,
+    maintenance: rooms.filter((r) => ["maintenance", "out_of_order"].includes(r.status)).length,
+    arrivalsToday: rooms.filter((r) => r.arrival === todayStr).length,
+    departuresToday: rooms.filter((r) => r.departure === todayStr).length,
+    lowBattery: rooms.filter((r) => (r.batteryLevel || 100) < 20).length,
+    offlineLocks: rooms.filter((r) => r.lockStatus === "offline").length,
+    revenueAtRisk: rooms.filter((r) => r.status === "vacant_dirty").length * 129,
   };
 
-  const todayArrivals = mockRooms.filter((r) => r.arrival === "2026-05-10" && r.status !== "occupied");
-  const todayDepartures = mockRooms.filter((r) => r.departure === "2026-05-10" && r.status === "occupied");
+  const todayArrivals = rooms.filter((r) => r.arrival === todayStr && r.status !== "occupied");
+  const todayDepartures = rooms.filter((r) => r.departure === todayStr && r.status === "occupied");
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Command Center</h1>
@@ -148,7 +224,7 @@ export default function CommandCenterPage() {
           </div>
           <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-2">
             <Wifi className="h-4 w-4 text-emerald-400" />
-            <span className="text-sm text-emerald-400">{mockRooms.filter(r => r.lockStatus !== "offline").length}/{mockRooms.length} Online</span>
+            <span className="text-sm text-emerald-400">{rooms.filter(r => r.lockStatus !== "offline").length}/{rooms.length} Online</span>
           </div>
         </div>
       </div>
@@ -195,67 +271,70 @@ export default function CommandCenterPage() {
       <div className="flex gap-6">
         {/* Room Grid */}
         <div className="flex-1 space-y-4">
-          {floors.map((floor) => {
-            const floorRooms = filteredRooms.filter((r) => r.floor === floor);
-            if (floorRooms.length === 0) return null;
-            return (
-              <div key={floor}>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Floor {floor}</h3>
-                <div className="grid grid-cols-5 gap-3">
-                  {floorRooms.map((room) => {
-                    const st = statusConfig[room.status];
-                    const StatusIcon = st.icon;
-                    return (
-                      <button
-                        key={room.id}
-                        onClick={() => { setSelectedRoom(room); setActionPanel(null); }}
-                        className={`relative rounded-lg border p-3 text-left transition-all hover:scale-[1.02] ${
-                          selectedRoom?.id === room.id
-                            ? "border-nexus-400 ring-1 ring-nexus-400"
-                            : st.bg
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className={`text-lg font-bold ${st.color}`}>{room.number}</span>
-                          {room.vip && <Crown className="h-3 w-3 text-amber-400" />}
-                        </div>
-                        <div className="mt-1 flex items-center gap-1">
-                          <StatusIcon className={`h-3 w-3 ${st.color}`} />
-                          <span className={`text-[10px] font-medium ${st.color}`}>{st.label}</span>
-                        </div>
-                        {room.guest && (
-                          <p className="mt-1 truncate text-[10px] text-slate-300">{room.guest}</p>
-                        )}
-                        <div className="mt-2 flex items-center gap-2">
-                          {room.lockStatus === "offline" ? (
-                            <WifiOff className="h-3 w-3 text-rose-400" />
-                          ) : room.lockStatus === "unlocked" ? (
-                            <Unlock className="h-3 w-3 text-amber-400" />
-                          ) : (
-                            <Lock className="h-3 w-3 text-emerald-400" />
+          {loading ? (
+            <p className="text-sm text-slate-500">Loading rooms...</p>
+          ) : (
+            floors.map((floor) => {
+              const floorRooms = filteredRooms.filter((r) => r.floor === floor);
+              if (floorRooms.length === 0) return null;
+              return (
+                <div key={floor}>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Floor {floor}</h3>
+                  <div className="grid grid-cols-5 gap-3">
+                    {floorRooms.map((room) => {
+                      const st = statusConfig[room.status];
+                      const StatusIcon = st.icon;
+                      return (
+                        <button
+                          key={room.id}
+                          onClick={() => { setSelectedRoom(room); }}
+                          className={`relative rounded-lg border p-3 text-left transition-all hover:scale-[1.02] ${
+                            selectedRoom?.id === room.id
+                              ? "border-nexus-400 ring-1 ring-nexus-400"
+                              : st.bg
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className={`text-lg font-bold ${st.color}`}>{room.number}</span>
+                            {room.vip && <Crown className="h-3 w-3 text-amber-400" />}
+                          </div>
+                          <div className="mt-1 flex items-center gap-1">
+                            <StatusIcon className={`h-3 w-3 ${st.color}`} />
+                            <span className={`text-[10px] font-medium ${st.color}`}>{st.label}</span>
+                          </div>
+                          {room.guest && (
+                            <p className="mt-1 truncate text-[10px] text-slate-300">{room.guest}</p>
                           )}
-                          {(room.batteryLevel || 0) < 20 ? (
-                            <BatteryWarning className="h-3 w-3 text-rose-400" />
-                          ) : (
-                            <Battery className="h-3 w-3 text-slate-500" />
+                          <div className="mt-2 flex items-center gap-2">
+                            {room.lockStatus === "offline" ? (
+                              <WifiOff className="h-3 w-3 text-rose-400" />
+                            ) : room.lockStatus === "unlocked" ? (
+                              <Unlock className="h-3 w-3 text-amber-400" />
+                            ) : (
+                              <Lock className="h-3 w-3 text-emerald-400" />
+                            )}
+                            {(room.batteryLevel || 0) < 20 ? (
+                              <BatteryWarning className="h-3 w-3 text-rose-400" />
+                            ) : (
+                              <Battery className="h-3 w-3 text-slate-500" />
+                            )}
+                            {!room.iptvOnline && <Tv className="h-3 w-3 text-rose-400" />}
+                          </div>
+                          {room.notes && (
+                            <p className="mt-1 text-[9px] text-slate-500 line-clamp-1">{room.notes}</p>
                           )}
-                          {!room.iptvOnline && <Tv className="h-3 w-3 text-rose-400" />}
-                        </div>
-                        {room.notes && (
-                          <p className="mt-1 text-[9px] text-slate-500 line-clamp-1">{room.notes}</p>
-                        )}
-                      </button>
-                    );
-                  })}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
 
         {/* Side Panel */}
         <div className="w-80 shrink-0 space-y-4">
-          {/* Selected Room Detail */}
           {selectedRoom && (
             <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-4">
               <div className="flex items-center justify-between">
@@ -264,8 +343,8 @@ export default function CommandCenterPage() {
                   <ChevronRight className="h-4 w-4 rotate-90" />
                 </button>
               </div>
-              <p className="text-sm text-slate-400">{selectedRoom.type} &middot; Floor {selectedRoom.floor}</p>
-              
+              <p className="text-sm text-slate-400">{selectedRoom.type} · Floor {selectedRoom.floor}</p>
+
               {selectedRoom.guest && (
                 <div className="mt-3 rounded-lg bg-slate-700/50 p-3">
                   <div className="flex items-center gap-2">
@@ -273,7 +352,7 @@ export default function CommandCenterPage() {
                     <span className="text-sm font-medium text-white">{selectedRoom.guest}</span>
                   </div>
                   <div className="mt-1 flex items-center gap-3 text-xs text-slate-400">
-                    <span>{selectedRoom.arrival} &rarr; {selectedRoom.departure}</span>
+                    <span>{selectedRoom.arrival} → {selectedRoom.departure}</span>
                     <span>{selectedRoom.nights} nights</span>
                   </div>
                   {selectedRoom.balance !== undefined && (
@@ -282,7 +361,6 @@ export default function CommandCenterPage() {
                 </div>
               )}
 
-              {/* Quick Actions */}
               <div className="mt-3 grid grid-cols-2 gap-2">
                 {selectedRoom.status === "occupied" && (
                   <>
@@ -302,13 +380,17 @@ export default function CommandCenterPage() {
                     <QuickActionButton icon={Ban} label="Block Room" color="violet" />
                   </>
                 )}
-                <QuickActionButton icon={selectedRoom.lockStatus === "locked" ? Unlock : Lock} label={selectedRoom.lockStatus === "locked" ? "Unlock" : "Lock"} color={selectedRoom.lockStatus === "locked" ? "amber" : "emerald"} />
+                <QuickActionButton
+                  icon={selectedRoom.lockStatus === "locked" ? Unlock : Lock}
+                  label={selectedRoom.lockStatus === "locked" ? "Unlock" : "Lock"}
+                  color={selectedRoom.lockStatus === "locked" ? "amber" : "emerald"}
+                  onClick={handleRemoteUnlock}
+                />
                 <QuickActionButton icon={KeyRound} label="New Code" color="slate" />
               </div>
             </div>
           )}
 
-          {/* Arrivals Today */}
           <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-4">
             <div className="flex items-center gap-2 mb-3">
               <CalendarDays className="h-4 w-4 text-violet-400" />
@@ -332,7 +414,6 @@ export default function CommandCenterPage() {
             </div>
           </div>
 
-          {/* Departures Today */}
           <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-4">
             <div className="flex items-center gap-2 mb-3">
               <ArrowRightLeft className="h-4 w-4 text-amber-400" />
@@ -356,14 +437,13 @@ export default function CommandCenterPage() {
             </div>
           </div>
 
-          {/* Alerts */}
           <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 p-4">
             <div className="flex items-center gap-2 mb-3">
               <AlertTriangle className="h-4 w-4 text-rose-400" />
               <h4 className="text-sm font-semibold text-white">Alerts</h4>
             </div>
             <div className="space-y-2">
-              {mockRooms.filter(r => (r.batteryLevel || 100) < 20 || r.lockStatus === "offline").map(r => (
+              {rooms.filter(r => (r.batteryLevel || 100) < 20 || r.lockStatus === "offline").map(r => (
                 <div key={r.id} className="flex items-center gap-2 text-xs">
                   {r.lockStatus === "offline" ? (
                     <WifiOff className="h-3 w-3 text-rose-400" />
@@ -409,7 +489,7 @@ function StatCard({ label, value, total, color, icon: Icon, alert }: { label: st
   );
 }
 
-function QuickActionButton({ icon: Icon, label, color }: { icon: React.ElementType; label: string; color: string }) {
+function QuickActionButton({ icon: Icon, label, color, onClick }: { icon: React.ElementType; label: string; color: string; onClick?: () => void }) {
   const colorMap: Record<string, string> = {
     sky: "bg-sky-500/10 text-sky-400 hover:bg-sky-500/20",
     emerald: "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20",
@@ -419,7 +499,10 @@ function QuickActionButton({ icon: Icon, label, color }: { icon: React.ElementTy
     slate: "bg-slate-500/10 text-slate-400 hover:bg-slate-500/20",
   };
   return (
-    <button className={`flex items-center gap-1.5 rounded px-2 py-1.5 text-[10px] font-medium transition-colors ${colorMap[color]}`}>
+    <button 
+      onClick={onClick}
+      className={`flex items-center gap-1.5 rounded px-2 py-1.5 text-[10px] font-medium transition-colors ${colorMap[color]}`}
+    >
       <Icon className="h-3 w-3" />
       {label}
     </button>
