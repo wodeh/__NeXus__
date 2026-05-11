@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   ArrowLeft, Play, Square, CheckCircle2, Clock, BedDouble, Package,
   Coffee, Droplets, Sparkles, Wrench, ChevronRight, User, AlertTriangle,
-  Star, Wifi, Thermometer, Battery, MapPin, ClipboardList
+  Star, Wifi, Thermometer, Battery, MapPin, ClipboardList, RefreshCw,
 } from "lucide-react";
-import Link from "next/link";
+import {
+  HousekeepingTask, HousekeepingStaff,
+  getHousekeepingTasks, getHousekeepingStaff, updateHousekeepingTask,
+} from "@/lib/api";
 
 type TaskStatus = "pending" | "in_progress" | "completed" | "paused";
 type CardMode = "clean_full" | "clean_refill" | "maintenance";
@@ -62,60 +66,97 @@ const defaultChecklist: Record<string, ChecklistItem[]> = {
   ],
 };
 
-const mockTasks: CleanerTask[] = [
-  {
-    id: "t1", roomId: "101", roomNumber: "101", floor: "1", type: "Standard",
-    status: "pending", taskType: "clean", priority: false, vip: false, estimatedMin: 25,
-    checklist: JSON.parse(JSON.stringify(defaultChecklist.clean_full)),
-    notes: "Regular checkout clean",
-  },
-  {
-    id: "t2", roomId: "103", roomNumber: "103", floor: "1", type: "Deluxe",
-    status: "in_progress", taskType: "clean", priority: true, vip: true, estimatedMin: 30,
-    startedAt: "2026-05-10T08:30:00Z",
-    checklist: JSON.parse(JSON.stringify(defaultChecklist.clean_full)),
-    notes: "VIP arrival at 14:00",
-  },
-  {
-    id: "t3", roomId: "105", roomNumber: "105", floor: "1", type: "Standard",
-    status: "pending", taskType: "refill", priority: false, vip: false, estimatedMin: 10,
-    checklist: JSON.parse(JSON.stringify(defaultChecklist.clean_refill)),
-    suppliesNeeded: ["Coffee pods", "Sugar packets", "Minibar: Coke"],
-  },
-  {
-    id: "t4", roomId: "201", roomNumber: "201", floor: "2", type: "Deluxe King",
-    status: "pending", taskType: "clean", priority: true, vip: true, estimatedMin: 35,
-    checklist: JSON.parse(JSON.stringify(defaultChecklist.clean_full)),
-    notes: "Late checkout — start after 13:00",
-  },
-  {
-    id: "t5", roomId: "203", roomNumber: "203", floor: "2", type: "Suite",
-    status: "pending", taskType: "maintenance", priority: false, vip: false, estimatedMin: 15,
-    checklist: JSON.parse(JSON.stringify(defaultChecklist.maintenance)),
-    notes: "Faucet handle loose",
-  },
-];
+function mapApiTaskToCleanerTask(t: HousekeepingTask): CleanerTask {
+  const mode: CardMode =
+    t.task_type === "refill" ? "clean_refill" :
+    t.task_type === "maintenance" ? "maintenance" :
+    "clean_full";
+  return {
+    id: t.id,
+    roomId: t.room_number,
+    roomNumber: t.room_number,
+    floor: "?",
+    type: "Standard",
+    status: t.status as TaskStatus,
+    taskType: (t.task_type.replace("_", "") as any) || "clean",
+    priority: t.priority === "urgent" || t.priority === "high",
+    vip: false,
+    estimatedMin: 25,
+    startedAt: t.status === "in_progress" ? new Date().toISOString() : undefined,
+    checklist: JSON.parse(JSON.stringify(defaultChecklist[mode] || defaultChecklist.clean_full)),
+    notes: t.notes,
+  };
+}
 
 export default function HousekeepingStaffPage() {
-  const [tasks, setTasks] = useState<CleanerTask[]>(mockTasks);
+  const [tasks, setTasks] = useState<CleanerTask[]>([]);
+  const [staff, setStaff] = useState<HousekeepingStaff[]>([]);
+  const [selectedStaffId, setSelectedStaffId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [cardMode, setCardMode] = useState<CardMode>("clean_full");
   const [showModePicker, setShowModePicker] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const activeTask = tasks.find((t) => t.id === activeTaskId);
 
-  const startTask = (taskId: string) => {
-    setTasks(tasks.map((t) =>
-      t.id === taskId
-        ? { ...t, status: "in_progress", startedAt: new Date().toISOString() }
-        : t.status === "in_progress"
-        ? { ...t, status: "paused" }
-        : t
-    ));
-    setActiveTaskId(taskId);
-  };
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [apiTasks, apiStaff] = await Promise.all([
+        getHousekeepingTasks(), getHousekeepingStaff(),
+      ]);
+      setStaff(apiStaff);
+      const mapped = apiTasks.map(mapApiTaskToCleanerTask);
+      setTasks(mapped);
+      // If no staff selected yet, default to first active cleaner
+      if (!selectedStaffId && apiStaff.length > 0) {
+        setSelectedStaffId(apiStaff[0].id);
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to load tasks");
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedStaffId]);
 
-  const toggleChecklistItem = (taskId: string, itemId: string) => {
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const myTasks = tasks.filter((t) => {
+    // We don't have per-cleaner auth, so we show ALL tasks but highlight ones that might be theirs
+    // In a real setup, tasks would be filtered by assigned_to === currentUser.staffId
+    return true;
+  });
+
+  const pendingTasks = myTasks.filter((t) => t.status === "pending");
+  const inProgressTasks = myTasks.filter((t) => t.status === "in_progress");
+  const completedToday = myTasks.filter((t) => t.status === "completed").length;
+
+  async function startTask(taskId: string) {
+    setActionLoading(taskId);
+    try {
+      await updateHousekeepingTask(taskId, { status: "in_progress" });
+      setTasks(tasks.map((t) =>
+        t.id === taskId
+          ? { ...t, status: "in_progress" as TaskStatus, startedAt: new Date().toISOString() }
+          : t.status === "in_progress"
+          ? { ...t, status: "paused" as TaskStatus }
+          : t
+      ));
+      setActiveTaskId(taskId);
+      await fetchData();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  function toggleChecklistItem(taskId: string, itemId: string) {
     setTasks(tasks.map((t) =>
       t.id === taskId
         ? {
@@ -126,9 +167,9 @@ export default function HousekeepingStaffPage() {
           }
         : t
     ));
-  };
+  }
 
-  const completeTask = (taskId: string) => {
+  async function completeTask(taskId: string) {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
     const completedCount = task.checklist.filter((c) => c.completed).length;
@@ -136,9 +177,18 @@ export default function HousekeepingStaffPage() {
     if (completedCount < total * 0.5) {
       if (!confirm(`Only ${completedCount}/${total} checklist items done. Complete anyway?`)) return;
     }
-    setTasks(tasks.map((t) => (t.id === taskId ? { ...t, status: "completed" } : t)));
-    setActiveTaskId(null);
-  };
+    setActionLoading(taskId);
+    try {
+      await updateHousekeepingTask(taskId, { status: "completed" });
+      setTasks(tasks.map((t) => (t.id === taskId ? { ...t, status: "completed" as TaskStatus } : t)));
+      setActiveTaskId(null);
+      await fetchData();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setActionLoading(null);
+    }
+  }
 
   const modeLabel: Record<CardMode, string> = {
     clean_full: "Full Clean",
@@ -158,9 +208,15 @@ export default function HousekeepingStaffPage() {
     maintenance: "bg-amber-500",
   };
 
-  const pendingTasks = tasks.filter((t) => t.status === "pending");
-  const inProgressTasks = tasks.filter((t) => t.status === "in_progress");
-  const completedToday = tasks.filter((t) => t.status === "completed").length;
+  const currentStaff = staff.find((s) => s.id === selectedStaffId);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-slate-500">
+        <RefreshCw className="mr-2 h-5 w-5 animate-spin" /> Loading cleaner tablet...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -173,10 +229,25 @@ export default function HousekeepingStaffPage() {
             </Link>
             <div>
               <h1 className="text-lg font-bold text-white">Cleaner Tablet</h1>
-              <p className="text-xs text-slate-400">Maria K. · Morning Shift</p>
+              <p className="text-xs text-slate-400">
+                {currentStaff ? `${currentStaff.name} · ${currentStaff.shift} Shift` : "Select staff member"}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <select
+              value={selectedStaffId}
+              onChange={(e) => setSelectedStaffId(e.target.value)}
+              className="input text-xs py-1.5"
+            >
+              <option value="">Select staff...</option>
+              {staff.map((s) => (
+                <option key={s.id} value={s.id}>{s.name} · {s.department}</option>
+              ))}
+            </select>
+            <button onClick={fetchData} className="rounded-lg border border-slate-700 bg-slate-800 p-2 text-slate-400 hover:text-white" title="Refresh">
+              <RefreshCw className="h-4 w-4" />
+            </button>
             <button
               onClick={() => setShowModePicker(true)}
               className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white ${modeColor[cardMode]}`}
@@ -190,6 +261,12 @@ export default function HousekeepingStaffPage() {
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="mx-4 mt-3 rounded-lg border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-sm text-rose-400">
+          {error}
+        </div>
+      )}
 
       {/* Stats Row */}
       <div className="grid grid-cols-3 gap-2 px-4 py-3">
@@ -220,10 +297,11 @@ export default function HousekeepingStaffPage() {
               </div>
               <button
                 onClick={() => completeTask(activeTask.id)}
-                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600"
+                disabled={actionLoading === activeTask.id}
+                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600 disabled:opacity-50"
               >
                 <CheckCircle2 className="h-4 w-4 inline mr-1" />
-                Done
+                {actionLoading === activeTask.id ? "..." : "Done"}
               </button>
             </div>
             <p className="text-xs text-slate-400 mb-3">
@@ -274,7 +352,8 @@ export default function HousekeepingStaffPage() {
               <button
                 key={task.id}
                 onClick={() => startTask(task.id)}
-                className="flex w-full items-center gap-4 rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-left hover:border-slate-600 transition-colors"
+                disabled={actionLoading === task.id}
+                className="flex w-full items-center gap-4 rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-left hover:border-slate-600 transition-colors disabled:opacity-50"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-700">
                   <BedDouble className="h-6 w-6 text-slate-400" />

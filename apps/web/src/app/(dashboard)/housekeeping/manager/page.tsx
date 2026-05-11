@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   Users, ArrowLeft, ChevronRight, Clock, BedDouble, CheckCircle2, User, Plus, Trash2,
   RotateCcw, Sparkles, AlertTriangle, Star, Filter, Search, Grid3X3, List, Wand2,
-  Calendar, ChevronDown, MapPin
+  Calendar, ChevronDown, MapPin, RefreshCw,
 } from "lucide-react";
-import Link from "next/link";
+import {
+  Room as ApiRoom, HousekeepingTask, HousekeepingStaff,
+  getRooms, getHousekeepingTasks, getHousekeepingStaff,
+  createHousekeepingTask, updateHousekeepingTask, updateRoomStatus,
+} from "@/lib/api";
 
 type RoomStatus = "dirty" | "in_progress" | "inspected" | "ready" | "blocked" | "maintenance";
 type Shift = "morning" | "afternoon" | "evening" | "night";
@@ -25,30 +30,6 @@ interface RoomTask {
 
 const shifts: Shift[] = ["morning", "afternoon", "evening", "night"];
 
-const mockStaff: Staff[] = [
-  { id: "s1", name: "Maria K.", role: "cleaner", active: true, shift: "morning", floors: ["1", "2"], maxRooms: 8, currentLoad: 3, rating: 4.8, completedToday: 5 },
-  { id: "s2", name: "John D.", role: "cleaner", active: true, shift: "morning", floors: ["2", "3"], maxRooms: 8, currentLoad: 4, rating: 4.5, completedToday: 4 },
-  { id: "s3", name: "Sofia L.", role: "cleaner", active: true, shift: "afternoon", floors: ["3", "4"], maxRooms: 6, currentLoad: 2, rating: 4.9, completedToday: 6 },
-  { id: "s4", name: "Ahmed R.", role: "inspector", active: true, shift: "morning", floors: ["1", "2", "3", "4"], maxRooms: 12, currentLoad: 5, rating: 4.7, completedToday: 3 },
-  { id: "s5", name: "Chen W.", role: "cleaner", active: false, shift: "night", floors: ["1"], maxRooms: 5, currentLoad: 0, rating: 4.2, completedToday: 0 },
-];
-
-const mockTasks: RoomTask[] = [
-  { id: "101", number: "101", floor: "1", type: "Standard", status: "dirty", priority: false, vip: false, estimatedTime: 25, taskType: "clean" },
-  { id: "102", number: "102", floor: "1", type: "Standard", status: "dirty", priority: true, vip: false, estimatedTime: 25, taskType: "clean" },
-  { id: "103", number: "103", floor: "1", type: "Deluxe", status: "in_progress", assignedTo: "s2", priority: true, vip: true, estimatedTime: 30, taskType: "clean" },
-  { id: "105", number: "105", floor: "1", type: "Standard", status: "maintenance", priority: false, vip: false, estimatedTime: 15, taskType: "maintenance" },
-  { id: "201", number: "201", floor: "2", type: "Deluxe King", status: "dirty", priority: true, vip: true, estimatedTime: 35, taskType: "clean" },
-  { id: "202", number: "202", floor: "2", type: "Deluxe King", status: "dirty", priority: false, vip: false, estimatedTime: 25, taskType: "clean" },
-  { id: "203", number: "203", floor: "2", type: "Suite", status: "inspected", assignedTo: "s3", priority: false, vip: false, estimatedTime: 10, taskType: "inspection" },
-  { id: "301", number: "301", floor: "3", type: "Suite", status: "dirty", priority: false, vip: false, estimatedTime: 40, taskType: "clean" },
-  { id: "302", number: "302", floor: "3", type: "Suite", status: "ready", assignedTo: "s1", priority: false, vip: false, estimatedTime: 20, taskType: "refill" },
-  { id: "303", number: "303", floor: "3", type: "Deluxe", status: "in_progress", assignedTo: "s3", priority: false, vip: false, estimatedTime: 30, taskType: "clean" },
-  { id: "304", number: "304", floor: "3", type: "Standard", status: "dirty", priority: false, vip: false, estimatedTime: 20, taskType: "clean" },
-  { id: "401", number: "401", floor: "4", type: "Suite", status: "dirty", priority: false, vip: false, estimatedTime: 40, taskType: "clean" },
-  { id: "402", number: "402", floor: "4", type: "Deluxe", status: "dirty", priority: true, vip: false, estimatedTime: 30, taskType: "clean" },
-];
-
 const statusConfig: Record<RoomStatus, { label: string; color: string; bg: string }> = {
   dirty: { label: "Dirty", color: "text-rose-400", bg: "bg-rose-500/10" },
   in_progress: { label: "In Progress", color: "text-sky-400", bg: "bg-sky-500/10" },
@@ -58,15 +39,101 @@ const statusConfig: Record<RoomStatus, { label: string; color: string; bg: strin
   maintenance: { label: "Maintenance", color: "text-amber-400", bg: "bg-amber-500/10" },
 };
 
+function mapApiRoomStatus(status: string): RoomStatus {
+  const map: Record<string, RoomStatus> = {
+    vacant_dirty: "dirty",
+    occupied: "in_progress",
+    vacant_clean: "ready",
+    blocked: "blocked",
+    maintenance: "maintenance",
+  };
+  return map[status] || "dirty";
+}
+
+function mapRoomStatusToApi(status: RoomStatus): string {
+  const map: Record<string, string> = {
+    dirty: "vacant_dirty",
+    in_progress: "occupied",
+    inspected: "vacant_clean",
+    ready: "vacant_clean",
+    blocked: "blocked",
+    maintenance: "maintenance",
+  };
+  return map[status] || "vacant_dirty";
+}
+
 export default function HousekeepingManagerPage() {
-  const [tasks, setTasks] = useState<RoomTask[]>(mockTasks);
-  const [staff, setStaff] = useState<Staff[]>(mockStaff);
+  const [tasks, setTasks] = useState<RoomTask[]>([]);
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [shiftFilter, setShiftFilter] = useState<Shift | "all">("all");
   const [floorFilter, setFloorFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [bulkAssignStaff, setBulkAssignStaff] = useState("");
   const [viewMode, setViewMode] = useState<"floor" | "staff">("floor");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [apiRooms, apiTasks, apiStaff] = await Promise.all([
+        getRooms(), getHousekeepingTasks(), getHousekeepingStaff(),
+      ]);
+
+      // Map API tasks to RoomTask shape
+      const mappedTasks: RoomTask[] = apiTasks.map((t) => {
+        const room = apiRooms.find((r) => r.number === t.room_number);
+        return {
+          id: t.id,
+          number: t.room_number,
+          floor: room?.floor || "?",
+          type: room?.type || "Standard",
+          status: mapApiRoomStatus(room?.status || "vacant_dirty"),
+          assignedTo: t.assigned_to || undefined,
+          priority: t.priority === "urgent" || t.priority === "high",
+          vip: false,
+          estimatedTime: 25,
+          taskType: (t.task_type.replace("_", "") as any) || "clean",
+        };
+      });
+
+      // Build staff with computed load
+      const mappedStaff: Staff[] = apiStaff.map((s) => {
+        const assignedCount = apiTasks.filter(
+          (t) => t.assigned_to === s.id && t.status !== "completed"
+        ).length;
+        const completedCount = apiTasks.filter(
+          (t) => t.assigned_to === s.id && t.status === "completed"
+        ).length;
+        return {
+          id: s.id,
+          name: s.name,
+          role: (s.department as any) || "cleaner",
+          active: s.status === "active",
+          shift: (s.shift as Shift) || "morning",
+          floors: ["1", "2", "3", "4"], // API doesn't have floors per staff yet
+          maxRooms: 8,
+          currentLoad: assignedCount,
+          rating: 4.5,
+          completedToday: completedCount,
+        };
+      });
+
+      setTasks(mappedTasks);
+      setStaff(mappedStaff);
+    } catch (e: any) {
+      setError(e.message || "Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const floors = Array.from(new Set(tasks.map((t) => t.floor))).sort();
 
@@ -76,64 +143,78 @@ export default function HousekeepingManagerPage() {
     return matchesFloor && matchesSearch;
   });
 
-  const assignTask = (taskId: string, staffId: string) => {
-    setTasks(tasks.map((t) => t.id === taskId ? { ...t, assignedTo: staffId || undefined } : t));
-    setStaff(staff.map((s) => {
-      const task = tasks.find((t) => t.id === taskId);
-      if (!task) return s;
-      if (s.id === staffId) return { ...s, currentLoad: s.currentLoad + 1 };
-      if (s.id === task.assignedTo) return { ...s, currentLoad: Math.max(0, s.currentLoad - 1) };
-      return s;
-    }));
-  };
-
-  const autoAssign = () => {
-    const unassigned = tasks.filter((t) => !t.assignedTo && t.status === "dirty");
-    const activeStaff = staff.filter((s) => s.active && s.role === "cleaner");
-    let updatedTasks = [...tasks];
-    let updatedStaff = [...staff];
-
-    for (const task of unassigned) {
-      const candidates = activeStaff.filter((s) => {
-        const workload = updatedStaff.find((us) => us.id === s.id)?.currentLoad || s.currentLoad;
-        return workload < s.maxRooms && s.floors.includes(task.floor);
-      }).sort((a, b) => {
-        const aLoad = updatedStaff.find((us) => us.id === a.id)?.currentLoad || a.currentLoad;
-        const bLoad = updatedStaff.find((us) => us.id === b.id)?.currentLoad || b.currentLoad;
-        return aLoad - bLoad;
-      });
-
-      if (candidates.length > 0) {
-        const chosen = candidates[0];
-        updatedTasks = updatedTasks.map((t) => t.id === task.id ? { ...t, assignedTo: chosen.id } : t);
-        updatedStaff = updatedStaff.map((s) => s.id === chosen.id ? { ...s, currentLoad: s.currentLoad + 1 } : s);
-      }
-    }
-    setTasks(updatedTasks);
-    setStaff(updatedStaff);
-  };
-
-  const bulkAssign = () => {
-    if (!bulkAssignStaff) return;
-    let updatedTasks = [...tasks];
-    let updatedStaff = [...staff];
-    for (const taskId of selectedTasks) {
-      const task = tasks.find((t) => t.id === taskId);
-      if (!task || task.assignedTo === bulkAssignStaff) continue;
-      updatedTasks = updatedTasks.map((t) => t.id === taskId ? { ...t, assignedTo: bulkAssignStaff } : t);
-      updatedStaff = updatedStaff.map((s) => {
-        if (s.id === bulkAssignStaff) return { ...s, currentLoad: s.currentLoad + 1 };
-        if (s.id === task.assignedTo) return { ...s, currentLoad: Math.max(0, s.currentLoad - 1) };
-        return s;
-      });
-    }
-    setTasks(updatedTasks);
-    setStaff(updatedStaff);
-    setSelectedTasks([]);
-    setBulkAssignStaff("");
-  };
-
   const activeStaff = staff.filter((s) => s.active && (shiftFilter === "all" || s.shift === shiftFilter));
+
+  async function assignTask(taskId: string, staffId: string) {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    setActionLoading(taskId);
+    try {
+      await updateHousekeepingTask(taskId, { assigned_to: staffId || null });
+      // Also update room status if assigning cleaner
+      if (staffId) {
+        const s = staff.find((st) => st.id === staffId);
+        if (s && s.role === "cleaner" && task.status === "dirty") {
+          await updateRoomStatus(task.number, "occupied");
+        }
+      }
+      setTasks(tasks.map((t) =>
+        t.id === taskId ? { ...t, assignedTo: staffId || undefined, status: staffId && task.status === "dirty" ? "in_progress" : t.status } : t
+      ));
+      await fetchData();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function autoAssign() {
+    const unassigned = tasks.filter((t) => !t.assignedTo && t.status === "dirty");
+    const cleaners = staff.filter((s) => s.active && s.role === "cleaner");
+    try {
+      for (const task of unassigned) {
+        const candidates = cleaners
+          .filter((s) => s.currentLoad < s.maxRooms)
+          .sort((a, b) => a.currentLoad - b.currentLoad);
+        if (candidates.length > 0) {
+          const chosen = candidates[0];
+          await updateHousekeepingTask(task.id, { assigned_to: chosen.id });
+          await updateRoomStatus(task.number, "occupied");
+        }
+      }
+      await fetchData();
+    } catch (e: any) {
+      alert(e.message);
+    }
+  }
+
+  async function bulkAssign() {
+    if (!bulkAssignStaff) return;
+    try {
+      for (const taskId of selectedTasks) {
+        const task = tasks.find((t) => t.id === taskId);
+        if (!task || task.assignedTo === bulkAssignStaff) continue;
+        await updateHousekeepingTask(taskId, { assigned_to: bulkAssignStaff });
+        if (task.status === "dirty") {
+          await updateRoomStatus(task.number, "occupied");
+        }
+      }
+      setSelectedTasks([]);
+      setBulkAssignStaff("");
+      await fetchData();
+    } catch (e: any) {
+      alert(e.message);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-slate-500">
+        <RefreshCw className="mr-2 h-5 w-5 animate-spin" /> Loading manager board...
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -149,6 +230,9 @@ export default function HousekeepingManagerPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={fetchData} className="rounded-lg border border-slate-700 bg-slate-800 p-2 text-slate-400 hover:text-white" title="Refresh">
+            <RefreshCw className="h-4 w-4" />
+          </button>
           <button onClick={autoAssign} className="btn-primary text-xs gap-1.5">
             <Wand2 className="h-3.5 w-3.5" /> Auto Assign
           </button>
@@ -157,6 +241,12 @@ export default function HousekeepingManagerPage() {
           </Link>
         </div>
       </div>
+
+      {error && (
+        <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-sm text-rose-400">
+          {error}
+        </div>
+      )}
 
       {/* Staff Overview Cards */}
       <div className="grid grid-cols-5 gap-3">
@@ -283,7 +373,8 @@ export default function HousekeepingManagerPage() {
                           <select
                             value={task.assignedTo || ""}
                             onChange={(e) => assignTask(task.id, e.target.value)}
-                            className="input w-full text-[10px] py-1"
+                            disabled={actionLoading === task.id}
+                            className="input w-full text-[10px] py-1 disabled:opacity-50"
                           >
                             <option value="">Unassigned</option>
                             {activeStaff.filter((s) => s.role === "cleaner").map((s) => (
@@ -330,8 +421,8 @@ export default function HousekeepingManagerPage() {
                         </div>
                         <p className="text-[10px] text-slate-500">{task.type} · Floor {task.floor}</p>
                         {task.assignedTo !== s.id && (
-                          <button onClick={() => assignTask(task.id, s.id)} className="mt-2 w-full rounded bg-nexus-500/10 py-1 text-[10px] text-nexus-400 hover:bg-nexus-500/20">
-                            Assign to {s.name.split(" ")[0]}
+                          <button onClick={() => assignTask(task.id, s.id)} disabled={actionLoading === task.id} className="mt-2 w-full rounded bg-nexus-500/10 py-1 text-[10px] text-nexus-400 hover:bg-nexus-500/20 disabled:opacity-50">
+                            {actionLoading === task.id ? "..." : `Assign to ${s.name.split(" ")[0]}`}
                           </button>
                         )}
                       </div>
@@ -356,7 +447,7 @@ export default function HousekeepingManagerPage() {
                     <p className="text-[10px] text-slate-500">{task.type} · Floor {task.floor}</p>
                     <div className="mt-2 flex flex-wrap gap-1">
                       {activeStaff.filter((s) => s.role === "cleaner" && s.floors.includes(task.floor)).map((s) => (
-                        <button key={s.id} onClick={() => assignTask(task.id, s.id)} className="rounded bg-slate-700 px-2 py-0.5 text-[10px] text-white hover:bg-nexus-500">
+                        <button key={s.id} onClick={() => assignTask(task.id, s.id)} disabled={actionLoading === task.id} className="rounded bg-slate-700 px-2 py-0.5 text-[10px] text-white hover:bg-nexus-500 disabled:opacity-50">
                           {s.name.split(" ")[0]}
                         </button>
                       ))}
