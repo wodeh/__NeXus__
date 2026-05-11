@@ -322,6 +322,35 @@ func (h *Handler) Router() chi.Router {
 		r.Get("/logs", h.listCommunicationLogs)
 		r.Post("/send", h.sendImmediate)
 	})
+
+	// Housekeeping Tasks + Staff + Manager Dashboard
+	r.Route("/tenants/{tenantId}/housekeeping", func(r chi.Router) {
+		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapHousekeeping))
+		r.Get("/dashboard", h.getHousekeepingDashboard)
+		r.Get("/tasks", h.listHousekeepingTasks)
+		r.Post("/tasks", h.createHousekeepingTask)
+		r.Get("/tasks/{taskId}", h.getHousekeepingTask)
+		r.Patch("/tasks/{taskId}", h.updateHousekeepingTask)
+		r.Delete("/tasks/{taskId}", h.deleteHousekeepingTask)
+		r.Post("/tasks/{taskId}/assign", h.assignHousekeepingTask)
+		r.Post("/tasks/{taskId}/start", h.startHousekeepingTask)
+		r.Post("/tasks/{taskId}/complete", h.completeHousekeepingTask)
+		r.Post("/tasks/bulk-assign", h.bulkAssignTasks)
+		r.Get("/staff", h.listHousekeepingStaff)
+		r.Post("/staff", h.createHousekeepingStaff)
+		r.Patch("/staff/{staffId}", h.updateHousekeepingStaff)
+		r.Delete("/staff/{staffId}", h.deleteHousekeepingStaff)
+		r.Get("/staff/{staffId}/performance", h.getStaffPerformance)
+		r.Get("/checklists", h.getChecklistTemplate)
+		r.Post("/checklists", h.saveChecklistTemplate)
+		r.Get("/cleaner-cards", h.listCleanerCards)
+		r.Post("/cleaner-cards", h.createCleanerCard)
+		r.Post("/cleaner-cards/{cardId}/revoke", h.revokeCleanerCard)
+		r.Get("/supplies", h.listSupplies)
+		r.Post("/supplies/update", h.updateSupplyStock)
+	})
+
+	return r
 }
 
 // ==================== MIDDLEWARE ====================
