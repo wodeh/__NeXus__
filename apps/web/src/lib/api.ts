@@ -101,6 +101,16 @@ export async function assignRoom(id: string, roomNumber: string): Promise<void> 
   });
 }
 
+export async function moveReservation(
+  id: string,
+  updates: { room_number?: string; check_in?: string; check_out?: string }
+): Promise<void> {
+  await api(`/v1/reservations/${id}/move`, {
+    method: "PATCH",
+    body: JSON.stringify(updates),
+  });
+}
+
 /* ─── Rooms ─── */
 export interface Room {
   id: string;

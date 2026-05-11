@@ -54,3 +54,10 @@ type ReservationCreateRequest struct {
 type ReservationAssignRequest struct {
 	RoomNumber string `json:"room_number"`
 }
+
+// ReservationMoveRequest moves a reservation to a new room and/or dates.
+type ReservationMoveRequest struct {
+	RoomNumber string `json:"room_number,omitempty"`
+	CheckIn    string `json:"check_in,omitempty"`
+	CheckOut   string `json:"check_out,omitempty"`
+}

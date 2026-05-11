@@ -22,7 +22,7 @@ import {
   GripVertical,
   RefreshCw,
 } from "lucide-react";
-import { Reservation, Room, getReservations, getRooms } from "@/lib/api";
+import { Reservation, Room, getReservations, getRooms, moveReservation } from "@/lib/api";
 
 /* ─── Types ─── */
 interface TapechartReservation extends Reservation {
@@ -151,10 +151,20 @@ export default function TapechartPage() {
     }
   };
 
-  const handleDrop = (roomNumber: string, date: string) => {
+  const handleDrop = async (roomNumber: string, date: string) => {
     if (!draggingRes) return;
-    console.log("Move", draggingRes.id, "to", roomNumber, "starting", date);
+    try {
+      await moveReservation(draggingRes.id, {
+        room_number: roomNumber,
+        check_in: date,
+      });
+      // Refresh data to reflect the move
+      fetchData();
+    } catch (e: any) {
+      alert("Failed to move reservation: " + e.message);
+    }
     setDraggingRes(null);
+    setHoveredCell(null);
   };
 
   const occupancyStats = useMemo(() => {

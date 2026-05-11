@@ -241,5 +241,55 @@ func diffDays(a, b string) int {
 	return 0 // Simplified; actual implementation would parse dates
 }
 
+// Move updates room number and/or dates for a reservation.
+func (r *ReservationRepository) Move(ctx context.Context, tenantID string, id uuid.UUID, req *domain.ReservationMoveRequest) error {
+	updates := []string{}
+	args := []interface{}{id, tenantID}
+	argIdx := 3
+
+	if req.RoomNumber != "" {
+		updates = append(updates, fmt.Sprintf("room_number = $%d", argIdx))
+		args = append(args, req.RoomNumber)
+		argIdx++
+	}
+	if req.CheckIn != "" {
+		updates = append(updates, fmt.Sprintf("check_in = $%d", argIdx))
+		args = append(args, req.CheckIn)
+		argIdx++
+	}
+	if req.CheckOut != "" {
+		updates = append(updates, fmt.Sprintf("check_out = $%d", argIdx))
+		args = append(args, req.CheckOut)
+		argIdx++
+	}
+
+	if len(updates) == 0 {
+		return fmt.Errorf("no fields to update")
+	}
+
+	updates = append(updates, "updated_at = NOW(), version = version + 1")
+	sql := fmt.Sprintf("UPDATE reservations SET %s WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL", joinUpdates(updates))
+
+	cmdTag, err := r.pool.Exec(ctx, sql, args...)
+	if err != nil {
+		return fmt.Errorf("move reservation: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("reservation %s: %w", id, ErrNotFound)
+	}
+	return nil
+}
+
+func joinUpdates(updates []string) string {
+	result := ""
+	for i, u := range updates {
+		if i > 0 {
+			result += ", "
+		}
+		result += u
+	}
+	return result
+}
+
 // ErrNotFound is returned when a record is not found.
 var ErrNotFound = fmt.Errorf("not found")

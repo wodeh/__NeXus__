@@ -71,6 +71,23 @@ func (s *Server) handleReservationDetail(w http.ResponseWriter, r *http.Request)
 	if len(parts) > 1 {
 		action := parts[1]
 		switch action {
+		case "move":
+			if r.Method != http.MethodPatch {
+				http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+				return
+			}
+			var req domain.ReservationMoveRequest
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+				return
+			}
+			if err := repo.Move(ctx, tenantID, id, &req); err != nil {
+				http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]string{"status": "moved"})
+			return
+			
 		case "checkin":
 			if r.Method != http.MethodPatch {
 				http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)

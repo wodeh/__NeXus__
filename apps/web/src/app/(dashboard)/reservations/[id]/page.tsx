@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -30,7 +30,9 @@ import {
   Wifi,
   KeyRound,
   AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
+import { Reservation as ApiReservation, Room, getReservations, getRooms, checkInReservation, checkOutReservation, cancelReservation, assignRoom } from "@/lib/api";
 
 interface Charge {
   id: string;
@@ -43,76 +45,21 @@ interface Charge {
   staffName?: string;
 }
 
-interface Reservation {
-  id: string;
-  guest_name: string;
-  email: string;
-  phone: string;
-  address: string;
-  country: string;
-  room_number: string;
-  room_type: string;
-  check_in: string;
-  check_out: string;
-  nights: number;
-  adults: number;
-  children: number;
-  status: "confirmed" | "checked_in" | "checked_out" | "cancelled" | "no_show";
-  source: string;
-  total: number;
-  balance: number;
-  paid: number;
-  deposit: number;
-  special_requests: string;
-  vip: boolean;
-  loyalty_id?: string;
-  createdAt: string;
+interface Reservation extends ApiReservation {
+  address?: string;
+  country?: string;
+  nights?: number;
+  paid?: number;
+  deposit?: number;
+  createdAt?: string;
   checkedInAt?: string;
   checkedOutAt?: string;
+  loyalty_id?: string;
 }
 
-const mockReservation: Reservation = {
-  id: "r-001",
-  guest_name: "Alice Chen",
-  email: "alice.chen@email.com",
-  phone: "+1-555-0101",
-  address: "123 Park Avenue, New York",
-  country: "United States",
-  room_number: "201",
-  room_type: "Deluxe King",
-  check_in: "2026-05-10",
-  check_out: "2026-05-14",
-  nights: 4,
-  adults: 2,
-  children: 0,
-  status: "checked_in",
-  source: "direct",
-  total: 516,
-  balance: 129,
-  paid: 387,
-  deposit: 100,
-  special_requests: "Late checkout requested. Extra pillows.",
-  vip: true,
-  loyalty_id: "LX-88421",
-  createdAt: "2026-04-28",
-  checkedInAt: "2026-05-10 14:32",
-  checkedOutAt: undefined,
-};
-
 const mockCharges: Charge[] = [
-  { id: "ch-1", description: "Deluxe King × 4 nights", amount: 129, qty: 4, total: 516, category: "room", postedAt: "2026-05-10" },
+  { id: "ch-1", description: "Room Charge", amount: 129, qty: 4, total: 516, category: "room", postedAt: "2026-05-10" },
   { id: "ch-2", description: "Room Service - Breakfast", amount: 24, qty: 2, total: 48, category: "restaurant", postedAt: "2026-05-11", staffName: "Maria K." },
-  { id: "ch-3", description: "Minibar - Snacks", amount: 12, qty: 1, total: 12, category: "minibar", postedAt: "2026-05-11" },
-  { id: "ch-4", description: "Spa Treatment", amount: 89, qty: 1, total: 89, category: "spa", postedAt: "2026-05-12", staffName: "Spa Desk" },
-  { id: "ch-5", description: "Late Checkout Fee", amount: 45, qty: 1, total: 45, category: "late", postedAt: "2026-05-14" },
-];
-
-const mockAvailableRooms = [
-  { number: "102", type: "Standard", floor: "1", status: "vacant_clean" },
-  { number: "104", type: "Deluxe", floor: "1", status: "vacant_clean" },
-  { number: "202", type: "Deluxe King", floor: "2", status: "vacant_clean" },
-  { number: "203", type: "Suite", floor: "2", status: "vacant_clean" },
-  { number: "302", type: "Suite", floor: "3", status: "vacant_clean" },
 ];
 
 const statusColors: Record<string, string> = {
@@ -126,8 +73,11 @@ const statusColors: Record<string, string> = {
 export default function ReservationDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = React.use(props.params);
   const id = params?.id || "";
-  const [res, setRes] = useState(mockReservation);
-  const [charges, setCharges] = useState(mockCharges);
+  const [res, setRes] = useState<Reservation | null>(null);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [charges, setCharges] = useState<Charge[]>(mockCharges);
   const [activeTab, setActiveTab] = useState<"overview" | "charges" | "invoice" | "history">("overview");
   const [editingGuest, setEditingGuest] = useState(false);
   const [showChangeRoom, setShowChangeRoom] = useState(false);
@@ -136,19 +86,80 @@ export default function ReservationDetailPage(props: { params: Promise<{ id: str
   const [showCheckInOut, setShowCheckInOut] = useState<"checkin" | "checkout" | null>(null);
   const [showCancel, setShowCancel] = useState(false);
 
+  const fetchData = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const [allRes, allRooms] = await Promise.all([getReservations(), getRooms()]);
+      const found = allRes.find((r) => r.id === id);
+      if (!found) {
+        setError("Reservation not found");
+        return;
+      }
+      // Enrich with mock fields that API doesn't have yet
+      const enriched: Reservation = {
+        ...found,
+        address: "123 Park Avenue, New York",
+        country: "United States",
+        nights: Math.max(1, Math.round((new Date(found.check_out).getTime() - new Date(found.check_in).getTime()) / (1000 * 60 * 60 * 24))),
+        paid: found.total - found.balance,
+        deposit: 100,
+        createdAt: found.created_at?.split("T")[0] || "",
+      };
+      setRes(enriched);
+      setRooms(allRooms);
+    } catch (e: any) {
+      setError(e.message || "Failed to load reservation");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  if (loading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-nexus-400" />
+      </div>
+    );
+  }
+
+  if (error || !res) {
+    return (
+      <div className="flex h-96 flex-col items-center justify-center gap-4">
+        <AlertTriangle className="h-10 w-10 text-rose-400" />
+        <p className="text-rose-400">{error || "Reservation not found"}</p>
+        <div className="flex gap-2">
+          <Link href="/reservations" className="btn-secondary">Back to Reservations</Link>
+          <button onClick={fetchData} className="btn-primary">Retry</button>
+        </div>
+      </div>
+    );
+  }
+
   const subtotal = charges.reduce((s, c) => s + c.total, 0);
   const tax = subtotal * 0.12;
   const grandTotal = subtotal + tax;
-  const balanceDue = grandTotal - res.paid;
+  const balanceDue = grandTotal - (res.paid || 0);
+  const availableRooms = rooms.filter((r) => r.status === "vacant_clean" && r.number !== res.room_number);
 
   const handleGuestSave = (updated: Partial<Reservation>) => {
     setRes({ ...res, ...updated });
     setEditingGuest(false);
   };
 
-  const handleRoomChange = (newRoom: string) => {
-    setRes({ ...res, room_number: newRoom });
-    setShowChangeRoom(false);
+  const handleRoomChange = async (newRoom: string) => {
+    try {
+      await assignRoom(res.id, newRoom);
+      setRes({ ...res, room_number: newRoom });
+      setShowChangeRoom(false);
+    } catch (e: any) {
+      alert(e.message);
+    }
   };
 
   const handleAddCharge = (charge: Charge) => {
@@ -156,19 +167,34 @@ export default function ReservationDetailPage(props: { params: Promise<{ id: str
     setShowAddCharge(false);
   };
 
-  const handleCheckIn = () => {
-    setRes({ ...res, status: "checked_in", checkedInAt: new Date().toISOString() });
-    setShowCheckInOut(null);
+  const handleCheckIn = async () => {
+    try {
+      await checkInReservation(res.id);
+      setRes({ ...res, status: "checked_in", checkedInAt: new Date().toISOString() });
+      setShowCheckInOut(null);
+    } catch (e: any) {
+      alert(e.message);
+    }
   };
 
-  const handleCheckOut = () => {
-    setRes({ ...res, status: "checked_out", checkedOutAt: new Date().toISOString() });
-    setShowCheckInOut(null);
+  const handleCheckOut = async () => {
+    try {
+      await checkOutReservation(res.id);
+      setRes({ ...res, status: "checked_out", checkedOutAt: new Date().toISOString() });
+      setShowCheckInOut(null);
+    } catch (e: any) {
+      alert(e.message);
+    }
   };
 
-  const handleCancel = () => {
-    setRes({ ...res, status: "cancelled" });
-    setShowCancel(false);
+  const handleCancel = async () => {
+    try {
+      await cancelReservation(res.id);
+      setRes({ ...res, status: "cancelled" });
+      setShowCancel(false);
+    } catch (e: any) {
+      alert(e.message);
+    }
   };
 
   return (
@@ -350,7 +376,7 @@ export default function ReservationDetailPage(props: { params: Promise<{ id: str
               </div>
               <div className="rounded bg-slate-800/50 p-3 text-center">
                 <p className="text-xs text-slate-400">Paid</p>
-                <p className="text-lg font-bold text-emerald-400">${res.paid.toFixed(2)}</p>
+                <p className="text-lg font-bold text-emerald-400">${(res.paid || 0).toFixed(2)}</p>
               </div>
               <div className="rounded bg-slate-800/50 p-3 text-center">
                 <p className="text-xs text-slate-400">Balance</p>
@@ -450,7 +476,7 @@ export default function ReservationDetailPage(props: { params: Promise<{ id: str
 
       {/* Modals */}
       {editingGuest && <EditGuestModal res={res} onSave={handleGuestSave} onClose={() => setEditingGuest(false)} />}
-      {showChangeRoom && <ChangeRoomModal currentRoom={res.room_number} rooms={mockAvailableRooms} onSelect={handleRoomChange} onClose={() => setShowChangeRoom(false)} />}
+      {showChangeRoom && <ChangeRoomModal currentRoom={res.room_number || ""} rooms={availableRooms} onSelect={handleRoomChange} onClose={() => setShowChangeRoom(false)} />}
       {showAddCharge && <AddChargeModal onAdd={handleAddCharge} onClose={() => setShowAddCharge(false)} />}
       {showInvoice && <InvoiceModal res={res} charges={charges} subtotal={subtotal} tax={tax} grandTotal={grandTotal} balanceDue={balanceDue} onClose={() => setShowInvoice(false)} />}
       {showCheckInOut === "checkin" && <CheckInModal res={res} onConfirm={handleCheckIn} onClose={() => setShowCheckInOut(null)} />}
@@ -502,7 +528,7 @@ function EditGuestModal({ res, onSave, onClose }: { res: Reservation; onSave: (u
   );
 }
 
-function ChangeRoomModal({ currentRoom, rooms, onSelect, onClose }: { currentRoom: string; rooms: typeof mockAvailableRooms; onSelect: (r: string) => void; onClose: () => void }) {
+function ChangeRoomModal({ currentRoom, rooms, onSelect, onClose }: { currentRoom: string; rooms: Room[]; onSelect: (r: string) => void; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl space-y-4">
@@ -622,8 +648,8 @@ function InvoicePreview({ res, charges, subtotal, tax, grandTotal, balanceDue }:
       <div className="border-t border-slate-700 pt-4 space-y-1 text-sm">
         <div className="flex justify-between"><span className="text-slate-400">Subtotal</span><span className="text-white">${subtotal.toFixed(2)}</span></div>
         <div className="flex justify-between"><span className="text-slate-400">Tax (12%)</span><span className="text-white">${tax.toFixed(2)}</span></div>
-        <div className="flex justify-between"><span className="text-slate-400">Deposit</span><span className="text-white">-${res.deposit.toFixed(2)}</span></div>
-        <div className="flex justify-between"><span className="text-slate-400">Paid</span><span className="text-emerald-400">-${res.paid.toFixed(2)}</span></div>
+        <div className="flex justify-between"><span className="text-slate-400">Deposit</span><span className="text-white">-${(res.deposit || 0).toFixed(2)}</span></div>
+        <div className="flex justify-between"><span className="text-slate-400">Paid</span><span className="text-emerald-400">-${(res.paid || 0).toFixed(2)}</span></div>
         <div className="flex justify-between border-t border-slate-700 pt-2 text-lg font-bold">
           <span className={balanceDue > 0 ? "text-amber-400" : "text-white"}>Balance Due</span>
           <span className={balanceDue > 0 ? "text-amber-400" : "text-emerald-400"}>${balanceDue.toFixed(2)}</span>
