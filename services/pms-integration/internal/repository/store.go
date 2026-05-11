@@ -36,9 +36,10 @@ type Store struct {
 	WhatsApp              *WhatsAppRepository
 	BookingEngine         *BookingEngineRepository
 	Reviews               *ReviewsRepository
-	Communications        *CommunicationsRepository
-	Housekeeping          *HousekeepingRepository
-	Users                 UserRepository
+	Communications          *CommunicationsRepository
+	Housekeeping            *HousekeepingRepository
+	Users                   UserRepository
+	Tapechart               TapechartRepository
 }
 
 // NewStore creates a repository store backed by a PostgreSQL pool.
@@ -75,6 +76,7 @@ func NewStore(pool *db.Pool) *Store {
 		Communications:       NewCommunicationsRepository(pool, m),
 		Housekeeping:         NewHousekeepingRepository(pool.Pool),
 		Users:                NewUserRepository(pool, m),
+		Tapechart:            NewTapechartRepository(pool, m),
 	}
 	return s
 }

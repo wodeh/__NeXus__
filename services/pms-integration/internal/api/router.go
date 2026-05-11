@@ -75,15 +75,17 @@ func (h *Handler) Router() chi.Router {
 	// Reservations
 	r.Route("/tenants/{tenantId}/reservations", func(r chi.Router) {
 		r.Use(apiMiddleware.License(h.licenseSvc, domain.CapReservations))
+		r.Get("/", h.listReservations)
 		r.Post("/", h.createReservation)
 		r.Get("/{reservationId}", h.getReservation)
 		r.Post("/{reservationId}/checkin", h.checkIn)
 		r.Post("/{reservationId}/checkout", h.checkOut)
 		r.Patch("/{reservationId}/cancel", h.cancelReservation)
+		r.Patch("/{reservationId}/room", h.moveReservation)
 	})
 
-	// Availability
-	r.Get("/tenants/{tenantId}/availability", h.checkAvailability)
+	// Tapechart
+	r.Get("/tenants/{tenantId}/tapechart", h.getTapechart)
 
 	// Properties
 	r.Route("/tenants/{tenantId}/properties", func(r chi.Router) {

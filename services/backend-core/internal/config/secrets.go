@@ -16,7 +16,7 @@ type SecretResolver struct {
 	vault     VaultClient
 	overrides map[string]string
 	mu        sync.RWMutex
-	metrics   ConfigMetrics
+	metrics   *ConfigMetrics
 }
 
 // NewSecretResolver creates a resolver backed by Vault.
@@ -25,7 +25,7 @@ func NewSecretResolver(vault VaultClient) *SecretResolver {
 	return &SecretResolver{
 		vault:     vault,
 		overrides: make(map[string]string),
-		metrics:   NewConfigMetrics(),
+		metrics:   NewConfigMetrics(nil),
 	}
 }
 

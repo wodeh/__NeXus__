@@ -48,7 +48,10 @@ func (s *Store) ResetTenant(ctx context.Context) error {
 	return s.pool.ResetTenant(ctx)
 }
 
-// TenantConfig holds minimal tenant metadata (Phase 1 compatibility).
+// Pool returns the underlying database pool for direct repository creation.
+func (s *Store) Pool() *db.Pool {
+	return s.pool
+}
 // Deprecated: use TenantRepository.GetByExternalID for full tenant records.
 type TenantConfig struct {
 	ID        string    `json:"id"`

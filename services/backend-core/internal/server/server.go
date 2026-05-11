@@ -54,6 +54,9 @@ func (s *Server) Start(ctx context.Context) error {
 	})
 	mux.HandleFunc("/v1/tenant/", s.withTenant(s.handleTenantAPI))
 	mux.HandleFunc("/v1/events/publish", s.withTenant(s.handlePublishEvent))
+	s.registerReservationHandlers(mux)
+	s.registerRoomHandlers(mux)
+	s.registerHousekeepingHandlers(mux)
 
 	s.httpServer = &http.Server{
 		Addr:         ":" + s.cfg.HTTPPort,
