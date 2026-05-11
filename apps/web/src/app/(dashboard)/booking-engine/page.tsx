@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { hasCapability, CAPABILITIES } from "@/lib/tenant";
 import {
@@ -22,7 +22,9 @@ import {
   Eye,
   ToggleRight,
   ToggleLeft,
+  RefreshCw,
 } from "lucide-react";
+import { Reservation, getReservations } from "@/lib/api";
 
 const mockPromoCodes = [
   { id: "p1", code: "SUMMER25", discountType: "percentage", discountValue: 25, maxUses: 100, usesCount: 42, minNights: 2, validFrom: "2026-05-01", validUntil: "2026-08-31", isActive: true },
@@ -41,6 +43,28 @@ const mockUpsells = [
 
 export default function BookingEnginePage() {
   const { config } = useTenant();
+  const [directBookings, setDirectBookings] = useState(0);
+  const [upsellRevenue, setUpsellRevenue] = useState(0);
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  const fetchStats = useCallback(async () => {
+    setLoadingStats(true);
+    try {
+      const reservations = await getReservations();
+      const direct = reservations.filter((r) => r.source === "direct").length;
+      setDirectBookings(direct);
+      // Upsell revenue placeholder — no backend yet
+      setUpsellRevenue(0);
+    } catch {
+      // keep defaults
+    } finally {
+      setLoadingStats(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
   const [activeTab, setActiveTab] = useState<"widget" | "promos" | "upsells">("widget");
   const [widgetEnabled, setWidgetEnabled] = useState(true);
   const [showPromoCode, setShowPromoCode] = useState(true);
@@ -68,16 +92,21 @@ export default function BookingEnginePage() {
           <h1 className="text-2xl font-bold text-white">Booking Engine</h1>
           <p className="text-sm text-slate-400">Direct booking widget · Promo codes · Upsells</p>
         </div>
-        <button className="btn-primary gap-2 text-sm">
-          <Eye className="h-4 w-4" /> Preview Widget
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={fetchStats} className="rounded-lg border border-slate-700 bg-slate-800 p-2 text-slate-400 hover:text-white" title="Refresh stats">
+            <RefreshCw className="h-4 w-4" />
+          </button>
+          <button className="btn-primary gap-2 text-sm">
+            <Eye className="h-4 w-4" /> Preview Widget
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
         <div className="card space-y-2">
           <div className="flex items-center gap-2 text-xs text-slate-400"><ExternalLink className="h-4 w-4" /> Direct Bookings</div>
-          <p className="text-2xl font-bold text-white">43</p>
+          <p className="text-2xl font-bold text-white">{loadingStats ? "—" : directBookings}</p>
           <div className="text-xs text-emerald-400">+18% vs last month</div>
         </div>
         <div className="card space-y-2">
@@ -86,7 +115,7 @@ export default function BookingEnginePage() {
         </div>
         <div className="card space-y-2">
           <div className="flex items-center gap-2 text-xs text-slate-400"><Gift className="h-4 w-4" /> Upsell Revenue</div>
-          <p className="text-2xl font-bold text-white">$4,280</p>
+          <p className="text-2xl font-bold text-white">${loadingStats ? "—" : upsellRevenue.toLocaleString()}</p>
         </div>
         <div className="card space-y-2">
           <div className="flex items-center gap-2 text-xs text-slate-400"><CheckCircle2 className="h-4 w-4" /> Conversion Rate</div>
