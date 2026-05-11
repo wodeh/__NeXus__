@@ -230,7 +230,7 @@ export default function HousekeepingStaffPage() {
             <div>
               <h1 className="text-lg font-bold text-white">Cleaner Tablet</h1>
               <p className="text-xs text-slate-400">
-                {currentStaff ? `${currentStaff.name} · ${currentStaff.shift} Shift` : "Select staff member"}
+                {currentStaff ? `${currentStaff.name} · ${currentStaff.active_shift} Shift` : "Select staff member"}
               </p>
             </div>
           </div>
@@ -242,7 +242,7 @@ export default function HousekeepingStaffPage() {
             >
               <option value="">Select staff...</option>
               {staff.map((s) => (
-                <option key={s.id} value={s.id}>{s.name} · {s.department}</option>
+                <option key={s.id} value={s.id}>{s.name} · {s.role}</option>
               ))}
             </select>
             <button onClick={fetchData} className="rounded-lg border border-slate-700 bg-slate-800 p-2 text-slate-400 hover:text-white" title="Refresh">

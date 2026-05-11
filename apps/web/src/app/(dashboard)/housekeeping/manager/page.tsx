@@ -111,11 +111,11 @@ export default function HousekeepingManagerPage() {
         return {
           id: s.id,
           name: s.name,
-          role: (s.department as any) || "cleaner",
-          active: s.status === "active",
-          shift: (s.shift as Shift) || "morning",
+          role: (s.role as any) || "cleaner",
+          active: s.active,
+          shift: (s.active_shift as Shift) || "morning",
           floors: ["1", "2", "3", "4"], // API doesn't have floors per staff yet
-          maxRooms: 8,
+          maxRooms: s.max_rooms_per_day || 8,
           currentLoad: assignedCount,
           rating: 4.5,
           completedToday: completedCount,
@@ -150,7 +150,7 @@ export default function HousekeepingManagerPage() {
     if (!task) return;
     setActionLoading(taskId);
     try {
-      await updateHousekeepingTask(taskId, { assigned_to: staffId || null });
+      await updateHousekeepingTask(taskId, { assigned_to: staffId || undefined });
       // Also update room status if assigning cleaner
       if (staffId) {
         const s = staff.find((st) => st.id === staffId);

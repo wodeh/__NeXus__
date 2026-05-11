@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { apiClient } from "@/lib/api";
+import { apiClient, getTenantConfig } from "@/lib/api";
 import { TenantConfig } from "@/lib/tenant";
 
 const fallbackConfig: TenantConfig = {
@@ -33,13 +33,13 @@ export function useTenant() {
 
   useEffect(() => {
     const tenant = localStorage.getItem("nexus-tenant") || "demo";
-    apiClient
-      .get(`/tenants/${tenant}/config`)
+    getTenantConfig(tenant)
       .then((data) => {
-        setConfig(data as TenantConfig);
+        setConfig(data);
         setLoading(false);
       })
       .catch((err) => {
+        console.warn("Tenant config fetch failed, using fallback:", err.message);
         setConfig(fallbackConfig);
         setError(err.message);
         setLoading(false);

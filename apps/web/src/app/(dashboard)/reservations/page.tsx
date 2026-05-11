@@ -147,6 +147,23 @@ export default function ReservationsPage() {
           )}
         </>
       )}
+
+      {/* Quick Book Modal */}
+      {showQuickBook && (
+        <QuickBookModal
+          rooms={rooms}
+          onClose={() => setShowQuickBook(false)}
+          onCreate={async (payload) => {
+            try {
+              await createReservation(payload);
+              fetchData();
+              setShowQuickBook(false);
+            } catch (e: any) {
+              alert(e.message);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -391,16 +408,20 @@ function TapechartView({ reservations, rooms, today, onRefresh }: { reservations
     });
   }, [reservations]);
 
-  const getSpanForRes = useCallback((res: Reservation, roomNumber: string) => {
-    if (res.room_number !== roomNumber) return 0;
+  const getSpanForRes = useCallback((res: Reservation, roomNumber: string, date: string) => {
+    if (res.room_number !== roomNumber) return { span: 0, start: false };
     const resStart = normalizeDate(res.check_in);
     const resEnd = normalizeDate(res.check_out);
     const gridStart = startDate;
     const gridEnd = addDays(startDate, dayCount);
+    if (resEnd <= gridStart || resStart >= gridEnd) return { span: 0, start: false };
+    const visibleStart = resStart < gridStart ? gridStart : resStart;
+    const isVisibleStart = date === visibleStart;
+    if (!isVisibleStart) return { span: 0, start: false };
     const overlapStart = new Date(Math.max(new Date(gridStart + "T00:00:00").getTime(), new Date(resStart + "T00:00:00").getTime()));
     const overlapEnd = new Date(Math.min(new Date(gridEnd + "T00:00:00").getTime(), new Date(resEnd + "T00:00:00").getTime()));
     const days = Math.round((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.max(0, days);
+    return { span: Math.max(0, days), start: true };
   }, [startDate, dayCount]);
 
   const handlePrev = () => setStartDate((d) => addDays(d, -7));
@@ -536,7 +557,8 @@ function TapechartView({ reservations, rooms, today, onRefresh }: { reservations
                         const isToday = date === today;
                         const isHovered = hoveredCell?.room === room.number && hoveredCell?.date === date;
                         const isDropTarget = draggingRes && isHovered && resList.length === 0;
-                        const spanRes = resList.find((r) => normalizeDate(r.check_in) === date);
+                        const spanInfo = resList.map((r) => getSpanForRes(r, room.number, date)).find((s) => s.start);
+                        const spanRes = spanInfo ? resList.find((r) => getSpanForRes(r, room.number, date).start) : null;
                         return (
                           <div
                             key={`${room.number}-${date}`}
@@ -553,7 +575,7 @@ function TapechartView({ reservations, rooms, today, onRefresh }: { reservations
                                 onDragStart={() => setDraggingRes(spanRes)}
                                 onDragEnd={() => setDraggingRes(null)}
                                 className={`absolute inset-y-0.5 left-0.5 z-10 rounded cursor-move ${spanRes.color || "bg-sky-500"} hover:brightness-110`}
-                                style={{ width: `${Math.max(getSpanForRes(spanRes, room.number), 1) * 5 - 0.25}rem`, minWidth: "4.5rem" }}
+                                style={{ width: `${Math.max(spanInfo?.span || 1, 1) * 5 - 0.25}rem`, minWidth: "4.5rem" }}
                                 onClick={(e) => { e.stopPropagation(); setSelectedRes(spanRes); }}
                               >
                                 <div className="flex h-full items-center px-1.5 overflow-hidden">
@@ -605,23 +627,6 @@ function TapechartView({ reservations, rooms, today, onRefresh }: { reservations
               alert(e.message);
             } finally {
               setActionLoading(false);
-            }
-          }}
-        />
-      )}
-
-      {/* Quick Book Modal */}
-      {showQuickBook && (
-        <QuickBookModal
-          rooms={rooms}
-          onClose={() => setShowQuickBook(false)}
-          onCreate={async (payload) => {
-            try {
-              await createReservation(payload);
-              fetchData();
-              setShowQuickBook(false);
-            } catch (e: any) {
-              alert(e.message);
             }
           }}
         />

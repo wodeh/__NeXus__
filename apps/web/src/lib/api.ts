@@ -1,3 +1,5 @@
+import { TenantConfig } from "@/lib/tenant";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 async function api<T>(path: string, opts?: RequestInit): Promise<T> {
@@ -119,6 +121,86 @@ export async function updateRoomStatus(number: string, status: string): Promise<
   await api(`/v1/rooms/${number}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
+  });
+}
+
+export async function getProperties(): Promise<Property[]> {
+  const data = await api<{ properties: Property[] }>("/v1/properties", {
+    headers: { "X-Tenant-ID": localStorage.getItem("nexus-tenant") || "demo" },
+  });
+  return data.properties;
+}
+
+export interface Property {
+  id: string;
+  tenant_id: string;
+  property_id: string;
+  name: string;
+  timezone: string;
+  locale: string;
+  currency: string;
+  config?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreatePropertyPayload {
+  name: string;
+  timezone?: string;
+  locale?: string;
+  currency?: string;
+}
+
+export async function createProperty(payload: CreatePropertyPayload): Promise<Property> {
+  return api<Property>("/v1/properties", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    headers: { "X-Tenant-ID": localStorage.getItem("nexus-tenant") || "demo" },
+  });
+}
+
+export async function getTenantConfig(tenantId: string): Promise<TenantConfig> {
+  const data = await api<{ tenants: any[] }>(`/v1/admin/tenants`, {
+    headers: { "X-Tenant-ID": tenantId },
+  });
+  const t = data.tenants[0];
+  if (!t) throw new Error("Tenant not found");
+  return {
+    id: t.external_id || t.id,
+    name: t.name,
+    property_type: "boutique",
+    license_tier: (t.tier as any) || "enterprise",
+    license_status: "active",
+    license_expires_at: "",
+    max_rooms: 5000,
+    max_users: 200,
+    capabilities: [
+      "core:reservations", "core:guests", "core:properties", "core:rooms",
+      "core:housekeeping", "core:settings", "core:audit_logs",
+      "operations:floor_dashboard", "operations:room_blocks",
+      "operations:group_reservations", "operations:maintenance", "operations:front_desk",
+      "revenue:dynamic_pricing", "revenue:ota_integration",
+      "revenue:revenue_forecasting", "revenue:agent_management",
+      "enterprise:multi_property", "enterprise:advanced_crm",
+      "enterprise:api_access", "enterprise:white_label", "enterprise:custom_reports",
+    ],
+    settings: {
+      timezone: "UTC",
+      currency_code: "USD",
+      date_format: "YYYY-MM-DD",
+      language: "en",
+      ...(t.config || {}),
+    },
+    created_at: t.created_at,
+    updated_at: t.updated_at,
+  };
+}
+
+export async function updateTenantConfig(tenantId: string, updates: Partial<TenantConfig>): Promise<void> {
+  await api(`/v1/admin/tenants/${tenantId}`, {
+    method: "PATCH",
+    body: JSON.stringify(updates),
+    headers: { "X-Tenant-ID": tenantId },
   });
 }
 

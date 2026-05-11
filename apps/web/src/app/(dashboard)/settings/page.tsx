@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { hasCapability, CAPABILITIES, tierName } from "@/lib/tenant";
+import { updateTenantConfig } from "@/lib/api";
 import {
   Settings,
   Globe,
@@ -10,24 +11,107 @@ import {
   Bell,
   Shield,
   Plug,
-  ArrowUpRight,
   Check,
   X,
   Building2,
+  Save,
+  RefreshCw,
 } from "lucide-react";
 
 export default function SettingsPage() {
-  const { config } = useTenant();
+  const { config, loading: configLoading } = useTenant();
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Controlled form state synced from config
+  const [form, setForm] = useState({
+    name: "",
+    timezone: "UTC",
+    currency_code: "USD",
+    language: "en",
+    date_format: "YYYY-MM-DD",
+  });
+
   const [notifEmail, setNotifEmail] = useState(true);
   const [notifSMS, setNotifSMS] = useState(false);
   const [notifPush, setNotifPush] = useState(true);
 
+  useEffect(() => {
+    if (config) {
+      setForm({
+        name: config.name || "",
+        timezone: config.settings?.timezone || "UTC",
+        currency_code: config.settings?.currency_code || "USD",
+        language: config.settings?.language || "en",
+        date_format: config.settings?.date_format || "YYYY-MM-DD",
+      });
+    }
+  }, [config]);
+
+  async function handleSave() {
+    setSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+    try {
+      const tenant = localStorage.getItem("nexus-tenant") || "demo";
+      await updateTenantConfig(tenant, {
+        name: form.name,
+        settings: {
+          timezone: form.timezone,
+          currency_code: form.currency_code,
+          date_format: form.date_format || "YYYY-MM-DD",
+          language: form.language,
+        },
+      });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (e: any) {
+      setSaveError(e.message || "Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (configLoading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-slate-500">
+        <RefreshCw className="mr-2 h-5 w-5 animate-spin" /> Loading settings...
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-white">Settings</h2>
-        <p className="text-sm text-slate-400">Property configuration and preferences</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Settings</h2>
+          <p className="text-sm text-slate-400">Property configuration and preferences</p>
+        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="btn-primary disabled:opacity-50"
+        >
+          {saving ? (
+            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
+          {saving ? "Saving..." : "Save Changes"}
+        </button>
       </div>
+
+      {saveSuccess && (
+        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-400">
+          Settings saved successfully.
+        </div>
+      )}
+      {saveError && (
+        <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-sm text-rose-400">
+          {saveError}
+        </div>
+      )}
 
       {/* Property Info */}
       <div className="card space-y-4">
@@ -38,23 +122,36 @@ export default function SettingsPage() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-xs text-slate-500">Property Name</label>
-            <input className="input mt-1 w-full" defaultValue={config?.name || "Demo Hotel"} />
+            <input
+              className="input mt-1 w-full"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
           </div>
           <div>
             <label className="text-xs text-slate-500">Timezone</label>
-            <input className="input mt-1 w-full" defaultValue={config?.settings.timezone || "UTC"} />
+            <input
+              className="input mt-1 w-full"
+              value={form.timezone}
+              onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+            />
           </div>
           <div>
             <label className="text-xs text-slate-500">Currency</label>
-            <input className="input mt-1 w-full" defaultValue={config?.settings.currency_code || "USD"} />
+            <input
+              className="input mt-1 w-full"
+              value={form.currency_code}
+              onChange={(e) => setForm({ ...form, currency_code: e.target.value })}
+            />
           </div>
           <div>
             <label className="text-xs text-slate-500">Language</label>
-            <input className="input mt-1 w-full" defaultValue={config?.settings.language || "en"} />
+            <input
+              className="input mt-1 w-full"
+              value={form.language}
+              onChange={(e) => setForm({ ...form, language: e.target.value })}
+            />
           </div>
-        </div>
-        <div className="flex justify-end">
-          <button className="btn-primary">Save Changes</button>
         </div>
       </div>
 

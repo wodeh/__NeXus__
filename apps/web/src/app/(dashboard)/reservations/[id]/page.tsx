@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -123,7 +123,9 @@ const statusColors: Record<string, string> = {
   no_show: "bg-rose-500/10 text-rose-400 border-rose-500/20",
 };
 
-export default function ReservationDetailPage({ params }: { params: { id: string } }) {
+export default function ReservationDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = React.use(props.params);
+  const id = params?.id || "";
   const [res, setRes] = useState(mockReservation);
   const [charges, setCharges] = useState(mockCharges);
   const [activeTab, setActiveTab] = useState<"overview" | "charges" | "invoice" | "history">("overview");

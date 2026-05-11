@@ -3,10 +3,6 @@
 import { useState } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { hasCapability, CAPABILITIES } from "@/lib/tenant";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import {
   Lock,
   Unlock,
@@ -99,6 +95,14 @@ const mockAccessCodes: Record<string, AccessCode[]> = {
   ],
 };
 
+function ToggleSwitch({ checked }: { checked: boolean }) {
+  return (
+    <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${checked ? "bg-nexus-500" : "bg-slate-700"}`}>
+      <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${checked ? "translate-x-4" : "translate-x-1"}`} />
+    </div>
+  );
+}
+
 export default function SmartLocksPage() {
   const { config } = useTenant();
   const [search, setSearch] = useState("");
@@ -144,14 +148,14 @@ export default function SmartLocksPage() {
           <p className="text-sm text-slate-400">OrbitaTech lock management · Remote control · Access codes</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
+          <button className="btn-secondary gap-2 text-xs">
             <RotateCcw className="h-4 w-4" />
             Sync All
-          </Button>
-          <Button size="sm" className="gap-2 bg-nexus-500 hover:bg-nexus-600">
+          </button>
+          <button className="btn-primary gap-2 text-xs">
             <Plus className="h-4 w-4" />
             Add Lock
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -184,11 +188,11 @@ export default function SmartLocksPage() {
         <>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-            <Input
+            <input
               placeholder="Search by room or serial number..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
+              className="input w-full pl-10"
             />
           </div>
           <div className="grid grid-cols-4 gap-4">
@@ -279,23 +283,21 @@ function LockCard({ lock, onClick, isSelected }: { lock: SmartLock; onClick: () 
 }
 
 function LockDetailPanel({ lock }: { lock: SmartLock }) {
-  const hasRemote = hasCapability(null, CAPABILITIES.OPERATIONS.REMOTE_UNLOCK);
-
   return (
     <div className="mt-4 rounded-lg border border-slate-700 bg-slate-800/50 p-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-bold text-white">Room {lock.roomNumber} Details</h3>
         <div className="flex items-center gap-2">
           {lock.remoteUnlockEnabled && (
-            <Button size="sm" className="gap-2 bg-amber-500 hover:bg-amber-600">
+            <button className="btn-primary gap-2 text-xs bg-amber-500 hover:bg-amber-600">
               <Unlock className="h-4 w-4" />
               Unlock
-            </Button>
+            </button>
           )}
-          <Button variant="outline" size="sm" className="gap-2">
+          <button className="btn-secondary gap-2 text-xs">
             <KeyRound className="h-4 w-4" />
             New Code
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -328,11 +330,11 @@ function LockDetailPanel({ lock }: { lock: SmartLock }) {
 
       <div className="mt-4 flex items-center gap-6">
         <div className="flex items-center gap-2">
-          <Switch checked={lock.remoteUnlockEnabled} />
+          <ToggleSwitch checked={lock.remoteUnlockEnabled} />
           <span className="text-xs text-slate-300">Remote Unlock</span>
         </div>
         <div className="flex items-center gap-2">
-          <Switch checked={lock.autoLockEnabled} />
+          <ToggleSwitch checked={lock.autoLockEnabled} />
           <span className="text-xs text-slate-300">Auto-Lock</span>
         </div>
       </div>
@@ -344,11 +346,9 @@ function OverviewTab({ locks, onSelect }: { locks: SmartLock[]; onSelect: (l: Sm
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-slate-400">Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <div className="card space-y-2">
+          <p className="text-sm text-slate-400">Recent Activity</p>
+          <div className="space-y-2">
             {locks.slice(0, 5).map((l) => (
               <button key={l.id} onClick={() => onSelect(l)} className="flex w-full items-center justify-between rounded bg-slate-700/30 px-3 py-2 text-left hover:bg-slate-700/50">
                 <div className="flex items-center gap-2">
@@ -358,29 +358,25 @@ function OverviewTab({ locks, onSelect }: { locks: SmartLock[]; onSelect: (l: Sm
                 <span className="text-xs text-slate-400">{l.lastUnlockAt || "No recent activity"}</span>
               </button>
             ))}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-slate-400">Battery Overview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {locks.map((l) => (
-                <div key={l.id} className="flex items-center gap-3">
-                  <span className="w-12 text-xs text-slate-400">{l.roomNumber}</span>
-                  <div className="flex-1 h-2 rounded-full bg-slate-700">
-                    <div
-                      className={`h-full rounded-full ${l.batteryLevel > 50 ? "bg-emerald-400" : l.batteryLevel > 20 ? "bg-amber-400" : "bg-rose-400"}`}
-                      style={{ width: `${l.batteryLevel}%` }}
-                    />
-                  </div>
-                  <span className={`w-8 text-right text-xs ${l.batteryLevel > 20 ? "text-slate-400" : "text-rose-400"}`}>{l.batteryLevel}%</span>
+          </div>
+        </div>
+        <div className="card space-y-2">
+          <p className="text-sm text-slate-400">Battery Overview</p>
+          <div className="space-y-2">
+            {locks.map((l) => (
+              <div key={l.id} className="flex items-center gap-3">
+                <span className="w-12 text-xs text-slate-400">{l.roomNumber}</span>
+                <div className="flex-1 h-2 rounded-full bg-slate-700">
+                  <div
+                    className={`h-full rounded-full ${l.batteryLevel > 50 ? "bg-emerald-400" : l.batteryLevel > 20 ? "bg-amber-400" : "bg-rose-400"}`}
+                    style={{ width: `${l.batteryLevel}%` }}
+                  />
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <span className={`w-8 text-right text-xs ${l.batteryLevel > 20 ? "text-slate-400" : "text-rose-400"}`}>{l.batteryLevel}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -414,10 +410,10 @@ function AccessCodesTab({ locks }: { locks: SmartLock[] }) {
           <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-8 text-center">
             <KeyRound className="mx-auto h-8 w-8 text-slate-500" />
             <p className="mt-2 text-sm text-slate-400">No access codes for this room</p>
-            <Button size="sm" className="mt-3 gap-2">
+            <button className="btn-primary mt-3 gap-2 text-xs">
               <Plus className="h-4 w-4" />
               Create Code
-            </Button>
+            </button>
           </div>
         ) : (
           codes.map((code) => (
@@ -432,9 +428,9 @@ function AccessCodesTab({ locks }: { locks: SmartLock[] }) {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Switch checked={code.isActive} />
-                <Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="sm" className="text-rose-400"><Trash2 className="h-4 w-4" /></Button>
+                <ToggleSwitch checked={code.isActive} />
+                <button className="rounded p-1 text-slate-400 hover:text-white"><Eye className="h-4 w-4" /></button>
+                <button className="rounded p-1 text-rose-400 hover:text-rose-300"><Trash2 className="h-4 w-4" /></button>
               </div>
             </div>
           ))

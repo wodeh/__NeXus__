@@ -41,14 +41,14 @@ const mockMessages = [
 ];
 
 export default function WhatsAppPage() {
-  const { tenantConfig } = useTenant();
+  const { config } = useTenant();
   const [activeTab, setActiveTab] = useState<"conversations" | "settings">("conversations");
   const [selectedConv, setSelectedConv] = useState<string | null>("w1");
   const [botEnabled, setBotEnabled] = useState(true);
   const [bookingEnabled, setBookingEnabled] = useState(true);
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(true);
 
-  if (!hasCapability(tenantConfig, CAPABILITIES.REVENUE.WHATSAPP_BOT)) {
+  if (!hasCapability(config, CAPABILITIES.REVENUE.WHATSAPP_BOT)) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <MessageCircle className="h-16 w-16 text-slate-600" />
@@ -261,7 +261,7 @@ export default function WhatsAppPage() {
                 <div key={t.trigger} className="flex items-start gap-3 rounded bg-slate-800/50 p-3">
                   <span className="rounded bg-nexus-500/10 px-2 py-0.5 text-xs font-medium text-nexus-400">{t.trigger}</span>
                   <p className="text-sm text-slate-300">{t.response}</p>
-                </div㸁e
+                </div>
               ))}
             </div>
           </div>

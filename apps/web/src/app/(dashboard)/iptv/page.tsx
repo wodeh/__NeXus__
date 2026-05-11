@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { hasCapability, CAPABILITIES } from "@/lib/tenant";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   Tv,
   Plus,
@@ -21,8 +19,6 @@ import {
   Eye,
   Settings,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 
 interface Channel {
   id: string;
@@ -70,6 +66,14 @@ const mockContent: ContentItem[] = [
   { id: "m7", title: "Local Attractions", type: "info", description: "Top 10 places to visit within 5km of the hotel", category: "tourism", isActive: true },
 ];
 
+function ToggleSwitch({ checked }: { checked: boolean }) {
+  return (
+    <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${checked ? "bg-nexus-500" : "bg-slate-700"}`}>
+      <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${checked ? "translate-x-4" : "translate-x-1"}`} />
+    </div>
+  );
+}
+
 export default function IPTVPage() {
   const { config } = useTenant();
   const [tab, setTab] = useState<"channels" | "content" | "rooms" | "analytics">("channels");
@@ -111,14 +115,14 @@ export default function IPTVPage() {
           <p className="text-sm text-slate-400">Channels, content library, and room bindings</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
+          <button className="btn-secondary gap-2 text-xs">
             <Settings className="h-4 w-4" />
             Settings
-          </Button>
-          <Button size="sm" className="gap-2 bg-nexus-500 hover:bg-nexus-600">
+          </button>
+          <button className="btn-primary gap-2 text-xs">
             <Plus className="h-4 w-4" />
             Add Channel
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -141,11 +145,11 @@ export default function IPTVPage() {
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-          <Input
+          <input
             placeholder={`Search ${tab}...`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
+            className="input w-full pl-10"
           />
         </div>
         {tab !== "analytics" && (
@@ -210,9 +214,9 @@ function ChannelCard({ channel, viewMode }: { channel: Channel; viewMode: string
           {channel.isPremium && (
             <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400">Premium</span>
           )}
-          <Switch checked={channel.isActive} />
-          <Button variant="ghost" size="sm"><Pencil className="h-3 w-3" /></Button>
-          <Button variant="ghost" size="sm" className="text-rose-400"><Trash2 className="h-3 w-3" /></Button>
+          <ToggleSwitch checked={channel.isActive} />
+          <button className="rounded p-1 text-slate-400 hover:text-white"><Pencil className="h-3 w-3" /></button>
+          <button className="rounded p-1 text-rose-400 hover:text-rose-300"><Trash2 className="h-3 w-3" /></button>
         </div>
       </div>
     );
@@ -232,12 +236,12 @@ function ChannelCard({ channel, viewMode }: { channel: Channel; viewMode: string
       <p className="text-xs text-slate-400">{channel.category} · {channel.language}</p>
       <div className="mt-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Switch checked={channel.isActive} />
+          <ToggleSwitch checked={channel.isActive} />
           <span className="text-xs text-slate-400">{channel.isActive ? "Live" : "Offline"}</span>
         </div>
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm"><Pencil className="h-3 w-3" /></Button>
-          <Button variant="ghost" size="sm" className="text-rose-400"><Trash2 className="h-3 w-3" /></Button>
+          <button className="rounded p-1 text-slate-400 hover:text-white"><Pencil className="h-3 w-3" /></button>
+          <button className="rounded p-1 text-rose-400 hover:text-rose-300"><Trash2 className="h-3 w-3" /></button>
         </div>
       </div>
     </div>
@@ -258,9 +262,9 @@ function ContentCard({ item, viewMode }: { item: ContentItem; viewMode: string }
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Switch checked={item.isActive} />
-          <Button variant="ghost" size="sm"><Pencil className="h-3 w-3" /></Button>
-          <Button variant="ghost" size="sm" className="text-rose-400"><Trash2 className="h-3 w-3" /></Button>
+          <ToggleSwitch checked={item.isActive} />
+          <button className="rounded p-1 text-slate-400 hover:text-white"><Pencil className="h-3 w-3" /></button>
+          <button className="rounded p-1 text-rose-400 hover:text-rose-300"><Trash2 className="h-3 w-3" /></button>
         </div>
       </div>
     );
@@ -274,10 +278,10 @@ function ContentCard({ item, viewMode }: { item: ContentItem; viewMode: string }
       <h3 className="mt-2 text-sm font-medium text-white">{item.title}</h3>
       <p className="text-xs text-slate-400">{item.type} · {item.category}</p>
       <div className="mt-3 flex items-center justify-between">
-        <Switch checked={item.isActive} />
+        <ToggleSwitch checked={item.isActive} />
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm"><Pencil className="h-3 w-3" /></Button>
-          <Button variant="ghost" size="sm" className="text-rose-400"><Trash2 className="h-3 w-3" /></Button>
+          <button className="rounded p-1 text-slate-400 hover:text-white"><Pencil className="h-3 w-3" /></button>
+          <button className="rounded p-1 text-rose-400 hover:text-rose-300"><Trash2 className="h-3 w-3" /></button>
         </div>
       </div>
     </div>
@@ -313,8 +317,8 @@ function RoomBindingsTab() {
             <div className="rounded bg-slate-700/50 px-3 py-1.5 text-xs text-slate-300">
               {r.welcome}
             </div>
-            <Button variant="outline" size="sm">Edit</Button>
-            <Switch checked={true} />
+            <button className="btn-secondary text-xs">Edit</button>
+            <ToggleSwitch checked={true} />
           </div>
         </div>
       ))}
@@ -325,48 +329,32 @@ function RoomBindingsTab() {
 function AnalyticsTab() {
   return (
     <div className="grid grid-cols-3 gap-4">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm text-slate-400">Active Viewers</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-3xl font-bold text-white">24</p>
-          <p className="text-xs text-emerald-400">+3 from yesterday</p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm text-slate-400">Most Watched</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-lg font-bold text-white">HBO</p>
-          <p className="text-xs text-slate-400">12 viewers · 4.2 hrs avg</p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm text-slate-400">Content Requests</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-3xl font-bold text-white">8</p>
-          <p className="text-xs text-slate-400">This week</p>
-        </CardContent>
-      </Card>
-      <Card className="col-span-3">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm text-slate-400">Hourly Viewership</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-end gap-1 h-32">
-            {[2,4,3,6,8,12,15,18,22,20,16,14,10,8,6,5,7,9,14,18,20,16,10,5].map((v, i) => (
-              <div key={i} className="flex-1 rounded-t bg-nexus-500/20 hover:bg-nexus-500/40 transition-colors" style={{ height: `${(v/22)*100}%` }} title={`${i}:00 - ${v} viewers`} />
-            ))}
-          </div>
-          <div className="mt-2 flex justify-between text-[10px] text-slate-500">
-            <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:00</span>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="card space-y-2">
+        <p className="text-sm text-slate-400">Active Viewers</p>
+        <p className="text-3xl font-bold text-white">24</p>
+        <p className="text-xs text-emerald-400">+3 from yesterday</p>
+      </div>
+      <div className="card space-y-2">
+        <p className="text-sm text-slate-400">Most Watched</p>
+        <p className="text-lg font-bold text-white">HBO</p>
+        <p className="text-xs text-slate-400">12 viewers · 4.2 hrs avg</p>
+      </div>
+      <div className="card space-y-2">
+        <p className="text-sm text-slate-400">Content Requests</p>
+        <p className="text-3xl font-bold text-white">8</p>
+        <p className="text-xs text-slate-400">This week</p>
+      </div>
+      <div className="card col-span-3 space-y-2">
+        <p className="text-sm text-slate-400">Hourly Viewership</p>
+        <div className="flex items-end gap-1 h-32">
+          {[2,4,3,6,8,12,15,18,22,20,16,14,10,8,6,5,7,9,14,18,20,16,10,5].map((v, i) => (
+            <div key={i} className="flex-1 rounded-t bg-nexus-500/20 hover:bg-nexus-500/40 transition-colors" style={{ height: `${(v/22)*100}%` }} title={`${i}:00 - ${v} viewers`} />
+          ))}
+        </div>
+        <div className="mt-2 flex justify-between text-[10px] text-slate-500">
+          <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:00</span>
+        </div>
+      </div>
     </div>
   );
 }

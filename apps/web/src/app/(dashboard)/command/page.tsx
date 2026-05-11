@@ -72,7 +72,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
   vacant_clean: { label: "Vacant Clean", color: "text-emerald-400", icon: CheckCircle2, bg: "bg-emerald-500/5 border-emerald-500/10" },
   vacant_dirty: { label: "Vacant Dirty", color: "text-rose-400", icon: Sparkles, bg: "bg-rose-500/5 border-rose-500/10" },
   occupied: { label: "Occupied", color: "text-sky-400", icon: BedDouble, bg: "bg-sky-500/5 border-sky-500/10" },
-  blocked: { label: "Blocked", label: "Blocked", color: "text-violet-400", icon: Ban, bg: "bg-violet-500/5 border-violet-500/10" },
+  blocked: { label: "Blocked", color: "text-violet-400", icon: Ban, bg: "bg-violet-500/5 border-violet-500/10" },
   maintenance: { label: "Maintenance", color: "text-amber-400", icon: Wrench, bg: "bg-amber-500/5 border-amber-500/10" },
   out_of_order: { label: "OOO", color: "text-slate-400", icon: AlertTriangle, bg: "bg-slate-500/5 border-slate-500/10" },
 };

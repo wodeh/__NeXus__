@@ -46,11 +46,11 @@ const mockSyncLogs = [
 ];
 
 export default function ChannelManagerPage() {
-  const { tenantConfig } = useTenant();
+  const { config } = useTenant();
   const [activeTab, setActiveTab] = useState<"overview" | "reservations" | "logs">("overview");
   const [search, setSearch] = useState("");
 
-  if (!hasCapability(tenantConfig, CAPABILITIES.REVENUE.CHANNEL_MANAGER)) {
+  if (!hasCapability(config, CAPABILITIES.REVENUE.CHANNEL_MANAGER)) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <Globe className="h-16 w-16 text-slate-600" />

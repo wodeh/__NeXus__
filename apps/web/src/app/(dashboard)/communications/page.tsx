@@ -46,11 +46,11 @@ const mockScheduled = [
 ];
 
 export default function CommunicationsPage() {
-  const { tenantConfig } = useTenant();
+  const { config } = useTenant();
   const [activeTab, setActiveTab] = useState<"templates" | "sequences" | "scheduled">("templates");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
 
-  if (!hasCapability(tenantConfig, CAPABILITIES.REVENUE.COMMUNICATIONS)) {
+  if (!hasCapability(config, CAPABILITIES.REVENUE.COMMUNICATIONS)) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <Mail className="h-16 w-16 text-slate-600" />

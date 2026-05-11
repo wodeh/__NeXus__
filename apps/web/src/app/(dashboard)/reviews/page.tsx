@@ -12,7 +12,6 @@ import {
   TrendingDown,
   Send,
   Globe,
-  Google,
   CalendarDays,
   Filter,
   Search,
@@ -41,13 +40,13 @@ const mockReviewRequests = [
 ];
 
 export default function ReviewsPage() {
-  const { tenantConfig } = useTenant();
+  const { config } = useTenant();
   const [activeTab, setActiveTab] = useState<"reviews" | "requests" | "analytics">("reviews");
   const [search, setSearch] = useState("");
   const [selectedReview, setSelectedReview] = useState<string | null>(null);
   const [responseText, setResponseText] = useState("");
 
-  if (!hasCapability(tenantConfig, CAPABILITIES.REVENUE.GUEST_REVIEWS)) {
+  if (!hasCapability(config, CAPABILITIES.REVENUE.GUEST_REVIEWS)) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <Star className="h-16 w-16 text-slate-600" />

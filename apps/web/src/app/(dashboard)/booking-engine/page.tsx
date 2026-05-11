@@ -20,6 +20,8 @@ import {
   Palette,
   Link as LinkIcon,
   Eye,
+  ToggleRight,
+  ToggleLeft,
 } from "lucide-react";
 
 const mockPromoCodes = [
@@ -38,7 +40,7 @@ const mockUpsells = [
 ];
 
 export default function BookingEnginePage() {
-  const { tenantConfig } = useTenant();
+  const { config } = useTenant();
   const [activeTab, setActiveTab] = useState<"widget" | "promos" | "upsells">("widget");
   const [widgetEnabled, setWidgetEnabled] = useState(true);
   const [showPromoCode, setShowPromoCode] = useState(true);
@@ -47,7 +49,7 @@ export default function BookingEnginePage() {
   const [depositPct, setDepositPct] = useState(25);
   const [themeColor, setThemeColor] = useState("#6366f1");
 
-  if (!hasCapability(tenantConfig, CAPABILITIES.REVENUE.DIRECT_BOOKING)) {
+  if (!hasCapability(config, CAPABILITIES.REVENUE.DIRECT_BOOKING)) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <ExternalLink className="h-16 w-16 text-slate-600" />
