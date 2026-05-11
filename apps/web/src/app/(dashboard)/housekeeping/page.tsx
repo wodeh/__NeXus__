@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   BedDouble, CheckCircle2, Clock, AlertTriangle, Star, Filter, Search, User, Plus, Save,
   RotateCcw, ArrowRightLeft, Sparkles, Wrench, Ban, Eye, X, Camera, MapPin, ClipboardList,
-  Droplets, Package, Activity, Users, ShieldCheck, ChevronRight, Settings, Play, Square
+  Droplets, Package, Activity, Users, ShieldCheck, ChevronRight, Settings, Play, Square,
+  RefreshCw,
 } from "lucide-react";
-import Link from "next/link";
+import {
+  Room as ApiRoom,
+  HousekeepingTask, HousekeepingStaff,
+  getRooms, updateRoomStatus,
+  getHousekeepingTasks, createHousekeepingTask, updateHousekeepingTask, getHousekeepingStaff,
+} from "@/lib/api";
 
 type RoomStatus = "dirty" | "in_progress" | "inspected" | "ready" | "blocked" | "maintenance";
 
@@ -17,25 +24,37 @@ interface Room {
   damageReport?: string; inspectionNotes?: string; suppliesNeeded?: string[];
 }
 
-const mockRooms: Room[] = [
-  { id: "101", number: "101", floor: "1", type: "Standard", status: "ready", assignedTo: "Maria K.", priority: false, vip: false, lateCheckout: false, lastCleaned: "2026-05-10 08:30" },
-  { id: "102", number: "102", floor: "1", type: "Standard", status: "dirty", assignedTo: "Maria K.", priority: false, vip: false, lateCheckout: false, estimatedTime: 25 },
-  { id: "103", number: "103", floor: "1", type: "Deluxe", status: "in_progress", assignedTo: "John D.", priority: true, vip: true, lateCheckout: false, estimatedTime: 30 },
-  { id: "104", number: "104", floor: "1", type: "Standard", status: "blocked", assignedTo: undefined, priority: false, vip: false, lateCheckout: false },
-  { id: "105", number: "105", floor: "1", type: "Standard", status: "maintenance", assignedTo: undefined, priority: false, vip: false, lateCheckout: false, notes: "Leaky faucet reported", damageReport: "Faucet handle loose" },
-  { id: "201", number: "201", floor: "2", type: "Deluxe King", status: "in_progress", assignedTo: "Sofia L.", priority: true, vip: true, lateCheckout: true, estimatedTime: 35, notes: "VIP arrival at 14:00" },
-  { id: "202", number: "202", floor: "2", type: "Deluxe King", status: "dirty", assignedTo: undefined, priority: false, vip: false, lateCheckout: false, estimatedTime: 25 },
-  { id: "203", number: "203", floor: "2", type: "Suite", status: "inspected", assignedTo: "Sofia L.", priority: false, vip: false, lateCheckout: false, lastCleaned: "2026-05-10 09:00", inspectionNotes: "All items checked. Minibar full." },
-  { id: "204", number: "204", floor: "2", type: "Deluxe King", status: "ready", assignedTo: "John D.", priority: false, vip: false, lateCheckout: false, lastCleaned: "2026-05-10 07:45" },
-  { id: "301", number: "301", floor: "3", type: "Suite", status: "dirty", assignedTo: "Maria K.", priority: false, vip: false, lateCheckout: false, estimatedTime: 40, suppliesNeeded: ["Shampoo", "Body lotion"] },
-  { id: "302", number: "302", floor: "3", type: "Suite", status: "ready", assignedTo: "John D.", priority: false, vip: false, lateCheckout: false, lastCleaned: "2026-05-10 08:00" },
-  { id: "303", number: "303", floor: "3", type: "Deluxe", status: "in_progress", assignedTo: "Sofia L.", priority: false, vip: false, lateCheckout: false, estimatedTime: 30 },
-  { id: "304", number: "304", floor: "3", type: "Standard", status: "dirty", assignedTo: undefined, priority: false, vip: false, lateCheckout: false, estimatedTime: 20 },
-  { id: "401", number: "401", floor: "4", type: "Suite", status: "inspected", assignedTo: "Maria K.", priority: false, vip: false, lateCheckout: false, lastCleaned: "2026-05-10 09:15" },
-  { id: "402", number: "402", floor: "4", type: "Deluxe", status: "dirty", assignedTo: "John D.", priority: true, vip: false, lateCheckout: true, estimatedTime: 30, notes: "Late checkout until 13:00" },
-];
+function mapApiRoom(r: ApiRoom): Room {
+  const statusMap: Record<string, RoomStatus> = {
+    vacant_dirty: "dirty",
+    occupied: "in_progress",
+    vacant_clean: "ready",
+    blocked: "blocked",
+    maintenance: "maintenance",
+  };
+  return {
+    id: r.id,
+    number: r.number,
+    floor: r.floor,
+    type: r.type,
+    status: statusMap[r.status] || "dirty",
+    priority: false,
+    vip: false,
+    lateCheckout: false,
+  };
+}
 
-const staffMembers = ["Maria K.", "John D.", "Sofia L.", "Unassigned"];
+function mapRoomStatusToApi(status: RoomStatus): string {
+  const map: Record<string, string> = {
+    dirty: "vacant_dirty",
+    in_progress: "occupied",
+    inspected: "vacant_clean",
+    ready: "vacant_clean",
+    blocked: "blocked",
+    maintenance: "maintenance",
+  };
+  return map[status] || "vacant_dirty";
+}
 
 const statusConfig: Record<RoomStatus, { label: string; color: string; bg: string; icon: React.ElementType }> = {
   dirty: { label: "Dirty", color: "text-rose-400", bg: "bg-rose-500/10", icon: BedDouble },
@@ -51,28 +70,23 @@ const statusFlow: RoomStatus[] = ["dirty", "in_progress", "inspected", "ready"];
 const supplyItems = ["Shampoo", "Conditioner", "Body lotion", "Soap", "Dental kit", "Slippers", "Coffee", "Tea", "Sugar", "Minibar: Coke", "Minibar: Water", "Minibar: Nuts", "Towels", "Toilet paper"];
 
 const inspectionChecklist = [
-  "Beds made & linens fresh",
-  "Bathroom sanitized",
-  "Towels folded & stocked",
-  "Minibar restocked",
-  "Coffee/tea station filled",
-  "Dust surfaces",
-  "Vacuum floor",
-  "Windows clean",
-  "TV & remote working",
-  "AC functioning",
-  "Lights all working",
-  "Trash emptied",
+  "Beds made & linens fresh", "Bathroom sanitized", "Towels folded & stocked", "Minibar restocked",
+  "Coffee/tea station filled", "Dust surfaces", "Vacuum floor", "Windows clean",
+  "TV & remote working", "AC functioning", "Lights all working", "Trash emptied",
 ];
 
 export default function HousekeepingPage() {
-  const [rooms, setRooms] = useState<Room[]>(mockRooms);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [tasks, setTasks] = useState<HousekeepingTask[]>([]);
+  const [staff, setStaff] = useState<HousekeepingStaff[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [floorFilter, setFloorFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<RoomStatus | "all">("all");
   const [staffFilter, setStaffFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list" | "staff">("grid");
-  const [expandedRoom, setExpandedRoom] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const [inspectModal, setInspectModal] = useState<string | null>(null);
   const [inspectChecks, setInspectChecks] = useState<boolean[]>(new Array(inspectionChecklist.length).fill(false));
@@ -85,14 +99,35 @@ export default function HousekeepingPage() {
   const [suppliesModal, setSuppliesModal] = useState<string | null>(null);
   const [selectedSupplies, setSelectedSupplies] = useState<string[]>([]);
 
-  const [staffActivity] = useState([
-    { time: "09:15", staff: "Maria K.", action: "Completed 101", type: "complete" },
-    { time: "09:10", staff: "John D.", action: "Started 103", type: "start" },
-    { time: "09:05", staff: "Sofia L.", action: "Inspected 203", type: "inspect" },
-    { time: "08:55", staff: "Maria K.", action: "Reported damage in 105", type: "damage" },
-    { time: "08:45", staff: "John D.", action: "Requested supplies for 301", type: "supply" },
-    { time: "08:30", staff: "Sofia L.", action: "Started 201", type: "start" },
-  ]);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [apiRooms, apiTasks, apiStaff] = await Promise.all([getRooms(), getHousekeepingTasks(), getHousekeepingStaff()]);
+      const mapped = apiRooms.map(mapApiRoom);
+      // Merge task data into rooms for assignment info
+      apiTasks.forEach((task) => {
+        const room = mapped.find((r) => r.number === task.room_number);
+        if (room && task.assigned_to) {
+          const s = apiStaff.find((st) => st.id === task.assigned_to);
+          if (s) room.assignedTo = s.name;
+          if (task.status === "in_progress") room.status = "in_progress";
+          if (task.priority === "high" || task.priority === "urgent") room.priority = true;
+        }
+      });
+      setRooms(mapped);
+      setTasks(apiTasks);
+      setStaff(apiStaff);
+    } catch (e: any) {
+      setError(e.message || "Failed to load housekeeping data");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const filtered = rooms.filter((r) => {
     const matchesSearch = r.number.includes(search) || r.type.toLowerCase().includes(search.toLowerCase());
@@ -103,14 +138,40 @@ export default function HousekeepingPage() {
   });
 
   const floors = Array.from(new Set(rooms.map((r) => r.floor))).sort();
+  const staffNames = ["Unassigned", ...staff.map((s) => s.name)];
 
-  const updateStatus = (roomId: string, newStatus: RoomStatus) => {
-    setRooms(rooms.map((r) => (r.id === roomId ? { ...r, status: newStatus, lastCleaned: newStatus === "ready" ? new Date().toISOString() : r.lastCleaned } : r)));
-  };
+  async function updateStatus(roomId: string, newStatus: RoomStatus) {
+    const room = rooms.find((r) => r.id === roomId);
+    if (!room) return;
+    setActionLoading(roomId);
+    try {
+      await updateRoomStatus(room.number, mapRoomStatusToApi(newStatus));
+      // Create/update housekeeping task
+      const existingTask = tasks.find((t) => t.room_number === room.number && t.status !== "completed");
+      if (newStatus === "in_progress" && !existingTask) {
+        await createHousekeepingTask({ room_number: room.number, task_type: "full_clean", priority: room.priority ? "high" : "normal" });
+      } else if ((newStatus === "inspected" || newStatus === "ready") && existingTask) {
+        await updateHousekeepingTask(existingTask.id, { status: "completed" });
+      }
+      setRooms(rooms.map((r) => (r.id === roomId ? { ...r, status: newStatus, lastCleaned: newStatus === "ready" ? new Date().toISOString() : r.lastCleaned } : r)));
+      await fetchData();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setActionLoading(null);
+    }
+  }
 
-  const assignStaff = (roomId: string, staff: string) => {
-    setRooms(rooms.map((r) => (r.id === roomId ? { ...r, assignedTo: staff === "Unassigned" ? undefined : staff } : r)));
-  };
+  function assignStaff(roomId: string, staffName: string) {
+    const s = staff.find((st) => st.name === staffName);
+    setRooms(rooms.map((r) => (r.id === roomId ? { ...r, assignedTo: staffName === "Unassigned" ? undefined : staffName } : r)));
+    if (s) {
+      const room = rooms.find((r) => r.id === roomId);
+      if (room) {
+        createHousekeepingTask({ room_number: room.number, task_type: "full_clean", assigned_to: s.id }).then(fetchData).catch((e) => alert(e.message));
+      }
+    }
+  }
 
   const nextStatus = (current: RoomStatus): RoomStatus | null => {
     const idx = statusFlow.indexOf(current);
@@ -134,12 +195,12 @@ export default function HousekeepingPage() {
     setInspectNotes("");
   };
 
-  const submitInspection = () => {
+  const submitInspection = async () => {
     if (!inspectModal) return;
     const passed = inspectChecks.filter(Boolean).length;
     const total = inspectionChecklist.length;
     if (passed >= total * 0.8) {
-      updateStatus(inspectModal, "inspected");
+      await updateStatus(inspectModal, "inspected");
     }
     setRooms(rooms.map((r) => r.id === inspectModal ? { ...r, inspectionNotes: inspectNotes } : r));
     setInspectModal(null);
@@ -148,6 +209,10 @@ export default function HousekeepingPage() {
   const submitDamage = () => {
     if (!damageModal) return;
     setRooms(rooms.map((r) => r.id === damageModal ? { ...r, damageReport: damageText, status: damageUrgency === "high" ? "maintenance" : r.status } : r));
+    const room = rooms.find((r) => r.id === damageModal);
+    if (room && damageUrgency === "high") {
+      updateRoomStatus(room.number, "maintenance").catch((e) => alert(e.message));
+    }
     setDamageModal(null);
     setDamageText("");
   };
@@ -159,15 +224,25 @@ export default function HousekeepingPage() {
     setSelectedSupplies([]);
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-slate-500">
+        <RefreshCw className="mr-2 h-5 w-5 animate-spin" /> Loading housekeeping data...
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Housekeeping</h1>
           <p className="text-sm text-slate-400">Room status · Staff assignments · Cleaning board</p>
         </div>
         <div className="flex items-center gap-3">
+          <button onClick={fetchData} className="rounded-lg border border-slate-700 bg-slate-800 p-2 text-slate-400 hover:text-white" title="Refresh">
+            <RefreshCw className="h-4 w-4" />
+          </button>
           <Link href="/housekeeping/manager" className="btn-secondary text-xs gap-1.5">
             <Users className="h-3.5 w-3.5" /> Manager View
           </Link>
@@ -182,7 +257,12 @@ export default function HousekeepingPage() {
         </div>
       </div>
 
-      {/* Stats */}
+      {error && (
+        <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-sm text-rose-400">
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-7 gap-2">
         {([
           { key: "dirty", label: "Dirty", value: stats.dirty, color: "rose" },
@@ -216,7 +296,6 @@ export default function HousekeepingPage() {
         ))}
       </div>
 
-      {/* Filters */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
@@ -230,7 +309,7 @@ export default function HousekeepingPage() {
         </select>
         <select value={staffFilter} onChange={(e) => setStaffFilter(e.target.value)} className="input text-xs">
           <option value="all">All Staff</option>
-          {staffMembers.map((s) => (
+          {staffNames.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
@@ -239,10 +318,8 @@ export default function HousekeepingPage() {
         </button>
       </div>
 
-      {/* Two column layout: rooms + activity */}
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2 space-y-6">
-          {/* Grid View */}
           {viewMode === "grid" && (
             <div className="grid grid-cols-4 gap-3">
               {filtered.map((room) => {
@@ -250,21 +327,14 @@ export default function HousekeepingPage() {
                 const Icon = config.icon;
                 const next = nextStatus(room.status);
                 return (
-                  <div
-                    key={room.id}
-                    className={`relative rounded-lg border p-4 transition-all hover:scale-[1.02] ${
-                      room.priority ? "border-amber-500/30" : "border-slate-700"
-                    } bg-slate-800/50`}
-                  >
+                  <div key={room.id} className={`relative rounded-lg border p-4 transition-all hover:scale-[1.02] ${room.priority ? "border-amber-500/30" : "border-slate-700"} bg-slate-800/50`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-lg font-bold text-white">{room.number}</span>
                         {room.vip && <Star className="h-4 w-4 text-amber-400" />}
                         {room.lateCheckout && <AlertTriangle className="h-4 w-4 text-amber-400" />}
                       </div>
-                      <span className={`rounded px-2 py-0.5 text-[10px] font-medium ${config.bg} ${config.color}`}>
-                        {config.label}
-                      </span>
+                      <span className={`rounded px-2 py-0.5 text-[10px] font-medium ${config.bg} ${config.color}`}>{config.label}</span>
                     </div>
                     <p className="mt-1 text-xs text-slate-500">{room.type} · Floor {room.floor}</p>
                     {room.assignedTo && (
@@ -297,9 +367,10 @@ export default function HousekeepingPage() {
                       {next && (
                         <button
                           onClick={() => updateStatus(room.id, next)}
-                          className="flex-1 rounded bg-nexus-500/10 px-2 py-1 text-xs text-nexus-400 hover:bg-nexus-500/20 transition-colors"
+                          disabled={actionLoading === room.id}
+                          className="flex-1 rounded bg-nexus-500/10 px-2 py-1 text-xs text-nexus-400 hover:bg-nexus-500/20 transition-colors disabled:opacity-50"
                         >
-                          Mark {statusConfig[next].label}
+                          {actionLoading === room.id ? "..." : `Mark ${statusConfig[next].label}`}
                         </button>
                       )}
                       <button onClick={() => openInspect(room.id)} className="rounded bg-violet-500/10 px-2 py-1 text-xs text-violet-400 hover:bg-violet-500/20">
@@ -318,7 +389,6 @@ export default function HousekeepingPage() {
             </div>
           )}
 
-          {/* List View */}
           {viewMode === "list" && (
             <div className="card overflow-hidden p-0">
               <table className="w-full text-left text-sm">
@@ -354,7 +424,7 @@ export default function HousekeepingPage() {
                         </td>
                         <td className="px-4 py-3">
                           <select value={room.assignedTo || "Unassigned"} onChange={(e) => assignStaff(room.id, e.target.value)} className="input text-xs py-1">
-                            {staffMembers.map((s) => (
+                            {staffNames.map((s) => (
                               <option key={s} value={s}>{s}</option>
                             ))}
                           </select>
@@ -365,7 +435,7 @@ export default function HousekeepingPage() {
                           {room.suppliesNeeded && <span className="text-sky-400 text-xs">{room.suppliesNeeded.join(", ")}</span>}
                         </td>
                         <td className="px-4 py-3 flex gap-1">
-                          {next && <button onClick={() => updateStatus(room.id, next)} className="text-xs text-nexus-400">{statusConfig[next].label} →</button>}
+                          {next && <button onClick={() => updateStatus(room.id, next)} disabled={actionLoading === room.id} className="text-xs text-nexus-400 disabled:opacity-50">{actionLoading === room.id ? "..." : `${statusConfig[next].label} →`}</button>}
                           <button onClick={() => openInspect(room.id)} className="text-xs text-violet-400">Inspect</button>
                           <button onClick={() => { setDamageModal(room.id); setDamageText(room.damageReport || ""); }} className="text-xs text-rose-400">Damage</button>
                         </td>
@@ -377,16 +447,15 @@ export default function HousekeepingPage() {
             </div>
           )}
 
-          {/* Staff View */}
           {viewMode === "staff" && (
             <div className="space-y-4">
-              {staffMembers.filter((s) => s !== "Unassigned").map((staff) => {
-                const staffRooms = filtered.filter((r) => r.assignedTo === staff);
+              {staffNames.filter((s) => s !== "Unassigned").map((staffName) => {
+                const staffRooms = filtered.filter((r) => r.assignedTo === staffName);
                 return (
-                  <div key={staff} className="card space-y-3">
+                  <div key={staffName} className="card space-y-3">
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                        <User className="h-5 w-5 text-nexus-400" /> {staff}
+                        <User className="h-5 w-5 text-nexus-400" /> {staffName}
                       </h3>
                       <span className="text-xs text-slate-400">{staffRooms.length} rooms</span>
                     </div>
@@ -419,7 +488,7 @@ export default function HousekeepingPage() {
                         <span className="font-bold text-white">{room.number}</span>
                         <span className={`ml-2 rounded px-1.5 py-0.5 text-[10px] ${config.bg} ${config.color}`}>{config.label}</span>
                         <div className="mt-2 flex gap-1">
-                          {staffMembers.filter((s) => s !== "Unassigned").map((s) => (
+                          {staffNames.filter((s) => s !== "Unassigned").map((s) => (
                             <button key={s} onClick={() => assignStaff(room.id, s)} className="rounded bg-slate-700 px-2 py-0.5 text-[10px] text-white hover:bg-nexus-500">
                               {s.split(" ")[0]}
                             </button>
@@ -434,46 +503,42 @@ export default function HousekeepingPage() {
           )}
         </div>
 
-        {/* Right sidebar: Activity + Quick Actions */}
         <div className="space-y-4">
-          {/* Live Activity Feed */}
           <div className="card">
             <div className="flex items-center gap-2 mb-3">
               <Activity className="h-4 w-4 text-nexus-400" />
-              <h3 className="font-semibold text-white text-sm">Live Activity</h3>
+              <h3 className="font-semibold text-white text-sm">Tasks</h3>
             </div>
             <div className="space-y-3 max-h-[320px] overflow-y-auto">
-              {staffActivity.map((act, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs">
+              {tasks.length === 0 && <p className="text-xs text-slate-500">No active tasks</p>}
+              {tasks.map((task) => (
+                <div key={task.id} className="flex items-start gap-2 text-xs">
                   <div className={`mt-0.5 h-2 w-2 rounded-full ${
-                    act.type === "complete" ? "bg-emerald-400" :
-                    act.type === "start" ? "bg-sky-400" :
-                    act.type === "inspect" ? "bg-violet-400" :
-                    act.type === "damage" ? "bg-rose-400" :
+                    task.status === "completed" ? "bg-emerald-400" :
+                    task.status === "in_progress" ? "bg-sky-400" :
+                    task.priority === "urgent" || task.priority === "high" ? "bg-rose-400" :
                     "bg-amber-400"
                   }`} />
                   <div>
-                    <p className="text-slate-300"><span className="font-medium text-white">{act.staff}</span> {act.action}</p>
-                    <p className="text-slate-500">{act.time}</p>
+                    <p className="text-slate-300"><span className="font-medium text-white">{task.room_number}</span> · {task.task_type.replace("_", " ")}</p>
+                    <p className="text-slate-500">{task.status} · {task.priority}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Quick Stats */}
           <div className="card space-y-3">
             <h3 className="font-semibold text-white text-sm">Today's Summary</h3>
             <div className="space-y-2 text-xs">
-              <div className="flex justify-between"><span className="text-slate-400">Rooms cleaned</span><span className="text-white font-medium">{rooms.filter(r => r.lastCleaned && r.lastCleaned.startsWith("2026-05-10")).length}</span></div>
-              <div className="flex justify-between"><span className="text-slate-400">Avg time/room</span><span className="text-white font-medium">28 min</span></div>
-              <div className="flex justify-between"><span className="text-slate-400">Staff on duty</span><span className="text-white font-medium">3</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">Rooms ready</span><span className="text-white font-medium">{rooms.filter(r => r.status === "ready").length}</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">In progress</span><span className="text-white font-medium">{rooms.filter(r => r.status === "in_progress").length}</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">Staff on duty</span><span className="text-white font-medium">{staff.length}</span></div>
               <div className="flex justify-between"><span className="text-slate-400">Damage reports</span><span className="text-rose-400 font-medium">{rooms.filter(r => r.damageReport).length}</span></div>
               <div className="flex justify-between"><span className="text-slate-400">Supply requests</span><span className="text-sky-400 font-medium">{rooms.filter(r => r.suppliesNeeded && r.suppliesNeeded.length > 0).length}</span></div>
             </div>
           </div>
 
-          {/* Priority Rooms */}
           <div className="card space-y-2">
             <h3 className="font-semibold text-white text-sm flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-400" /> Priority
@@ -488,8 +553,6 @@ export default function HousekeepingPage() {
           </div>
         </div>
       </div>
-
-      {/* ========== MODALS ========== */}
 
       {/* Inspection Modal */}
       {inspectModal && (
