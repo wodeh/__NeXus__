@@ -17,6 +17,8 @@ import {
   Crown,
   ChevronLeft,
   ChevronRight,
+  Tv,
+  Lock,
 } from "lucide-react";
 import { TenantConfig, hasCapability, CAPABILITIES } from "@/lib/tenant";
 
@@ -29,6 +31,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard, cap: CAPABILITIES.CORE.RESERVATIONS },
+  { label: "Command Center", href: "/command", icon: LayoutGrid, cap: CAPABILITIES.OPERATIONS.FRONT_DESK },
   { label: "Floor Plan", href: "/floor", icon: LayoutGrid, cap: CAPABILITIES.OPERATIONS.FLOOR_DASHBOARD },
   { label: "Reservations", href: "/reservations", icon: CalendarDays, cap: CAPABILITIES.CORE.RESERVATIONS },
   { label: "Guests", href: "/guests", icon: Users, cap: CAPABILITIES.CORE.GUESTS },
@@ -39,6 +42,8 @@ const navItems: NavItem[] = [
   { label: "Properties", href: "/properties", icon: Building2, cap: CAPABILITIES.CORE.PROPERTIES },
   { label: "Rooms", href: "/rooms", icon: DoorOpen, cap: CAPABILITIES.CORE.ROOMS },
   { label: "Housekeeping", href: "/housekeeping", icon: Sparkles, cap: CAPABILITIES.CORE.HOUSEKEEPING },
+  { label: "IPTV", href: "/iptv", icon: Tv, cap: CAPABILITIES.OPERATIONS.IPTV_BASIC },
+  { label: "Smart Locks", href: "/locks", icon: Lock, cap: CAPABILITIES.OPERATIONS.SMART_LOCKS },
   { label: "Revenue", href: "/revenue", icon: TrendingUp, cap: CAPABILITIES.REVENUE.DYNAMIC_PRICING },
   { label: "Audit", href: "/audit", icon: ShieldCheck, cap: CAPABILITIES.CORE.AUDIT_LOGS },
   { label: "Settings", href: "/settings", icon: Settings, cap: CAPABILITIES.CORE.SETTINGS },
