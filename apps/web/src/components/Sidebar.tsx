@@ -22,6 +22,8 @@ import {
   ExternalLink,
   Star,
   Mail,
+  Tv,
+  Lock,
 } from "lucide-react";
 import { TenantConfig, hasCapability, CAPABILITIES } from "@/lib/tenant";
 
