@@ -1,32 +1,60 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Search, DoorOpen, Wrench, Sparkles, ChevronRight } from "lucide-react";
-
-const mockRooms = [
-  { id: "rm-001", number: "201", type: "Deluxe King", floor: "2", status: "occupied", housekeeping: "clean" },
-  { id: "rm-002", number: "305", type: "Standard Twin", floor: "3", status: "vacant", housekeeping: "clean" },
-  { id: "rm-003", number: "412", type: "Suite", floor: "4", status: "occupied", housekeeping: "dirty" },
-  { id: "rm-004", number: "108", type: "Standard Queen", floor: "1", status: "maintenance", housekeeping: "clean" },
-];
+import { useState, useEffect, useCallback } from "react";
+import { Plus, Search, DoorOpen, Wrench, Sparkles, ChevronRight, RefreshCw } from "lucide-react";
+import { Room, getRooms } from "@/lib/api";
 
 const statusColors: Record<string, string> = {
   occupied: "badge-green",
-  vacant: "badge-blue",
-  maintenance: "badge-amber",
-  out_of_order: "badge-red",
-};
-
-const hkColors: Record<string, string> = {
-  clean: "badge-green",
-  dirty: "badge-red",
-  inspected: "badge-blue",
-  in_progress: "badge-amber",
+  vacant_clean: "badge-blue",
+  vacant_dirty: "badge-amber",
+  maintenance: "badge-red",
+  blocked: "badge-red",
 };
 
 export default function RoomsPage() {
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const filtered = mockRooms.filter((r) => r.number.includes(search) || r.type.toLowerCase().includes(search.toLowerCase()));
+
+  const fetchRooms = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const rms = await getRooms();
+      setRooms(rms);
+    } catch (e: any) {
+      setError(e.message || "Failed to load rooms");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRooms();
+  }, [fetchRooms]);
+
+  const filtered = rooms.filter((r) =>
+    r.number.includes(search) || r.type.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-nexus-400" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-96 flex-col items-center justify-center gap-4">
+        <p className="text-rose-400">{error}</p>
+        <button onClick={fetchRooms} className="btn-primary">Retry</button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -35,10 +63,15 @@ export default function RoomsPage() {
           <h2 className="text-2xl font-bold text-white">Rooms</h2>
           <p className="text-sm text-slate-400">Room inventory and status</p>
         </div>
-        <button className="btn-primary">
-          <Plus className="h-4 w-4" />
-          Add Room
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={fetchRooms} className="rounded-lg border border-slate-700 bg-slate-800 p-2 text-slate-400 hover:text-white" title="Refresh">
+            <RefreshCw className="h-4 w-4" />
+          </button>
+          <button className="btn-primary">
+            <Plus className="h-4 w-4" />
+            Add Room
+          </button>
+        </div>
       </div>
 
       <div className="relative">
@@ -54,7 +87,6 @@ export default function RoomsPage() {
               <th className="px-4 py-3">Type</th>
               <th className="px-4 py-3">Floor</th>
               <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Housekeeping</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
@@ -71,8 +103,7 @@ export default function RoomsPage() {
                 </td>
                 <td className="px-4 py-3 text-slate-300">{r.type}</td>
                 <td className="px-4 py-3 text-slate-300">{r.floor}</td>
-                <td className="px-4 py-3"><span className={statusColors[r.status]}>{r.status}</span></td>
-                <td className="px-4 py-3"><span className={hkColors[r.housekeeping]}>{r.housekeeping}</span></td>
+                <td className="px-4 py-3"><span className={statusColors[r.status] || "badge-gray"}>{r.status.replace("_", " ")}</span></td>
                 <td className="px-4 py-3 text-right">
                   <button className="text-slate-400 hover:text-white"><ChevronRight className="h-4 w-4" /></button>
                 </td>

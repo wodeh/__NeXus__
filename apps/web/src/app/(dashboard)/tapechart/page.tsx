@@ -56,6 +56,14 @@ const statusColors: Record<string, string> = {
   maintenance: "bg-orange-500",
 };
 
+const statusBadge: Record<string, string> = {
+  confirmed: "badge-blue",
+  checked_in: "badge-green",
+  checked_out: "badge-amber",
+  cancelled: "badge-red",
+  no_show: "badge-red",
+};
+
 /* ─── Component ─── */
 export default function TapechartPage() {
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
