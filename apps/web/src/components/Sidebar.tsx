@@ -17,6 +17,7 @@ import {
   Crown,
   ChevronLeft,
   ChevronRight,
+  Grid3X3,
   Globe,
   MessageCircle,
   ExternalLink,
