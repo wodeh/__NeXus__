@@ -38,6 +38,7 @@ type Store struct {
 	Reviews               *ReviewsRepository
 	Communications        *CommunicationsRepository
 	Housekeeping          *HousekeepingRepository
+	Users                 UserRepository
 }
 
 // NewStore creates a repository store backed by a PostgreSQL pool.
@@ -72,7 +73,8 @@ func NewStore(pool *db.Pool) *Store {
 		BookingEngine:        NewBookingEngineRepository(pool, m),
 		Reviews:              NewReviewsRepository(pool, m),
 		Communications:       NewCommunicationsRepository(pool, m),
-		Housekeeping:         NewHousekeepingRepository(pool),
+		Housekeeping:         NewHousekeepingRepository(pool.Pool),
+		Users:                NewUserRepository(pool, m),
 	}
 	return s
 }

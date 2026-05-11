@@ -4,13 +4,6 @@ import (
 	"time"
 )
 
-// SmartLockCapability constants
-const (
-	CapSmartLocks    = "smart_locks"
-	CapRemoteUnlock  = "remote_unlock"
-	CapAccessCodes   = "access_codes"
-)
-
 // SmartLock represents a physical door lock device
 type SmartLock struct {
 	ID                   string     `json:"id" db:"id"`

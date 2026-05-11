@@ -47,17 +47,18 @@ type DamageReport struct {
 
 // HousekeepingStaff represents a housekeeping employee
 type HousekeepingStaff struct {
-	ID           string    `json:"id"`
-	TenantID     string    `json:"tenant_id"`
-	Name         string    `json:"name"`
-	Role         string    `json:"role"`         // cleaner, inspector, manager
-	Active       bool      `json:"active"`
-	Shift        string    `json:"shift"`        // morning, afternoon, evening, night
-	Floors       []string  `json:"floors,omitempty"`
-	MaxRoomsPerDay int     `json:"max_rooms_per_day"`
-	CurrentLoad  int       `json:"current_load"`
-	Rating       float64   `json:"rating"`       // avg quality score 1-5
-	CompletedToday int     `json:"completed_today"`
+	ID             string    `json:"id"`
+	TenantID       string    `json:"tenant_id"`
+	UserID         *string   `json:"user_id,omitempty"`
+	Name           string    `json:"name"`
+	Role           string    `json:"role"`         // cleaner, inspector, manager
+	Active         bool      `json:"active"`
+	Shift          string    `json:"shift"`        // morning, afternoon, evening, night
+	Floors         []string  `json:"floors,omitempty"`
+	MaxRoomsPerDay int       `json:"max_rooms_per_day"`
+	CurrentLoad    int       `json:"current_load"`
+	Rating         float64   `json:"rating"`       // avg quality score 1-5
+	CompletedToday int       `json:"completed_today"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 

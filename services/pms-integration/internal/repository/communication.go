@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/nexus-platform/pms-integration/internal/db"
@@ -60,7 +61,19 @@ func (r *CommunicationsRepository) ListTemplates(ctx context.Context, tenantID s
 
 func (r *CommunicationsRepository) UpdateTemplate(ctx context.Context, tenantID, id string, updates map[string]interface{}) error {
 	r.pool.SetTenant(ctx, tenantID)
-	return r.pool.UpdateByID(ctx, "communication_templates", id, tenantID, updates)
+	query := "UPDATE communication_templates SET updated_at = NOW()"
+	args := []interface{}{}
+	argCount := 0
+	for col, val := range updates {
+		argCount++
+		query += fmt.Sprintf(", %s = $%d", col, argCount)
+		args = append(args, val)
+	}
+	argCount++
+	query += fmt.Sprintf(" WHERE tenant_id = $%d AND id = $%d", argCount, argCount+1)
+	args = append(args, tenantID, id)
+	_, err := r.pool.Exec(ctx, query, args...)
+	return err
 }
 
 func (r *CommunicationsRepository) DeleteTemplate(ctx context.Context, tenantID, id string) error {

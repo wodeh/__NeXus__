@@ -205,7 +205,7 @@ func (h *Handler) publicCreateBooking(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) publicCheckAvailability(w http.ResponseWriter, r *http.Request) {
-	tenantID := chi.URLParam(r, "tenantId")
+	_ = chi.URLParam(r, "tenantId")
 	checkIn := r.URL.Query().Get("check_in")
 	checkOut := r.URL.Query().Get("check_out")
 	adults, _ := strconv.Atoi(r.URL.Query().Get("adults"))

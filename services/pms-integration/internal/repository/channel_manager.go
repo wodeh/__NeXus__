@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/nexus-platform/pms-integration/internal/db"
 	"github.com/nexus-platform/pms-integration/internal/domain"
 )
@@ -26,7 +25,7 @@ func NewChannelManagerRepository(pool *db.Pool, metrics *RepositoryMetrics) *Cha
 func (r *ChannelManagerRepository) CreateConnection(ctx context.Context, tenantID string, conn *domain.ChannelConnection) (*domain.ChannelConnection, error) {
 	r.pool.SetTenant(ctx, tenantID)
 	start := time.Now()
-	defer func() { r.metrics.ObserveDuration("CreateConnection", time.Since(start)) }()
+	defer func() { r.metrics.ObserveDuration("channel_manager", "CreateConnection", time.Since(start).Seconds()) }()
 
 	query := `
 		INSERT INTO channel_connections (tenant_id, source, display_name, api_key, api_secret, property_id, is_active, commission_pct)
@@ -36,23 +35,23 @@ func (r *ChannelManagerRepository) CreateConnection(ctx context.Context, tenantI
 	row := r.pool.QueryRow(ctx, query, tenantID, conn.Source, conn.DisplayName, conn.APIKey, conn.APISecret, conn.PropertyID, conn.IsActive, conn.CommissionPct)
 	err := row.Scan(&conn.ID, &conn.CreatedAt, &conn.UpdatedAt)
 	if err != nil {
-		r.metrics.IncError("CreateConnection")
+		r.metrics.IncError("channel_manager", "CreateConnection", "db_error")
 		return nil, fmt.Errorf("create connection: %w", err)
 	}
-	r.metrics.IncQuery("CreateConnection")
+	r.metrics.IncQuery("channel_manager", "CreateConnection")
 	return conn, nil
 }
 
 func (r *ChannelManagerRepository) ListConnections(ctx context.Context, tenantID string) ([]*domain.ChannelConnection, error) {
 	r.pool.SetTenant(ctx, tenantID)
 	start := time.Now()
-	defer func() { r.metrics.ObserveDuration("ListConnections", time.Since(start)) }()
+	defer func() { r.metrics.ObserveDuration("channel_manager", "ListConnections", time.Since(start).Seconds()) }()
 
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, source, display_name, property_id, is_active, commission_pct, last_sync_at, last_sync_status, last_sync_error, created_at, updated_at
 		FROM channel_connections WHERE tenant_id = $1 ORDER BY display_name`, tenantID)
 	if err != nil {
-		r.metrics.IncError("ListConnections")
+		r.metrics.IncError("channel_manager", "ListConnections", "db_error")
 		return nil, err
 	}
 	defer rows.Close()
@@ -67,13 +66,13 @@ func (r *ChannelManagerRepository) ListConnections(ctx context.Context, tenantID
 		c.TenantID = tenantID
 		out = append(out, &c)
 	}
-	r.metrics.IncQuery("ListConnections")
+	r.metrics.IncQuery("channel_manager", "ListConnections")
 	return out, nil
 }
 
 func (r *ChannelManagerRepository) UpdateConnection(ctx context.Context, tenantID string, id string, updates map[string]interface{}) error {
 	r.pool.SetTenant(ctx, tenantID)
-	return r.pool.UpdateByID(ctx, "channel_connections", id, tenantID, updates)
+	return r.updateByID(ctx, tenantID, "channel_connections", id, updates)
 }
 
 func (r *ChannelManagerRepository) DeleteConnection(ctx context.Context, tenantID string, id string) error {
@@ -87,7 +86,7 @@ func (r *ChannelManagerRepository) DeleteConnection(ctx context.Context, tenantI
 func (r *ChannelManagerRepository) CreateChannelReservation(ctx context.Context, tenantID string, res *domain.ChannelReservation) (*domain.ChannelReservation, error) {
 	r.pool.SetTenant(ctx, tenantID)
 	start := time.Now()
-	defer func() { r.metrics.ObserveDuration("CreateChannelReservation", time.Since(start)) }()
+	defer func() { r.metrics.ObserveDuration("channel_manager", "CreateChannelReservation", time.Since(start).Seconds()) }()
 
 	query := `
 		INSERT INTO channel_reservations (tenant_id, channel_id, source, external_ref, guest_name, guest_email, guest_phone, room_type_id, room_id, check_in, check_out, nights, adults, children, total_amount, commission, net_amount, currency, status, special_requests, raw_payload)
@@ -97,17 +96,17 @@ func (r *ChannelManagerRepository) CreateChannelReservation(ctx context.Context,
 	row := r.pool.QueryRow(ctx, query, tenantID, res.ChannelID, res.Source, res.ExternalRef, res.GuestName, res.GuestEmail, res.GuestPhone, res.RoomTypeID, res.RoomID, res.CheckIn, res.CheckOut, res.Nights, res.Adults, res.Children, res.TotalAmount, res.Commission, res.NetAmount, res.Currency, res.Status, res.SpecialRequests, res.RawPayload)
 	err := row.Scan(&res.ID, &res.CreatedAt, &res.UpdatedAt)
 	if err != nil {
-		r.metrics.IncError("CreateChannelReservation")
+		r.metrics.IncError("channel_manager", "CreateChannelReservation", "db_error")
 		return nil, fmt.Errorf("create channel reservation: %w", err)
 	}
-	r.metrics.IncQuery("CreateChannelReservation")
+	r.metrics.IncQuery("channel_manager", "CreateChannelReservation")
 	return res, nil
 }
 
 func (r *ChannelManagerRepository) ListChannelReservations(ctx context.Context, tenantID string, source *domain.ChannelManagerSource, status *string, fromDate, toDate *time.Time) ([]*domain.ChannelReservation, error) {
 	r.pool.SetTenant(ctx, tenantID)
 	start := time.Now()
-	defer func() { r.metrics.ObserveDuration("ListChannelReservations", time.Since(start)) }()
+	defer func() { r.metrics.ObserveDuration("channel_manager", "ListChannelReservations", time.Since(start).Seconds()) }()
 
 	query := `SELECT id, channel_id, source, external_ref, guest_name, guest_email, guest_phone, room_type_id, room_id, check_in, check_out, nights, adults, children, total_amount, commission, net_amount, currency, status, special_requests, mapped_to_reservation_id, created_at, updated_at FROM channel_reservations WHERE tenant_id = $1`
 	args := []interface{}{tenantID}
@@ -138,7 +137,7 @@ func (r *ChannelManagerRepository) ListChannelReservations(ctx context.Context, 
 
 	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
-		r.metrics.IncError("ListChannelReservations")
+		r.metrics.IncError("channel_manager", "ListChannelReservations", "db_error")
 		return nil, err
 	}
 	defer rows.Close()
@@ -150,7 +149,7 @@ func (r *ChannelManagerRepository) ListChannelReservations(ctx context.Context, 
 		r.TenantID = tenantID
 		out = append(out, &r)
 	}
-	r.metrics.IncQuery("ListChannelReservations")
+	r.metrics.IncQuery("channel_manager", "ListChannelReservations")
 	return out, nil
 }
 
@@ -223,4 +222,21 @@ func (r *ChannelManagerRepository) GetChannelHealth(ctx context.Context, tenantI
 		out = append(out, &h)
 	}
 	return out, nil
+}
+
+// updateByID builds and executes a dynamic UPDATE query.
+func (r *ChannelManagerRepository) updateByID(ctx context.Context, tenantID, table, id string, updates map[string]interface{}) error {
+	query := "UPDATE " + table + " SET updated_at = NOW()"
+	args := []interface{}{}
+	argCount := 0
+	for col, val := range updates {
+		argCount++
+		query += fmt.Sprintf(", %s = $%d", col, argCount)
+		args = append(args, val)
+	}
+	argCount++
+	query += fmt.Sprintf(" WHERE tenant_id = $%d AND id = $%d", argCount, argCount+1)
+	args = append(args, tenantID, id)
+	_, err := r.pool.Exec(ctx, query, args...)
+	return err
 }

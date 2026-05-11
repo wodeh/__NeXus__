@@ -4,16 +4,6 @@ import (
 	"time"
 )
 
-// Capability constants for IPTV
-type IPTVCapability string
-
-const (
-	CapIPTVBasic    IPTVCapability = "iptv_basic"
-	CapIPTVPremium  IPTVCapability = "iptv_premium"
-	CapIPTVWelcome  IPTVCapability = "iptv_welcome"
-	CapIPTVContent  IPTVCapability = "iptv_content"
-)
-
 // IPTVChannel represents a TV channel available on the system
 type IPTVChannel struct {
 	ID          string    `json:"id" db:"id"`
