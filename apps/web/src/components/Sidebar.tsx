@@ -38,6 +38,7 @@ const navItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard, cap: CAPABILITIES.CORE.RESERVATIONS },
   { label: "Command Center", href: "/command", icon: LayoutGrid, cap: CAPABILITIES.OPERATIONS.FRONT_DESK },
   { label: "Floor Plan", href: "/floor", icon: LayoutGrid, cap: CAPABILITIES.OPERATIONS.FLOOR_DASHBOARD },
+  { label: "Tapechart", href: "/tapechart", icon: Grid3X3, cap: CAPABILITIES.CORE.RESERVATIONS },
   { label: "Reservations", href: "/reservations", icon: CalendarDays, cap: CAPABILITIES.CORE.RESERVATIONS },
   { label: "Guests", href: "/guests", icon: Users, cap: CAPABILITIES.CORE.GUESTS },
   { label: "Room Blocks", href: "/room-blocks", icon: DoorOpen, cap: CAPABILITIES.OPERATIONS.ROOM_BLOCKS },
