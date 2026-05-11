@@ -13,6 +13,7 @@ import (
 type Store struct {
 	pool      *db.Pool
 	Tenants   *TenantRepository
+	Admin     *AdminRepository
 }
 
 // NewStore creates a repository instance.
@@ -20,6 +21,7 @@ func NewStore(pool *db.Pool) *Store {
 	return &Store{
 		pool:    pool,
 		Tenants: NewTenantRepository(pool),
+		Admin:   NewAdminRepository(pool),
 	}
 }
 
