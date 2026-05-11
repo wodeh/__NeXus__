@@ -770,3 +770,61 @@ export async function getCommScheduled(): Promise<CommScheduled[]> {
   return data.scheduled;
 }
 
+
+/* ─── Admin Config API ─── */
+
+export interface SystemConfig {
+  tenant_id: string;
+  default_check_in_time: string;
+  default_check_out_time: string;
+  auto_confirm: boolean;
+  require_deposit: boolean;
+  deposit_percent: number;
+  allow_walk_in: boolean;
+}
+
+export async function getSystemConfig(): Promise<SystemConfig> {
+  return api<SystemConfig>("/v1/admin/config");
+}
+
+export async function updateSystemConfig(payload: Partial<SystemConfig>): Promise<SystemConfig> {
+  return api<SystemConfig>("/v1/admin/config", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getAdminProperties(): Promise<Property[]> {
+  const data = await api<{ properties: Property[] }>("/v1/admin/properties");
+  return data.properties;
+}
+
+export async function createAdminProperty(payload: { name: string; address?: string; city?: string; country?: string; phone?: string; email?: string; timezone?: string; currency?: string; star_rating?: number; config?: Record<string, unknown> }): Promise<Property> {
+  return api<Property>("/v1/admin/properties", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getAdminUsers(): Promise<User[]> {
+  const data = await api<{ users: User[] }>("/v1/admin/users");
+  return data.users;
+}
+
+export async function createAdminUser(payload: { email: string; name: string; role: string; password?: string }): Promise<User> {
+  return api<User>("/v1/admin/users", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateAdminUser(id: string, payload: { name?: string; role?: string; is_active?: boolean }): Promise<{ status: string }> {
+  return api<{ status: string }>("/v1/admin/users", {
+    method: "PATCH",
+    body: JSON.stringify({ id, ...payload }),
+  });
+}
+
+export async function deleteAdminUser(id: string): Promise<{ status: string }> {
+  return api<{ status: string }>(`/v1/admin/users?id=${id}`, { method: "DELETE" });
+}
