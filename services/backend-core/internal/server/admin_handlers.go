@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/nexus-platform/backend-core/internal/domain"
 	"github.com/nexus-platform/backend-core/internal/repository"
 )
@@ -53,7 +54,12 @@ func (s *Server) handleAdminTenantDetail(w http.ResponseWriter, r *http.Request)
 	// Summary endpoint: /v1/admin/tenants/{id}/summary
 	if len(parts) > 1 && parts[1] == "summary" {
 		repo := repository.NewTenantRepository(s.repo.Pool())
-		props, err := repo.ListProperties(ctx, tenantID)
+		tid, err := uuid.Parse(tenantID)
+	if err != nil {
+		http.Error(w, `{"error":"invalid tenant id"}`, http.StatusBadRequest)
+		return
+	}
+	props, err := repo.ListProperties(ctx, tid)
 		if err != nil {
 			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 			return

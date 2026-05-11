@@ -206,7 +206,7 @@ function ListView({ reservations, rooms, today, onRefresh }: { reservations: Res
     revenue: reservations.filter((r) => r.status === "checked_in").reduce((s, r) => s + r.total, 0),
   };
 
-  async function doAction(id: string, action: () => Promise<void>) {
+  async function doAction(id: string, action: () => Promise<unknown>) {
     setActionLoading(id);
     try {
       await action();

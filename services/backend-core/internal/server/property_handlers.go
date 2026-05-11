@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/nexus-platform/backend-core/internal/repository"
 )
 
@@ -19,7 +20,8 @@ func (s *Server) handleProperties(w http.ResponseWriter, r *http.Request) {
 	repo := repository.NewTenantRepository(s.repo.Pool())
 
 	if r.Method == http.MethodGet {
-		props, err := repo.ListProperties(ctx, tenantID)
+		tid, _ := uuid.Parse(tenantID)
+		props, err := repo.ListProperties(ctx, tid)
 		if err != nil {
 			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 			return
@@ -54,7 +56,8 @@ func (s *Server) handlePropertyDetail(w http.ResponseWriter, r *http.Request) {
 	propertyID := parts[0]
 
 	repo := repository.NewTenantRepository(s.repo.Pool())
-	props, err := repo.ListProperties(ctx, tenantID)
+	tid, _ := uuid.Parse(tenantID)
+	props, err := repo.ListProperties(ctx, tid)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return

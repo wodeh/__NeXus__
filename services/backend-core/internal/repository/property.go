@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/nexus-platform/backend-core/internal/db"
 	"github.com/nexus-platform/backend-core/internal/domain"
