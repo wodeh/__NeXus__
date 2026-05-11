@@ -11,19 +11,23 @@ import (
 
 // Store is the root repository backed by a PostgreSQL connection pool.
 type Store struct {
-	pool      *db.Pool
-	Tenants   *TenantRepository
-	Admin     *AdminRepository
-	Channel   *ChannelRepository
+	pool                 *db.Pool
+	Tenants              *TenantRepository
+	Admin                *AdminRepository
+	Channel              *ChannelRepository
+	ReservationDetail    *ReservationDetailRepository
+	Revenue              *RevenueRepository
 }
 
 // NewStore creates a repository instance.
 func NewStore(pool *db.Pool) *Store {
 	return &Store{
-		pool:    pool,
-		Tenants: NewTenantRepository(pool),
-		Admin:   NewAdminRepository(pool),
-		Channel: NewChannelRepository(pool),
+		pool:              pool,
+		Tenants:           NewTenantRepository(pool),
+		Admin:             NewAdminRepository(pool),
+		Channel:           NewChannelRepository(pool),
+		ReservationDetail: NewReservationDetailRepository(pool),
+		Revenue:           NewRevenueRepository(pool),
 	}
 }
 
