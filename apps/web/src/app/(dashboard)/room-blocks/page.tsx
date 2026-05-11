@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { hasCapability, CAPABILITIES } from "@/lib/tenant";
-import { Lock, Plus, Ban, Calendar, User, ArrowUpRight } from "lucide-react";
+import { Lock, Plus, Ban, Calendar, User, ArrowUpRight, RefreshCw, AlertTriangle } from "lucide-react";
+import { Room, getRooms } from "@/lib/api";
 
 interface RoomBlock {
   id: string;
@@ -13,19 +14,37 @@ interface RoomBlock {
   reason: string;
   type: string;
   status: string;
-  created_by: string;
 }
-
-const mockBlocks: RoomBlock[] = [
-  { id: "rb-1001", room_ids: ["r-104"], start_date: "2026-05-10", end_date: "2026-05-17", reason: "VIP Hold - Mr. Smith", type: "vip", status: "active", created_by: "manager@demo.com" },
-  { id: "rb-1002", room_ids: ["r-302", "r-303", "r-304"], start_date: "2026-05-24", end_date: "2026-05-26", reason: "Wedding Party - Johnson Group", type: "group", status: "active", created_by: "sales@demo.com" },
-];
 
 export default function RoomBlocksPage() {
   const { config } = useTenant();
   const [showForm, setShowForm] = useState(false);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const hasCap = hasCapability(config, CAPABILITIES.OPERATIONS.ROOM_BLOCKS);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const rms = await getRooms();
+      setRooms(rms);
+    } catch (e: any) {
+      setError(e.message || "Failed to load room blocks");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const blockedRooms = useMemo(() => {
+    return rooms.filter((r) => ["blocked", "maintenance", "out_of_order"].includes(r.status));
+  }, [rooms]);
 
   if (!hasCap) {
     return (
@@ -42,6 +61,24 @@ export default function RoomBlocksPage() {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-nexus-400" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-96 flex-col items-center justify-center gap-4">
+        <AlertTriangle className="h-10 w-10 text-rose-400" />
+        <p className="text-rose-400">{error}</p>
+        <button onClick={fetchData} className="btn-primary">Retry</button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -49,9 +86,14 @@ export default function RoomBlocksPage() {
           <h2 className="text-2xl font-bold text-white">Room Blocks</h2>
           <p className="text-sm text-slate-400">Hold rooms out of inventory</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="btn-primary">
-          <Plus className="h-4 w-4" /> New Block
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={fetchData} className="rounded-lg border border-slate-700 bg-slate-800 p-2 text-slate-400 hover:text-white" title="Refresh">
+            <RefreshCw className="h-4 w-4" />
+          </button>
+          <button onClick={() => setShowForm(!showForm)} className="btn-primary">
+            <Plus className="h-4 w-4" /> New Block
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -66,18 +108,21 @@ export default function RoomBlocksPage() {
       )}
 
       <div className="space-y-3">
-        {mockBlocks.map((b) => (
-          <div key={b.id} className="card flex items-center justify-between">
+        {blockedRooms.map((r) => (
+          <div key={r.id} className="card flex items-center justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="rounded-full bg-nexus-500/10 px-2.5 py-0.5 text-xs font-medium text-nexus-400 uppercase">{b.type}</span>
-                <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400">{b.status}</span>
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium uppercase ${
+                  r.status === "blocked" ? "bg-purple-500/10 text-purple-400" :
+                  r.status === "maintenance" ? "bg-amber-500/10 text-amber-400" :
+                  "bg-slate-500/10 text-slate-400"
+                }`}>{r.status}</span>
+                <span className="text-xs text-slate-500">{r.type}</span>
               </div>
-              <p className="text-sm font-medium text-white">{b.reason}</p>
+              <p className="text-sm font-medium text-white">Room {r.number} — Floor {r.floor}</p>
               <div className="flex items-center gap-4 text-xs text-slate-500">
-                <span>Rooms: {b.room_ids.join(", ")}</span>
-                <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {b.start_date} → {b.end_date}</span>
-                <span className="flex items-center gap-1"><User className="h-3 w-3" /> {b.created_by}</span>
+                <span>{r.bed_type || "Standard"} · ${r.rate_night}/night</span>
+                {r.rate_night > 0 && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> ${r.rate_night}/night</span>}
               </div>
             </div>
             <button className="rounded-lg p-2 text-slate-400 hover:bg-red-500/10 hover:text-red-400">
@@ -85,6 +130,11 @@ export default function RoomBlocksPage() {
             </button>
           </div>
         ))}
+        {blockedRooms.length === 0 && (
+          <div className="py-12 text-center text-sm text-slate-500">
+            No blocked rooms.
+          </div>
+        )}
       </div>
     </div>
   );
