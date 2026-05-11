@@ -314,19 +314,19 @@ export async function deleteRole(id: string): Promise<void> {
 /* ─── Housekeeping API ─── */
 
 export async function getHousekeepingTasks(): Promise<HousekeepingTask[]> {
-  const data = await api<{ tasks: HousekeepingTask[] }>("/v1/housekeeping");
+  const data = await api<{ tasks: HousekeepingTask[] }>("/v1/housekeeping/tasks");
   return data.tasks;
 }
 
 export async function createHousekeepingTask(payload: Omit<HousekeepingTask, "id" | "tenant_id" | "status" | "created_at" | "updated_at">): Promise<HousekeepingTask> {
-  return api<HousekeepingTask>("/v1/housekeeping", {
+  return api<HousekeepingTask>("/v1/housekeeping/tasks", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
 export async function updateHousekeepingTask(id: string, payload: Partial<HousekeepingTask>): Promise<HousekeepingTask> {
-  return api<HousekeepingTask>(`/v1/housekeeping/${id}`, {
+  return api<HousekeepingTask>(`/v1/housekeeping/tasks/${id}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });

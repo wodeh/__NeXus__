@@ -66,6 +66,17 @@ func (r *RoomRepository) List(ctx context.Context, tenantID string) ([]domain.Ro
 	return rooms, nil
 }
 
+// Create inserts a new room.
+func (r *RoomRepository) Create(ctx context.Context, tenantID string, rm *domain.Room) error {
+	return r.pool.QueryRow(ctx, `
+		INSERT INTO rooms (tenant_id, property_id, number, type, floor, bed_type, status, rate_night, config)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id, created_at, updated_at, version
+	`, tenantID, rm.PropertyID, rm.Number, rm.Type, rm.Floor, rm.BedType, rm.Status, rm.RateNight, `{"wifi":true,"tv":true,"ac":true}`).Scan(
+		&rm.ID, &rm.CreatedAt, &rm.UpdatedAt, &rm.Version,
+	)
+}
+
 // UpdateStatus updates a room's status.
 func (r *RoomRepository) UpdateStatus(ctx context.Context, tenantID string, number string, status string) error {
 	cmdTag, err := r.pool.Exec(ctx, `
