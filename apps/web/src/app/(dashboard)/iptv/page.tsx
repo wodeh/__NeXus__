@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { hasCapability, CAPABILITIES } from "@/lib/tenant";
 import {
@@ -19,52 +19,7 @@ import {
   Eye,
   Settings,
 } from "lucide-react";
-
-interface Channel {
-  id: string;
-  name: string;
-  number: number;
-  streamUrl: string;
-  logoUrl?: string;
-  category: string;
-  language: string;
-  isActive: boolean;
-  isPremium: boolean;
-}
-
-interface ContentItem {
-  id: string;
-  title: string;
-  type: "movie" | "series" | "music" | "info";
-  description: string;
-  duration?: number;
-  thumbnailUrl?: string;
-  category: string;
-  isActive: boolean;
-}
-
-const mockChannels: Channel[] = [
-  { id: "c1", name: "CNN International", number: 1, streamUrl: "https://cnn-intl/stream", category: "news", language: "en", isActive: true, isPremium: false },
-  { id: "c2", name: "BBC World", number: 2, streamUrl: "https://bbc-world/stream", category: "news", language: "en", isActive: true, isPremium: false },
-  { id: "c3", name: "Al Jazeera", number: 3, streamUrl: "https://aljazeera/stream", category: "news", language: "en", isActive: true, isPremium: false },
-  { id: "c4", name: "ESPN", number: 10, streamUrl: "https://espn/stream", category: "sports", language: "en", isActive: true, isPremium: true },
-  { id: "c5", name: "BeIN Sports", number: 11, streamUrl: "https://bein/stream", category: "sports", language: "en", isActive: true, isPremium: true },
-  { id: "c6", name: "HBO", number: 20, streamUrl: "https://hbo/stream", category: "movies", language: "en", isActive: true, isPremium: true },
-  { id: "c7", name: "Netflix Channel", number: 21, streamUrl: "https://netflix-channel/stream", category: "movies", language: "en", isActive: true, isPremium: true },
-  { id: "c8", name: "Kids TV", number: 50, streamUrl: "https://kids-tv/stream", category: "kids", language: "en", isActive: true, isPremium: false },
-  { id: "c9", name: "Cartoon Network", number: 51, streamUrl: "https://cn/stream", category: "kids", language: "en", isActive: true, isPremium: false },
-  { id: "c10", name: "Music FM", number: 80, streamUrl: "https://music-fm/stream", category: "music", language: "en", isActive: true, isPremium: false },
-];
-
-const mockContent: ContentItem[] = [
-  { id: "m1", title: "Welcome to Grand Plaza", type: "info", description: "Hotel overview, amenities guide, and local attractions", category: "welcome", isActive: true },
-  { id: "m2", title: "Room Service Menu", type: "info", description: "Full dining menu with ordering instructions", category: "dining", isActive: true },
-  { id: "m3", title: "Spa & Wellness Guide", type: "info", description: "Spa treatments, gym hours, and booking info", category: "wellness", isActive: true },
-  { id: "m4", title: "The Dark Knight", type: "movie", description: "Batman faces the Joker in Gotham City", duration: 152, category: "action", isActive: true },
-  { id: "m5", title: "Inception", type: "movie", description: "A thief who steals corporate secrets through dream-sharing technology", duration: 148, category: "sci-fi", isActive: true },
-  { id: "m6", title: "Breaking Bad S1", type: "series", description: "A high school chemistry teacher turned methamphetamine manufacturer", category: "drama", isActive: true },
-  { id: "m7", title: "Local Attractions", type: "info", description: "Top 10 places to visit within 5km of the hotel", category: "tourism", isActive: true },
-];
+import { getIPTVChannels, getIPTVContent, getIPTVRooms, IPTVChannel, IPTVContent, IPTVRoomStatus } from "@/lib/api";
 
 function ToggleSwitch({ checked }: { checked: boolean }) {
   return (
@@ -79,6 +34,32 @@ export default function IPTVPage() {
   const [tab, setTab] = useState<"channels" | "content" | "rooms" | "analytics">("channels");
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [channels, setChannels] = useState<IPTVChannel[]>([]);
+  const [content, setContent] = useState<IPTVContent[]>([]);
+  const [roomStatus, setRoomStatus] = useState<IPTVRoomStatus[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    setLoading(true);
+    try {
+      const [ch, ct, rs] = await Promise.all([
+        getIPTVChannels(),
+        getIPTVContent(),
+        getIPTVRooms(),
+      ]);
+      setChannels(ch);
+      setContent(ct);
+      setRoomStatus(rs);
+    } catch (e) {
+      console.error("Failed to load IPTV data", e);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const hasIPTV = hasCapability(config, CAPABILITIES.OPERATIONS.IPTV_BASIC);
 
@@ -96,19 +77,18 @@ export default function IPTVPage() {
     );
   }
 
-  const filteredChannels = mockChannels.filter((c) =>
+  const filteredChannels = channels.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     c.category.toLowerCase().includes(search.toLowerCase())
   );
 
-  const filteredContent = mockContent.filter((c) =>
+  const filteredContent = content.filter((c) =>
     c.title.toLowerCase().includes(search.toLowerCase()) ||
     c.category.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">IPTV Management</h1>
@@ -126,7 +106,6 @@ export default function IPTVPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-slate-700 pb-1">
         {(["channels", "content", "rooms", "analytics"] as const).map((t) => (
           <button
@@ -141,7 +120,6 @@ export default function IPTVPage() {
         ))}
       </div>
 
-      {/* Search bar */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
@@ -170,34 +148,36 @@ export default function IPTVPage() {
         )}
       </div>
 
-      {/* Channels Tab */}
-      {tab === "channels" && (
-        <div className={viewMode === "grid" ? "grid grid-cols-4 gap-4" : "space-y-2"}>
-          {filteredChannels.map((ch) => (
-            <ChannelCard key={ch.id} channel={ch} viewMode={viewMode} />
-          ))}
-        </div>
+      {loading ? (
+        <p className="text-sm text-slate-500">Loading IPTV data...</p>
+      ) : (
+        <>
+          {tab === "channels" && (
+            <div className={viewMode === "grid" ? "grid grid-cols-4 gap-4" : "space-y-2"}>
+              {filteredChannels.map((ch) => (
+                <ChannelCard key={ch.id} channel={ch} viewMode={viewMode} />
+              ))}
+            </div>
+          )}
+
+          {tab === "content" && (
+            <div className={viewMode === "grid" ? "grid grid-cols-3 gap-4" : "space-y-2"}>
+              {filteredContent.map((item) => (
+                <ContentCard key={item.id} item={item} viewMode={viewMode} />
+              ))}
+            </div>
+          )}
+
+          {tab === "rooms" && <RoomBindingsTab rooms={roomStatus} />}
+
+          {tab === "analytics" && <AnalyticsTab />}
+        </>
       )}
-
-      {/* Content Tab */}
-      {tab === "content" && (
-        <div className={viewMode === "grid" ? "grid grid-cols-3 gap-4" : "space-y-2"}>
-          {filteredContent.map((item) => (
-            <ContentCard key={item.id} item={item} viewMode={viewMode} />
-          ))}
-        </div>
-      )}
-
-      {/* Rooms Tab */}
-      {tab === "rooms" && <RoomBindingsTab />}
-
-      {/* Analytics Tab */}
-      {tab === "analytics" && <AnalyticsTab />}
     </div>
   );
 }
 
-function ChannelCard({ channel, viewMode }: { channel: Channel; viewMode: string }) {
+function ChannelCard({ channel, viewMode }: { channel: IPTVChannel; viewMode: string }) {
   if (viewMode === "list") {
     return (
       <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/50 p-3">
@@ -211,10 +191,10 @@ function ChannelCard({ channel, viewMode }: { channel: Channel; viewMode: string
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {channel.isPremium && (
+          {channel.is_premium && (
             <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400">Premium</span>
           )}
-          <ToggleSwitch checked={channel.isActive} />
+          <ToggleSwitch checked={channel.is_active} />
           <button className="rounded p-1 text-slate-400 hover:text-white"><Pencil className="h-3 w-3" /></button>
           <button className="rounded p-1 text-rose-400 hover:text-rose-300"><Trash2 className="h-3 w-3" /></button>
         </div>
@@ -228,7 +208,7 @@ function ChannelCard({ channel, viewMode }: { channel: Channel; viewMode: string
         <div className="flex h-8 w-8 items-center justify-center rounded bg-nexus-500/10 text-sm font-bold text-nexus-400">
           {channel.number}
         </div>
-        {channel.isPremium && (
+        {channel.is_premium && (
           <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400">Premium</span>
         )}
       </div>
@@ -236,8 +216,8 @@ function ChannelCard({ channel, viewMode }: { channel: Channel; viewMode: string
       <p className="text-xs text-slate-400">{channel.category} · {channel.language}</p>
       <div className="mt-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <ToggleSwitch checked={channel.isActive} />
-          <span className="text-xs text-slate-400">{channel.isActive ? "Live" : "Offline"}</span>
+          <ToggleSwitch checked={channel.is_active} />
+          <span className="text-xs text-slate-400">{channel.is_active ? "Live" : "Offline"}</span>
         </div>
         <div className="flex gap-1">
           <button className="rounded p-1 text-slate-400 hover:text-white"><Pencil className="h-3 w-3" /></button>
@@ -248,7 +228,7 @@ function ChannelCard({ channel, viewMode }: { channel: Channel; viewMode: string
   );
 }
 
-function ContentCard({ item, viewMode }: { item: ContentItem; viewMode: string }) {
+function ContentCard({ item, viewMode }: { item: IPTVContent; viewMode: string }) {
   if (viewMode === "list") {
     return (
       <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/50 p-3">
@@ -262,7 +242,7 @@ function ContentCard({ item, viewMode }: { item: ContentItem; viewMode: string }
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <ToggleSwitch checked={item.isActive} />
+          <ToggleSwitch checked={item.is_active} />
           <button className="rounded p-1 text-slate-400 hover:text-white"><Pencil className="h-3 w-3" /></button>
           <button className="rounded p-1 text-rose-400 hover:text-rose-300"><Trash2 className="h-3 w-3" /></button>
         </div>
@@ -278,7 +258,7 @@ function ContentCard({ item, viewMode }: { item: ContentItem; viewMode: string }
       <h3 className="mt-2 text-sm font-medium text-white">{item.title}</h3>
       <p className="text-xs text-slate-400">{item.type} · {item.category}</p>
       <div className="mt-3 flex items-center justify-between">
-        <ToggleSwitch checked={item.isActive} />
+        <ToggleSwitch checked={item.is_active} />
         <div className="flex gap-1">
           <button className="rounded p-1 text-slate-400 hover:text-white"><Pencil className="h-3 w-3" /></button>
           <button className="rounded p-1 text-rose-400 hover:text-rose-300"><Trash2 className="h-3 w-3" /></button>
@@ -288,40 +268,35 @@ function ContentCard({ item, viewMode }: { item: ContentItem; viewMode: string }
   );
 }
 
-function RoomBindingsTab() {
-  const rooms = [
-    { room: "101", guest: "Alice Chen", channel: "HBO, ESPN, CNN", language: "en", welcome: "Welcome Alice!" },
-    { room: "102", guest: null, channel: "Basic Package", language: "en", welcome: "Welcome to Grand Plaza" },
-    { room: "103", guest: null, channel: "Basic Package", language: "en", welcome: "Welcome to Grand Plaza" },
-    { room: "201", guest: "Bob Jones", channel: "Premium Package", language: "en", welcome: "Welcome back, Bob!" },
-    { room: "202", guest: null, channel: "Basic Package", language: "en", welcome: "Welcome to Grand Plaza" },
-    { room: "203", guest: "Carol White", channel: "Premium Package", language: "en", welcome: "Welcome Carol!" },
-  ];
-
+function RoomBindingsTab({ rooms }: { rooms: IPTVRoomStatus[] }) {
   return (
     <div className="space-y-3">
-      {rooms.map((r) => (
-        <div key={r.room} className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/50 p-4">
-          <div className="flex items-center gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded bg-slate-700 text-sm font-bold text-white">
-              {r.room}
+      {rooms.length === 0 ? (
+        <p className="text-sm text-slate-500">No IPTV room data available.</p>
+      ) : (
+        rooms.map((r) => (
+          <div key={r.id} className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/50 p-4">
+            <div className="flex items-center gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded bg-slate-700 text-sm font-bold text-white">
+                {r.room_number}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white">
+                  {r.is_online ? <span className="text-emerald-400">Online</span> : <span className="text-rose-400">Offline</span>}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {r.current_channel ? `Channel ${r.current_channel}` : "No active channel"}
+                  {r.last_activity_at && ` · Last active: ${r.last_activity_at.split("T")[1]?.substring(0,5) || ""}`}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-white">
-                {r.guest ? `Guest: ${r.guest}` : "Vacant"}
-              </p>
-              <p className="text-xs text-slate-400">{r.channel} · Lang: {r.language}</p>
+            <div className="flex items-center gap-3">
+              <button className="btn-secondary text-xs">Edit</button>
+              <ToggleSwitch checked={r.is_online} />
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="rounded bg-slate-700/50 px-3 py-1.5 text-xs text-slate-300">
-              {r.welcome}
-            </div>
-            <button className="btn-secondary text-xs">Edit</button>
-            <ToggleSwitch checked={true} />
-          </div>
-        </div>
-      ))}
+        ))
+      )}
     </div>
   );
 }

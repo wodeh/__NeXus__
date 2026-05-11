@@ -667,3 +667,106 @@ export async function getAuditStats(): Promise<AuditStats> {
   return api<AuditStats>("/v1/audit/stats");
 }
 
+/* ─── IPTV API ─── */
+
+export interface IPTVChannel {
+  id: string;
+  tenant_id: string;
+  name: string;
+  number: number;
+  stream_url: string;
+  logo_url?: string;
+  category: string;
+  language: string;
+  is_active: boolean;
+  is_premium: boolean;
+}
+
+export interface IPTVContent {
+  id: string;
+  tenant_id: string;
+  title: string;
+  type: "movie" | "series" | "music" | "info";
+  description: string;
+  duration?: number;
+  thumbnail_url?: string;
+  category: string;
+  is_active: boolean;
+}
+
+export interface IPTVRoomStatus {
+  id: string;
+  tenant_id: string;
+  room_id: string;
+  room_number: string;
+  is_online: boolean;
+  current_channel?: number;
+  last_activity_at?: string;
+}
+
+export async function getIPTVChannels(): Promise<IPTVChannel[]> {
+  const data = await api<{ channels: IPTVChannel[] }>("/v1/iptv/channels");
+  return data.channels;
+}
+
+export async function getIPTVContent(): Promise<IPTVContent[]> {
+  const data = await api<{ content: IPTVContent[] }>("/v1/iptv/content");
+  return data.content;
+}
+
+export async function getIPTVRooms(): Promise<IPTVRoomStatus[]> {
+  const data = await api<{ rooms: IPTVRoomStatus[] }>("/v1/iptv/rooms");
+  return data.rooms;
+}
+
+/* ─── Communications API ─── */
+
+export interface CommTemplate {
+  id: string;
+  tenant_id: string;
+  name: string;
+  subject?: string;
+  body: string;
+  channel: "email" | "sms" | "whatsapp";
+  category: string;
+  is_active: boolean;
+}
+
+export interface CommSequence {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description: string;
+  trigger: string;
+  is_active: boolean;
+  steps: number;
+}
+
+export interface CommScheduled {
+  id: string;
+  tenant_id: string;
+  guest_name: string;
+  channel: string;
+  subject?: string;
+  body?: string;
+  status: "scheduled" | "sent" | "delivered" | "failed";
+  scheduled_at: string;
+  sent_at?: string;
+  error?: string;
+}
+
+export async function getCommTemplates(): Promise<CommTemplate[]> {
+  const data = await api<{ templates: CommTemplate[] }>("/v1/communications/templates");
+  return data.templates;
+}
+
+export async function getCommSequences(): Promise<CommSequence[]> {
+  const data = await api<{ sequences: CommSequence[] }>("/v1/communications/sequences");
+  return data.sequences;
+}
+
+export async function getCommScheduled(): Promise<CommScheduled[]> {
+  const data = await api<{ scheduled: CommScheduled[] }>("/v1/communications/scheduled");
+  return data.scheduled;
+}
+
