@@ -1,39 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { hasCapability, CAPABILITIES } from "@/lib/tenant";
-import { Lock, Filter, Square, CheckCircle2, Wrench, Ban } from "lucide-react";
+import { Lock, Filter, Square, CheckCircle2, Wrench, Ban, RefreshCw, AlertTriangle } from "lucide-react";
+import { Room, Reservation, getRooms, getReservations } from "@/lib/api";
 
 interface RoomStatus {
   id: string;
   number: string;
   floor: string;
   type: string;
-  status: "vacant_clean" | "vacant_dirty" | "occupied" | "blocked" | "maintenance" | "out_of_order";
+  status: string;
   guest?: string;
   arrival?: string;
   departure?: string;
   blockReason?: string;
 }
-
-const mockRooms: RoomStatus[] = [
-  { id: "r-101", number: "101", floor: "1", type: "Standard", status: "occupied", guest: "Alice Chen", arrival: "2026-05-10", departure: "2026-05-14" },
-  { id: "r-102", number: "102", floor: "1", type: "Standard", status: "vacant_clean" },
-  { id: "r-103", number: "103", floor: "1", type: "Deluxe", status: "vacant_dirty" },
-  { id: "r-104", number: "104", floor: "1", type: "Standard", status: "blocked", blockReason: "VIP Hold - Mr. Smith" },
-  { id: "r-105", number: "105", floor: "1", type: "Accessible", status: "maintenance", blockReason: "Plumbing repair" },
-  { id: "r-201", number: "201", floor: "2", type: "Deluxe King", status: "occupied", guest: "Bob Jones", arrival: "2026-05-08", departure: "2026-05-11" },
-  { id: "r-202", number: "202", floor: "2", type: "Deluxe King", status: "vacant_clean" },
-  { id: "r-203", number: "203", floor: "2", type: "Suite", status: "occupied", guest: "Carol White", arrival: "2026-05-09", departure: "2026-05-12" },
-  { id: "r-204", number: "204", floor: "2", type: "Deluxe King", status: "out_of_order", blockReason: "Renovation" },
-  { id: "r-205", number: "205", floor: "2", type: "Standard", status: "vacant_dirty" },
-  { id: "r-301", number: "301", floor: "3", type: "Suite", status: "vacant_clean" },
-  { id: "r-302", number: "302", floor: "3", type: "Suite", status: "blocked", blockReason: "Group Block - Wedding Party" },
-  { id: "r-303", number: "303", floor: "3", type: "Deluxe King", status: "occupied", guest: "David Lee", arrival: "2026-05-10", departure: "2026-05-15" },
-  { id: "r-304", number: "304", floor: "3", type: "Standard", status: "vacant_clean" },
-  { id: "r-305", number: "305", floor: "3", type: "Standard", status: "vacant_dirty" },
-];
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   vacant_clean: { label: "Vacant Clean", color: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400", icon: CheckCircle2 },
@@ -48,8 +31,30 @@ export default function FloorPage() {
   const { config } = useTenant();
   const [filter, setFilter] = useState<string>("all");
   const [selectedRoom, setSelectedRoom] = useState<RoomStatus | null>(null);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const hasFloor = hasCapability(config, CAPABILITIES.OPERATIONS.FLOOR_DASHBOARD);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [rms, res] = await Promise.all([getRooms(), getReservations()]);
+      setRooms(rms);
+      setReservations(res);
+    } catch (e: any) {
+      setError(e.message || "Failed to load floor data");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   if (!hasFloor) {
     return (
@@ -65,17 +70,55 @@ export default function FloorPage() {
     );
   }
 
-  const floors = Array.from(new Set(mockRooms.map((r) => r.floor))).sort();
-  const filteredRooms = filter === "all" ? mockRooms : mockRooms.filter((r) => r.status === filter);
+  // Build room status from real data
+  const roomStatuses: RoomStatus[] = useMemo(() => {
+    return rooms.map((r) => {
+      const activeRes = reservations.find(
+        (res) => res.room_number === r.number && res.status === "checked_in"
+      );
+      return {
+        id: r.id,
+        number: r.number,
+        floor: r.floor,
+        type: r.type,
+        status: r.status,
+        guest: activeRes?.guest_name,
+        arrival: activeRes?.check_in,
+        departure: activeRes?.check_out,
+        blockReason: r.status === "blocked" ? "Blocked" : undefined,
+      };
+    });
+  }, [rooms, reservations]);
 
-  const occupancy = {
-    total: mockRooms.length,
-    occupied: mockRooms.filter((r) => r.status === "occupied").length,
-    vacantClean: mockRooms.filter((r) => r.status === "vacant_clean").length,
-    vacantDirty: mockRooms.filter((r) => r.status === "vacant_dirty").length,
-    blocked: mockRooms.filter((r) => r.status === "blocked").length,
-    maintenance: mockRooms.filter((r) => ["maintenance", "out_of_order"].includes(r.status)).length,
-  };
+  const floors = useMemo(() => Array.from(new Set(roomStatuses.map((r) => r.floor))).sort(), [roomStatuses]);
+  const filteredRooms = filter === "all" ? roomStatuses : roomStatuses.filter((r) => r.status === filter);
+
+  const occupancy = useMemo(() => ({
+    total: roomStatuses.length,
+    occupied: roomStatuses.filter((r) => r.status === "occupied").length,
+    vacantClean: roomStatuses.filter((r) => r.status === "vacant_clean").length,
+    vacantDirty: roomStatuses.filter((r) => r.status === "vacant_dirty").length,
+    blocked: roomStatuses.filter((r) => r.status === "blocked").length,
+    maintenance: roomStatuses.filter((r) => ["maintenance", "out_of_order"].includes(r.status)).length,
+  }), [roomStatuses]);
+
+  if (loading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-nexus-400" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-96 flex-col items-center justify-center gap-4">
+        <AlertTriangle className="h-10 w-10 text-rose-400" />
+        <p className="text-rose-400">{error}</p>
+        <button onClick={fetchData} className="btn-primary">Retry</button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -88,6 +131,9 @@ export default function FloorPage() {
           <span className="text-slate-400">Occupancy:</span>
           <span className="font-semibold text-white">{Math.round((occupancy.occupied / occupancy.total) * 100)}%</span>
           <span className="text-slate-500">({occupancy.occupied}/{occupancy.total})</span>
+          <button onClick={fetchData} className="ml-2 rounded-lg border border-slate-700 bg-slate-800 p-2 text-slate-400 hover:text-white" title="Refresh">
+            <RefreshCw className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
@@ -140,7 +186,7 @@ export default function FloorPage() {
               <h3 className="text-sm font-semibold text-slate-300">Floor {floor}</h3>
               <div className="grid grid-cols-5 gap-3">
                 {floorRooms.map((room) => {
-                  const cfg = statusConfig[room.status];
+                  const cfg = statusConfig[room.status] || statusConfig.vacant_clean;
                   const Icon = cfg.icon;
                   return (
                     <button
@@ -182,7 +228,7 @@ export default function FloorPage() {
             <div className="mt-4 space-y-3 text-sm">
               <div className="flex justify-between"><span className="text-slate-400">Type</span><span className="text-white">{selectedRoom.type}</span></div>
               <div className="flex justify-between"><span className="text-slate-400">Floor</span><span className="text-white">{selectedRoom.floor}</span></div>
-              <div className="flex justify-between"><span className="text-slate-400">Status</span><span className={statusConfig[selectedRoom.status].color.split(" ")[2]}>{statusConfig[selectedRoom.status].label}</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">Status</span><span className={(statusConfig[selectedRoom.status]?.color.split(" ")[2]) || "text-slate-400"}>{statusConfig[selectedRoom.status]?.label || selectedRoom.status}</span></div>
               {selectedRoom.guest && (
                 <>
                   <div className="flex justify-between"><span className="text-slate-400">Guest</span><span className="text-white">{selectedRoom.guest}</span></div>
