@@ -1047,3 +1047,217 @@ export async function createBulkReservations(payload: { reservations: CreateRese
     body: JSON.stringify(payload),
   });
 }
+
+/* ─── Guest Journey API ─── */
+
+export interface GuestJourney {
+  id: string;
+  tenant_id: string;
+  name: string;
+  trigger: string;
+  is_active: boolean;
+  steps: JourneyStep[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JourneyStep {
+  id: string;
+  delay_hours: number;
+  channel: string;
+  template_id: string;
+  upsell_offer_id?: string;
+  condition: string;
+  is_active: boolean;
+}
+
+export interface GuestJourneyExecution {
+  id: string;
+  tenant_id: string;
+  journey_id: string;
+  reservation_id: string;
+  guest_phone: string;
+  current_step: number;
+  total_steps: number;
+  status: string;
+  started_at: string;
+  completed_at?: string;
+  next_trigger_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UpsellOffer {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description: string;
+  category: string;
+  price: number;
+  currency: string;
+  image_url?: string;
+  is_active: boolean;
+  auto_offer: boolean;
+  conditions?: Record<string, unknown>;
+  display_order: number;
+  total_sold: number;
+  revenue_generated: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UpsellPurchase {
+  id: string;
+  tenant_id: string;
+  reservation_id: string;
+  guest_phone: string;
+  offer_id: string;
+  offer_name: string;
+  price: number;
+  currency: string;
+  status: string;
+  payment_method: string;
+  folio_posted: boolean;
+  journey_step_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CompetitorHotel {
+  id: string;
+  tenant_id: string;
+  name: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  star_rating?: number;
+  room_count?: number;
+  website?: string;
+  booking_url?: string;
+  is_active: boolean;
+  last_scraped?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CompetitorRate {
+  id: string;
+  tenant_id: string;
+  competitor_id: string;
+  competitor_name: string;
+  room_type: string;
+  date: string;
+  rate: number;
+  currency: string;
+  availability: number;
+  min_stay: number;
+  is_promo: boolean;
+  source: string;
+  scraped_at: string;
+  created_at: string;
+}
+
+export interface RateRecommendation {
+  id: string;
+  tenant_id: string;
+  room_type: string;
+  date: string;
+  current_rate: number;
+  recommended_rate: number;
+  confidence: number;
+  reason: string;
+  factors: string[];
+  applied: boolean;
+  applied_at?: string;
+  created_at: string;
+}
+
+export interface RateShopConfig {
+  tenant_id: string;
+  enabled: boolean;
+  frequency_hours: number;
+  lookahead_days: number;
+  auto_adjust: boolean;
+  max_adjustment_pct: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getJourneys(): Promise<GuestJourney[]> {
+  const data = await api<{ journeys: GuestJourney[] }>("/v1/journeys");
+  return data.journeys;
+}
+
+export async function createJourney(payload: Omit<GuestJourney, "id" | "tenant_id" | "created_at" | "updated_at">): Promise<GuestJourney> {
+  return api<GuestJourney>("/v1/journeys", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function updateJourney(id: string, payload: Partial<GuestJourney>): Promise<GuestJourney> {
+  return api<GuestJourney>(`/v1/journeys/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+}
+
+export async function deleteJourney(id: string): Promise<void> {
+  await api(`/v1/journeys/${id}`, { method: "DELETE" });
+}
+
+export async function getJourneyExecutions(): Promise<GuestJourneyExecution[]> {
+  const data = await api<{ executions: GuestJourneyExecution[] }>("/v1/journey-executions");
+  return data.executions;
+}
+
+export async function getUpsellOffers(): Promise<UpsellOffer[]> {
+  const data = await api<{ offers: UpsellOffer[] }>("/v1/upsell-offers");
+  return data.offers;
+}
+
+export async function createUpsellOffer(payload: Omit<UpsellOffer, "id" | "tenant_id" | "total_sold" | "revenue_generated" | "created_at" | "updated_at">): Promise<UpsellOffer> {
+  return api<UpsellOffer>("/v1/upsell-offers", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function updateUpsellOffer(id: string, payload: Partial<UpsellOffer>): Promise<UpsellOffer> {
+  return api<UpsellOffer>(`/v1/upsell-offers/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+}
+
+export async function deleteUpsellOffer(id: string): Promise<void> {
+  await api(`/v1/upsell-offers/${id}`, { method: "DELETE" });
+}
+
+export async function getUpsellPurchases(): Promise<UpsellPurchase[]> {
+  const data = await api<{ purchases: UpsellPurchase[] }>("/v1/upsell-purchases");
+  return data.purchases;
+}
+
+export async function getCompetitors(): Promise<CompetitorHotel[]> {
+  const data = await api<{ competitors: CompetitorHotel[] }>("/v1/competitors");
+  return data.competitors;
+}
+
+export async function createCompetitor(payload: Omit<CompetitorHotel, "id" | "tenant_id" | "created_at" | "updated_at">): Promise<CompetitorHotel> {
+  return api<CompetitorHotel>("/v1/competitors", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function deleteCompetitor(id: string): Promise<void> {
+  await api(`/v1/competitors/${id}`, { method: "DELETE" });
+}
+
+export async function getCompetitorRates(): Promise<CompetitorRate[]> {
+  const data = await api<{ rates: CompetitorRate[] }>("/v1/competitor-rates");
+  return data.rates;
+}
+
+export async function getRateRecommendations(): Promise<RateRecommendation[]> {
+  const data = await api<{ recommendations: RateRecommendation[] }>("/v1/rate-recommendations");
+  return data.recommendations;
+}
+
+export async function applyRateRecommendation(id: string): Promise<{ status: string }> {
+  return api<{ status: string }>("/v1/rate-recommendations/apply", { method: "POST", body: JSON.stringify({ id }) });
+}
+
+export async function getRateShopConfig(): Promise<RateShopConfig> {
+  return api<RateShopConfig>("/v1/rate-shop-config");
+}
+
+export async function updateRateShopConfig(payload: Partial<RateShopConfig>): Promise<RateShopConfig> {
+  return api<RateShopConfig>("/v1/rate-shop-config", { method: "PATCH", body: JSON.stringify(payload) });
+}
