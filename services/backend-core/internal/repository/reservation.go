@@ -251,8 +251,18 @@ func diffDays(a, b string) int {
 	return 0 // Simplified; actual implementation would parse dates
 }
 
-// Move updates room number and/or dates for a reservation.
+// Move updates room number and/or dates for a reservation, and syncs room status.
 func (r *ReservationRepository) Move(ctx context.Context, tenantID string, id uuid.UUID, req *domain.ReservationMoveRequest) error {
+	// Get current reservation to know old room
+	var oldRoom string
+	err := r.pool.QueryRow(ctx, `
+		SELECT room_number FROM reservations
+		WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`,
+		id, tenantID).Scan(&oldRoom)
+	if err != nil {
+		return fmt.Errorf("move: fetch old room: %w", err)
+	}
+
 	updates := []string{}
 	args := []interface{}{id, tenantID}
 	argIdx := 3
@@ -287,6 +297,32 @@ func (r *ReservationRepository) Move(ctx context.Context, tenantID string, id uu
 	if cmdTag.RowsAffected() == 0 {
 		return fmt.Errorf("reservation %s: %w", id, ErrNotFound)
 	}
+
+	// Sync room statuses: new room → occupied, old room → check if still occupied
+	if req.RoomNumber != "" && req.RoomNumber != oldRoom {
+		// New room becomes occupied
+		_, _ = r.pool.Exec(ctx, `
+			UPDATE rooms SET status = 'occupied', updated_at = NOW()
+			WHERE tenant_id = $1 AND number = $2`,
+			tenantID, req.RoomNumber)
+
+		// Check if old room still has active reservations
+		var count int
+		_ = r.pool.QueryRow(ctx, `
+			SELECT COUNT(*) FROM reservations
+			WHERE tenant_id = $1 AND room_number = $2 AND deleted_at IS NULL
+			  AND status NOT IN ('cancelled', 'checked_out')
+			  AND check_out > CURRENT_DATE`,
+			tenantID, oldRoom).Scan(&count)
+
+		if count == 0 {
+			_, _ = r.pool.Exec(ctx, `
+				UPDATE rooms SET status = 'vacant_clean', updated_at = NOW()
+				WHERE tenant_id = $1 AND number = $2`,
+				tenantID, oldRoom)
+		}
+	}
+
 	return nil
 }
 

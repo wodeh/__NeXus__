@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -12,7 +12,6 @@ import {
   User,
   X,
   Search,
-  Filter,
   Grid3X3,
   List,
   MapPin,
@@ -21,8 +20,9 @@ import {
   Clock,
   GripVertical,
   RefreshCw,
+  ArrowUpDown,
 } from "lucide-react";
-import { Reservation, Room, getReservations, getRooms, moveReservation } from "@/lib/api";
+import { Reservation, Room, getReservations, getRooms, moveReservation, updateRoomStatus } from "@/lib/api";
 import { useDragScroll } from "@/hooks/useDragScroll";
 
 /* ─── Types ─── */
@@ -42,6 +42,27 @@ function isDateInRange(date: string, start: string, end: string): boolean {
   const s = new Date(start + "T00:00:00").getTime();
   const e = new Date(end + "T00:00:00").getTime();
   return t >= s && t < e;
+}
+
+/** Is this the first visible day of the reservation within the tapechart? */
+function isFirstVisibleDay(res: TapechartReservation, date: string, viewStart: string): boolean {
+  const resStart = new Date(res.check_in + "T00:00:00").getTime();
+  const viewStartTime = new Date(viewStart + "T00:00:00").getTime();
+  const firstVisibleDay = new Date(Math.max(resStart, viewStartTime));
+  const dateTime = new Date(date + "T00:00:00");
+  return dateTime.getTime() === firstVisibleDay.getTime();
+}
+
+/** How many days of this reservation are visible in the current view? */
+function getVisibleSpanDays(res: TapechartReservation, viewStart: string, dayCount: number): number {
+  const viewStartTime = new Date(viewStart + "T00:00:00").getTime();
+  const viewEndTime = new Date(addDays(viewStart, dayCount) + "T00:00:00").getTime();
+  const resStart = new Date(res.check_in + "T00:00:00").getTime();
+  const resEnd = new Date(res.check_out + "T00:00:00").getTime();
+  const overlapStart = Math.max(resStart, viewStartTime);
+  const overlapEnd = Math.min(resEnd, viewEndTime);
+  const days = Math.round((overlapEnd - overlapStart) / (1000 * 60 * 60 * 24));
+  return Math.max(0, days);
 }
 
 const resColors = [
@@ -75,9 +96,11 @@ export default function TapechartPage() {
   const [filterType, setFilterType] = useState<string>("all");
   const [searchRoom, setSearchRoom] = useState("");
   const [draggingRes, setDraggingRes] = useState<TapechartReservation | null>(null);
+  const [movingResId, setMovingResId] = useState<string | null>(null);
   const [hoveredCell, setHoveredCell] = useState<{ room: string; date: string } | null>(null);
   const [showNewRes, setShowNewRes] = useState<{ room: string; date: string } | null>(null);
   const [selectedRes, setSelectedRes] = useState<TapechartReservation | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: "error" | "success" } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reservations, setReservations] = useState<TapechartReservation[]>([]);
@@ -102,6 +125,13 @@ export default function TapechartPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  /* Clear toast after 3s */
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const dates = useMemo(() => {
     return Array.from({ length: dayCount }, (_, i) => addDays(startDate, i));
@@ -128,17 +158,6 @@ export default function TapechartPage() {
     [reservations]
   );
 
-  const getSpanForRes = useCallback(
-    (res: TapechartReservation, roomNumber: string) => {
-      if (res.room_number !== roomNumber) return 0;
-      const overlapStart = new Date(Math.max(new Date(startDate + "T00:00:00").getTime(), new Date(res.check_in + "T00:00:00").getTime()));
-      const overlapEnd = new Date(Math.min(new Date(addDays(startDate, dayCount) + "T00:00:00").getTime(), new Date(res.check_out + "T00:00:00").getTime()));
-      const days = Math.round((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24));
-      return Math.max(0, days);
-    },
-    [startDate, dayCount]
-  );
-
   const handlePrev = () => setStartDate((d) => addDays(d, -7));
   const handleNext = () => setStartDate((d) => addDays(d, 7));
   const handleToday = () => setStartDate(today);
@@ -154,19 +173,60 @@ export default function TapechartPage() {
 
   const handleDrop = async (roomNumber: string, date: string) => {
     if (!draggingRes) return;
+
+    // 1. Collision check — don't drop on occupied cell (unless it's the same reservation)
+    const existing = getReservationsForRoomDate(roomNumber, date).filter(
+      (r) => r.id !== draggingRes.id && r.status !== "cancelled"
+    );
+    if (existing.length > 0) {
+      setToast({ msg: `Room ${roomNumber} occupied on ${date}`, type: "error" });
+      setDraggingRes(null);
+      setHoveredCell(null);
+      return;
+    }
+
+    const oldRoom = draggingRes.room_number;
+    const movedId = draggingRes.id;
+
+    // 2. Optimistic UI: immediately show bar at new position
+    setMovingResId(movedId);
+    setReservations((prev) =>
+      prev.map((r) =>
+        r.id === movedId
+          ? { ...r, room_number: roomNumber, check_in: date }
+          : r
+      )
+    );
+    setDraggingRes(null);
+    setHoveredCell(null);
+
+    // 3. Update old room status (vacant if no other reservations today)
+    if (oldRoom) {
+      const stillOccupied = reservations.some(
+        (r) => r.room_number === oldRoom && r.id !== movedId && isDateInRange(today, r.check_in, r.check_out) && r.status !== "cancelled"
+      );
+      if (!stillOccupied) {
+        updateRoomStatus(oldRoom, "vacant_clean").catch(() => {});
+      }
+    }
+    // New room becomes occupied
+    updateRoomStatus(roomNumber, "occupied").catch(() => {});
+
+    // 4. Sync with server
     try {
-      await moveReservation(draggingRes.id, {
+      await moveReservation(movedId, {
         room_number: roomNumber,
         check_in: date,
         check_out: draggingRes.check_out,
       });
-      // Refresh data to reflect the move
-      fetchData();
+      setToast({ msg: "Reservation moved successfully", type: "success" });
+      await fetchData();
     } catch (e: any) {
-      alert("Failed to move reservation: " + e.message);
+      setToast({ msg: "Move failed: " + e.message, type: "error" });
+      await fetchData(); // Revert by refetching
+    } finally {
+      setMovingResId(null);
     }
-    setDraggingRes(null);
-    setHoveredCell(null);
   };
 
   const occupancyStats = useMemo(() => {
@@ -198,6 +258,17 @@ export default function TapechartPage() {
 
   return (
     <div className="flex h-screen flex-col space-y-4 overflow-hidden p-6">
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 rounded-lg border px-4 py-3 text-sm shadow-lg ${
+          toast.type === "error"
+            ? "border-rose-500/20 bg-rose-500/10 text-rose-400"
+            : "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+        }`}>
+          {toast.msg}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -205,7 +276,7 @@ export default function TapechartPage() {
             <Grid3X3 className="h-6 w-6 text-nexus-400" />
             Tapechart
           </h1>
-          <p className="text-sm text-slate-400">Visual room availability grid — drag to assign, click to book</p>
+          <p className="text-sm text-slate-400">Drag the grip handle to move. Click the bar to view details.</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center rounded-lg border border-slate-700 bg-slate-800">
@@ -337,37 +408,59 @@ export default function TapechartPage() {
                       const resList = getReservationsForRoomDate(room.number, date);
                       const isToday = date === today;
                       const isHovered = hoveredCell?.room === room.number && hoveredCell?.date === date;
-                      const isDropTarget = draggingRes && isHovered && resList.length === 0;
-                      const spanInfo = resList.map((r) => getSpanForRes(r, room.number)).find((s) => s > 0);
-                      const spanRes = spanInfo ? resList.find((r) => getSpanForRes(r, room.number) > 0) : null;
+                      const isDropTarget = draggingRes && isHovered && resList.filter((r) => r.id !== draggingRes.id).length === 0;
+
+                      /* Find the reservation that STARTS on this visible day */
+                      const startingRes = resList.find(
+                        (r) => isFirstVisibleDay(r, date, startDate)
+                      );
+                      const spanDays = startingRes ? getVisibleSpanDays(startingRes, startDate, dayCount) : 0;
+                      const isMoving = startingRes && movingResId === startingRes.id;
+
                       return (
                         <div
                           key={`${room.number}-${date}`}
-                          className={`relative w-20 shrink-0 border-r border-slate-700/30 min-h-[48px] ${isToday ? "bg-nexus-500/5" : ""} ${isDropTarget ? "bg-emerald-500/10" : ""} ${!resList.length && !draggingRes ? "cursor-pointer hover:bg-slate-800/40" : ""}`}
+                          className={`relative w-20 shrink-0 border-r border-slate-700/30 min-h-[48px] ${isToday ? "bg-nexus-500/5" : ""} ${isDropTarget ? "bg-emerald-500/10 ring-1 ring-emerald-500/30" : ""} ${!resList.length && !draggingRes ? "cursor-pointer hover:bg-slate-800/40" : ""}`}
                           onMouseEnter={() => setHoveredCell({ room: room.number, date })}
                           onMouseLeave={() => setHoveredCell(null)}
                           onClick={() => handleCellClick(room, date)}
                           onDragOver={(e) => { e.preventDefault(); setHoveredCell({ room: room.number, date }); }}
                           onDrop={(e) => { e.preventDefault(); handleDrop(room.number, date); }}
                         >
-                          {spanRes && (
+                          {/* Reservation bar — only on first visible day */}
+                          {startingRes && spanDays > 0 && (
                             <div
-                              draggable
-                              onDragStart={() => setDraggingRes(spanRes)}
-                              onDragEnd={() => setDraggingRes(null)}
-                              className={`absolute inset-y-0.5 left-0.5 z-10 rounded cursor-move ${spanRes.color || "bg-sky-500"} hover:brightness-110`}
-                              style={{ width: `${Math.max(spanInfo || 1, 1) * 5 - 0.25}rem`, minWidth: "4.5rem" }}
-                              onClick={(e) => { e.stopPropagation(); setSelectedRes(spanRes); }}
+                              className={`absolute inset-y-0.5 left-0.5 z-10 rounded overflow-hidden ${startingRes.color || "bg-sky-500"} ${isMoving ? "opacity-60" : ""} hover:brightness-110 transition-opacity`}
+                              style={{ width: `${Math.max(spanDays, 1) * 5 - 0.25}rem`, minWidth: "4.5rem" }}
                             >
-                              <div className="flex h-full items-center px-1.5 overflow-hidden">
-                                <span className="text-[9px] font-medium text-white truncate">{spanRes.guest_name}</span>
-                                {spanRes.vip && <span className="ml-1 text-[7px] text-amber-300">★</span>}
+                              {/* Drag handle (left edge) */}
+                              <div
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.effectAllowed = "move";
+                                  setDraggingRes(startingRes);
+                                }}
+                                onDragEnd={() => setDraggingRes(null)}
+                                className="absolute left-0 top-0 bottom-0 w-5 cursor-grab active:cursor-grabbing flex items-center justify-center hover:bg-black/20"
+                                title="Drag to move"
+                              >
+                                <GripVertical className="h-4 w-3 text-white/70" />
+                              </div>
+                              {/* Clickable detail area */}
+                              <div
+                                className="absolute inset-0 left-5 flex items-center px-1 overflow-hidden cursor-pointer"
+                                onClick={(e) => { e.stopPropagation(); setSelectedRes(startingRes); }}
+                              >
+                                <span className="text-[9px] font-medium text-white truncate">{startingRes.guest_name}</span>
+                                {startingRes.vip && <span className="ml-1 text-[7px] text-amber-300 flex-shrink-0">★</span>}
                               </div>
                             </div>
                           )}
+
+                          {/* Empty cell hover hint */}
                           {!resList.length && !draggingRes && isHovered && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <Plus className="h-3 w-3 text-slate-600 opacity-0 hover:opacity-100" />
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <Plus className="h-3 w-3 text-slate-600" />
                             </div>
                           )}
                         </div>
@@ -387,7 +480,7 @@ export default function TapechartPage() {
         {Object.entries(statusColors).map(([status, color]) => (
           <span key={status} className="flex items-center gap-1"><div className={`h-2 w-2 rounded-full ${color}`} /> {status.replace("_", " ")}</span>
         ))}
-        <span className="ml-auto">Drag reservation blocks to reassign rooms</span>
+        <span className="ml-auto flex items-center gap-1"><GripVertical className="h-3 w-3" /> Drag handle to move</span>
       </div>
 
       {/* New Reservation Modal */}
