@@ -75,6 +75,15 @@ export const CAPABILITIES = {
     WHITE_LABEL: "enterprise:white_label",
     CUSTOM_REPORTS: "enterprise:custom_reports",
   },
+  VILLA: {
+    DASHBOARD: "villa:dashboard",
+    PROPERTIES: "villa:properties",
+    RESERVATIONS: "villa:reservations",
+    REVENUE: "villa:revenue",
+    CLEANER_TRACKING: "villa:cleaner_tracking",
+    WHATSAPP_BOT: "villa:whatsapp_bot",
+    SETTINGS: "villa:settings",
+  },
 } as const;
 
 export function hasCapability(config: TenantConfig | null, cap: string): boolean {

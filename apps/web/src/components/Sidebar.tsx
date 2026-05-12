@@ -24,6 +24,8 @@ import {
   Mail,
   Tv,
   Lock,
+  Home,
+  Smartphone,
 } from "lucide-react";
 import { TenantConfig, hasCapability, CAPABILITIES } from "@/lib/tenant";
 
@@ -35,6 +37,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  // Hotel PMS nav items
   { label: "Dashboard", href: "/", icon: LayoutDashboard, cap: CAPABILITIES.CORE.RESERVATIONS },
   { label: "Command Center", href: "/command", icon: LayoutGrid, cap: CAPABILITIES.OPERATIONS.FRONT_DESK },
   { label: "Floor Plan", href: "/floor", icon: LayoutGrid, cap: CAPABILITIES.OPERATIONS.FLOOR_DASHBOARD },
@@ -55,17 +58,33 @@ const navItems: NavItem[] = [
   { label: "Reviews", href: "/reviews", icon: Star, cap: CAPABILITIES.REVENUE.GUEST_REVIEWS },
   { label: "Communications", href: "/communications", icon: Mail, cap: CAPABILITIES.REVENUE.COMMUNICATIONS },
   { label: "Revenue", href: "/revenue", icon: TrendingUp, cap: CAPABILITIES.REVENUE.DYNAMIC_PRICING },
+  { label: "Guest Journey", href: "/guest-journey", icon: Globe, cap: CAPABILITIES.REVENUE.REVENUE_FORECAST },
+  { label: "Upsells", href: "/upsells", icon: Star, cap: CAPABILITIES.REVENUE.DYNAMIC_PRICING },
+  { label: "Competitors", href: "/competitors", icon: Globe, cap: CAPABILITIES.REVENUE.DYNAMIC_PRICING },
   { label: "Audit", href: "/audit", icon: ShieldCheck, cap: CAPABILITIES.CORE.AUDIT_LOGS },
   { label: "Settings", href: "/settings", icon: Settings, cap: CAPABILITIES.CORE.SETTINGS },
+  // Villa Rental nav items
+  { label: "My Villas", href: "/villas", icon: Home, cap: CAPABILITIES.VILLA.PROPERTIES },
+  { label: "Bookings", href: "/villa-reservations", icon: CalendarDays, cap: CAPABILITIES.VILLA.RESERVATIONS },
+  { label: "Villa Revenue", href: "/villa-revenue", icon: TrendingUp, cap: CAPABILITIES.VILLA.REVENUE },
+  { label: "Cleaner Tracking", href: "/cleaner-tracking", icon: Smartphone, cap: CAPABILITIES.VILLA.CLEANER_TRACKING },
 ];
 
 export default function Sidebar({ tenantConfig }: { tenantConfig: TenantConfig | null }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
-  const filteredNav = navItems.filter((item) =>
-    tenantConfig ? hasCapability(tenantConfig, item.cap) : true
-  );
+  const isVillaTenant = tenantConfig?.capabilities?.some((c) => c.startsWith("villa:"));
+
+  const filteredNav = navItems.filter((item) => {
+    if (!tenantConfig) return true;
+    // Villa tenants: only show villa + dashboard items
+    if (isVillaTenant) {
+      return item.cap.startsWith("villa:") || item.href === "/" || item.href === "/settings";
+    }
+    // Hotel tenants: hide villa-only items
+    return hasCapability(tenantConfig, item.cap) && !item.cap.startsWith("villa:");
+  });
 
   return (
     <aside
@@ -119,11 +138,11 @@ export default function Sidebar({ tenantConfig }: { tenantConfig: TenantConfig |
         <div className="border-t border-slate-800 p-3">
           <p className="text-[10px] uppercase tracking-wider text-slate-500">License</p>
           <p className="mt-0.5 text-xs font-semibold text-nexus-400 capitalize">
-            {tenantConfig.license_tier}
+            {isVillaTenant ? "Villa Rental" : tenantConfig.license_tier}
           </p>
           <p className="mt-0.5 text-[10px] text-slate-500 leading-tight">
             {tenantConfig.property_type.replace("-", " ")} &middot;{" "}
-            {tenantConfig.max_rooms} rooms max
+            {isVillaTenant ? "unlimited villas" : `${tenantConfig.max_rooms} rooms max`}
           </p>
         </div>
       )}
