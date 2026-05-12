@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { hasCapability, CAPABILITIES } from "@/lib/tenant";
-import { Lock, Filter, Square, CheckCircle2, Wrench, Ban, RefreshCw, AlertTriangle } from "lucide-react";
+import { useDragScroll } from "@/hooks/useDragScroll";
+import { Lock, Filter, Square, CheckCircle2, Wrench, Ban, RefreshCw, AlertTriangle, Grid3X3, List, Columns3 } from "lucide-react";
 import { Room, Reservation, getRooms, getReservations } from "@/lib/api";
 
 interface RoomStatus {
@@ -35,6 +36,8 @@ export default function FloorPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "horizontal" | "list">("horizontal");
+  const dragRef = useDragScroll();
 
   const hasFloor = hasCapability(config, CAPABILITIES.OPERATIONS.FLOOR_DASHBOARD);
 
@@ -158,22 +161,29 @@ export default function FloorPage() {
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-2">
-        <Filter className="h-4 w-4 text-slate-500" />
-        {["all", "vacant_clean", "vacant_dirty", "occupied", "blocked", "maintenance"].map((s) => (
-          <button
-            key={s}
-            onClick={() => setFilter(s)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              filter === s
-                ? "bg-nexus-500 text-white"
-                : "bg-slate-800 text-slate-400 hover:bg-slate-700"
-            }`}
-          >
-            {s === "all" ? "All" : statusConfig[s]?.label || s}
-          </button>
-        ))}
+      {/* View toggle + filters */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-slate-500" />
+          {["all", "vacant_clean", "vacant_dirty", "occupied", "blocked", "maintenance"].map((s) => (
+            <button
+              key={s}
+              onClick={() => setFilter(s)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                filter === s
+                  ? "bg-nexus-500 text-white"
+                  : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+              }`}
+            >
+              {s === "all" ? "All" : statusConfig[s]?.label || s}
+            </button>
+          ))}
+        </div>
+        <div className="flex rounded-lg border border-slate-700 bg-slate-800">
+          <button onClick={() => setViewMode("grid")} className={`p-2 ${viewMode === "grid" ? "text-white bg-slate-700" : "text-slate-400 hover:text-white"}`} title="Grid view"><Grid3X3 className="h-4 w-4"/></button>
+          <button onClick={() => setViewMode("horizontal")} className={`p-2 ${viewMode === "horizontal" ? "text-white bg-slate-700" : "text-slate-400 hover:text-white"}`} title="Horizontal scroll"><Columns3 className="h-4 w-4"/></button>
+          <button onClick={() => setViewMode("list")} className={`p-2 ${viewMode === "list" ? "text-white bg-slate-700" : "text-slate-400 hover:text-white"}`} title="List view"><List className="h-4 w-4"/></button>
+        </div>
       </div>
 
       {/* Floor grids */}
@@ -183,35 +193,93 @@ export default function FloorPage() {
           if (floorRooms.length === 0) return null;
           return (
             <div key={floor} className="space-y-3">
-              <h3 className="text-sm font-semibold text-slate-300">Floor {floor}</h3>
-              <div className="grid grid-cols-5 gap-3">
-                {floorRooms.map((room) => {
-                  const cfg = statusConfig[room.status] || statusConfig.vacant_clean;
-                  const Icon = cfg.icon;
-                  return (
-                    <button
-                      key={room.id}
-                      onClick={() => setSelectedRoom(room)}
-                      className={`relative rounded-lg border p-4 text-left transition-all hover:scale-[1.02] ${cfg.color}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold">{room.number}</span>
-                        <Icon className="h-4 w-4 opacity-60" />
-                      </div>
-                      <p className="mt-1 text-xs opacity-80">{room.type}</p>
-                      {room.guest && (
-                        <p className="mt-2 text-xs font-medium truncate">{room.guest}</p>
-                      )}
-                      {room.blockReason && (
-                        <p className="mt-2 text-xs opacity-80 truncate">{room.blockReason}</p>
-                      )}
-                      {room.departure && (
-                        <p className="mt-1 text-[10px] opacity-60">Out: {room.departure}</p>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+              <h3 className="text-sm font-semibold text-slate-300">Floor {floor} <span className="text-slate-500 text-xs">({floorRooms.length} rooms)</span></h3>
+              {viewMode === "horizontal" ? (
+                <div ref={dragRef} className="overflow-x-auto scrollbar-hide cursor-grab">
+                  <div className="flex gap-3 min-w-max">
+                    {floorRooms.map((room) => {
+                      const cfg = statusConfig[room.status] || statusConfig.vacant_clean;
+                      const Icon = cfg.icon;
+                      return (
+                        <button
+                          key={room.id}
+                          onClick={() => setSelectedRoom(room)}
+                          className={`relative flex-shrink-0 w-32 rounded-lg border p-3 text-left transition-all hover:scale-[1.02] ${cfg.color}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-lg font-bold">{room.number}</span>
+                            <Icon className="h-4 w-4 opacity-60" />
+                          </div>
+                          <p className="mt-1 text-xs opacity-80">{room.type}</p>
+                          {room.guest && (
+                            <p className="mt-2 text-xs font-medium truncate">{room.guest}</p>
+                          )}
+                          {room.departure && (
+                            <p className="mt-1 text-[10px] opacity-60">Out: {room.departure}</p>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : viewMode === "grid" ? (
+                <div className="grid grid-cols-5 gap-3">
+                  {floorRooms.map((room) => {
+                    const cfg = statusConfig[room.status] || statusConfig.vacant_clean;
+                    const Icon = cfg.icon;
+                    return (
+                      <button
+                        key={room.id}
+                        onClick={() => setSelectedRoom(room)}
+                        className={`relative rounded-lg border p-4 text-left transition-all hover:scale-[1.02] ${cfg.color}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-bold">{room.number}</span>
+                          <Icon className="h-4 w-4 opacity-60" />
+                        </div>
+                        <p className="mt-1 text-xs opacity-80">{room.type}</p>
+                        {room.guest && (
+                          <p className="mt-2 text-xs font-medium truncate">{room.guest}</p>
+                        )}
+                        {room.blockReason && (
+                          <p className="mt-2 text-xs opacity-80 truncate">{room.blockReason}</p>
+                        )}
+                        {room.departure && (
+                          <p className="mt-1 text-[10px] opacity-60">Out: {room.departure}</p>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-slate-700 bg-slate-800 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-800 border-b border-slate-700">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs text-slate-500">Room</th>
+                        <th className="px-4 py-2 text-left text-xs text-slate-500">Type</th>
+                        <th className="px-4 py-2 text-left text-xs text-slate-500">Status</th>
+                        <th className="px-4 py-2 text-left text-xs text-slate-500">Guest</th>
+                        <th className="px-4 py-2 text-left text-xs text-slate-500">Departure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {floorRooms.map((room) => {
+                        const cfg = statusConfig[room.status] || statusConfig.vacant_clean;
+                        return (
+                          <tr key={room.id} onClick={() => setSelectedRoom(room)} className="border-b border-slate-700/50 hover:bg-slate-700/20 cursor-pointer">
+                            <td className="px-4 py-2 font-bold text-white">{room.number}</td>
+                            <td className="px-4 py-2 text-slate-300">{room.type}</td>
+                            <td className="px-4 py-2"><span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${cfg.color.split(" ").slice(0,2).join(" ")}`}>{cfg.label}</span></td>
+                            <td className="px-4 py-2 text-slate-300">{room.guest || "—"}</td>
+                            <td className="px-4 py-2 text-slate-400">{room.departure || "—"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           );
         })}

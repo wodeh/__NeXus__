@@ -23,6 +23,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { Reservation, Room, getReservations, getRooms, moveReservation } from "@/lib/api";
+import { useDragScroll } from "@/hooks/useDragScroll";
 
 /* ─── Types ─── */
 interface TapechartReservation extends Reservation {
@@ -81,7 +82,7 @@ export default function TapechartPage() {
   const [error, setError] = useState<string | null>(null);
   const [reservations, setReservations] = useState<TapechartReservation[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useDragScroll();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
