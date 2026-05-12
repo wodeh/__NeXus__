@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -155,6 +156,15 @@ func (r *ReservationRepository) Create(ctx context.Context, tx pgx.Tx, tenantID 
 	res.Total = days * rate
 	res.Balance = res.Total
 
+	configJSON := []byte("{}")
+	if res.Config != nil {
+		var err error
+		configJSON, err = json.Marshal(res.Config)
+		if err != nil {
+			return nil, fmt.Errorf("marshal config: %w", err)
+		}
+	}
+
 	execer := r.execer(tx)
 	_, err := execer.Exec(ctx, `
 		INSERT INTO reservations (
@@ -164,7 +174,7 @@ func (r *ReservationRepository) Create(ctx context.Context, tx pgx.Tx, tenantID 
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW(), NOW(), 1)
 	`, res.ID, res.TenantID, res.PropertyID, res.GuestName, res.Email, res.Phone, res.RoomNumber,
 		res.RoomType, res.CheckIn, res.CheckOut, res.Adults, res.Children, res.Status, res.Source,
-		res.Total, res.Balance, res.SpecialRequests, res.VIP, res.Color, res.Config)
+		res.Total, res.Balance, res.SpecialRequests, res.VIP, res.Color, configJSON)
 	if err != nil {
 		return nil, fmt.Errorf("insert reservation: %w", err)
 	}
