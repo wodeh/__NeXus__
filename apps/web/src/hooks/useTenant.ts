@@ -20,6 +20,7 @@ const fallbackConfig: TenantConfig = {
     "revenue:revenue_forecasting", "revenue:agent_management",
     "enterprise:multi_property", "enterprise:advanced_crm",
     "enterprise:api_access", "enterprise:white_label", "enterprise:custom_reports",
+    "villa:dashboard", "villa:properties", "villa:reservations", "villa:revenue", "villa:cleaner_tracking",
   ],
   settings: { timezone: "UTC", currency_code: "USD", date_format: "YYYY-MM-DD", language: "en" },
   created_at: "",
