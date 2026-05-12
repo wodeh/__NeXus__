@@ -4,10 +4,12 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nexus-platform/backend-core/internal/config"
 	"github.com/nexus-platform/backend-core/internal/events"
 	"github.com/nexus-platform/backend-core/internal/health"
@@ -121,11 +123,28 @@ func (s *Server) withMetrics(next http.Handler) http.Handler {
 
 func (s *Server) withTenant(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := r.Header.Get("X-Tenant-ID")
-		if tenantID == "" {
+		headerValue := r.Header.Get("X-Tenant-ID")
+		if headerValue == "" {
 			http.Error(w, `{"error":"missing X-Tenant-ID header"}`, http.StatusBadRequest)
 			return
 		}
+
+		// Try parsing as UUID directly
+		tenantID := headerValue
+		if _, err := uuid.Parse(headerValue); err != nil {
+			// Not a UUID — look up by external_id
+			if s.repo == nil {
+				http.Error(w, `{"error":"database not configured"}`, http.StatusServiceUnavailable)
+				return
+			}
+			tenant, err := s.repo.Tenants.GetByExternalID(r.Context(), headerValue)
+			if err != nil {
+				http.Error(w, fmt.Sprintf(`{"error":"tenant not found: %s"}`, headerValue), http.StatusNotFound)
+				return
+			}
+			tenantID = tenant.ID.String()
+		}
+
 		ctx := context.WithValue(r.Context(), "tenant_id", tenantID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
