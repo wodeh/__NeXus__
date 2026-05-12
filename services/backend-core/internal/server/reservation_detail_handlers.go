@@ -34,28 +34,91 @@ func (s *Server) handleReservationDetailView(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Handle sub-routes
+	repo := repository.NewReservationRepository(s.repo.Pool())
+
+	// Handle sub-routes (actions)
 	if len(parts) > 1 {
 		switch parts[1] {
-		case "move", "checkin", "checkout", "cancel", "assign-room":
-			// Already handled by registerReservationHandlers
-			http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		case "move":
+			if r.Method != http.MethodPatch {
+				http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+				return
+			}
+			var req domain.ReservationMoveRequest
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+				return
+			}
+			if err := repo.Move(ctx, tenantIDStr, id, &req); err != nil {
+				http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]string{"status": "moved"})
+			return
+		case "checkin":
+			if r.Method != http.MethodPatch {
+				http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+				return
+			}
+			if err := repo.CheckIn(ctx, tenantIDStr, id); err != nil {
+				http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]string{"status": "checked_in"})
+			return
+		case "checkout":
+			if r.Method != http.MethodPatch {
+				http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+				return
+			}
+			if err := repo.CheckOut(ctx, tenantIDStr, id); err != nil {
+				http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]string{"status": "checked_out"})
+			return
+		case "cancel":
+			if r.Method != http.MethodPatch {
+				http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+				return
+			}
+			if err := repo.Cancel(ctx, tenantIDStr, id); err != nil {
+				http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]string{"status": "cancelled"})
+			return
+		case "assign-room":
+			if r.Method != http.MethodPatch {
+				http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+				return
+			}
+			var req domain.ReservationAssignRequest
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+				return
+			}
+			if err := repo.AssignRoom(ctx, tenantIDStr, id, req.RoomNumber); err != nil {
+				http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]string{"room_number": req.RoomNumber})
 			return
 		}
 	}
 
-	if r.Method != http.MethodGet {
-		http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+	// GET single reservation detail
+	if r.Method == http.MethodGet {
+		detail, err := s.repo.ReservationDetail.GetDetail(ctx, tenantID, id)
+		if err != nil {
+			writeJSON(w, http.StatusOK, demoReservationDetail(id, tenantID))
+			return
+		}
+		writeJSON(w, http.StatusOK, detail)
 		return
 	}
 
-	detail, err := s.repo.ReservationDetail.GetDetail(ctx, tenantID, id)
-	if err != nil {
-		// Return demo detail
-		writeJSON(w, http.StatusOK, demoReservationDetail(id, tenantID))
-		return
-	}
-	writeJSON(w, http.StatusOK, detail)
+	http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
 }
 
 func demoReservationDetail(id, tenantID uuid.UUID) *domain.ReservationDetail {
