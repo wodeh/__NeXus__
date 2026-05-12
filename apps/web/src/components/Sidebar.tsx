@@ -78,7 +78,22 @@ export default function Sidebar({ tenantConfig }: { tenantConfig: TenantConfig |
 
   const filteredNav = navItems.filter((item) => {
     if (!tenantConfig) return true;
-    // Show all items the tenant has capability for (hotel + villa can coexist)
+    // Role-based filtering
+    const role = localStorage.getItem("nexus-role") || "admin";
+    if (role === "front_desk") {
+      // Only operational items
+      const allowed = ["/", "/reservations", "/floor", "/guests", "/housekeeping", "/room-blocks", "/settings"];
+      return allowed.includes(item.href);
+    }
+    if (role === "villa_owner") {
+      // Villa-focused: villa items + core dashboard
+      return item.cap.startsWith("villa:") || item.href === "/" || item.href === "/settings";
+    }
+    if (role === "hotel_owner") {
+      // Hotel-focused: hide villa items unless explicitly enabled
+      return !item.cap.startsWith("villa:");
+    }
+    // Admin: show all matching capabilities
     return hasCapability(tenantConfig, item.cap);
   });
 
