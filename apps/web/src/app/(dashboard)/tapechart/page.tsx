@@ -465,6 +465,13 @@ export default function TapechartPage() {
                       const spanDays = startingRes ? getVisibleSpanDays(startingRes, startDate, dayCount) : 0;
                       const isMoving = startingRes && movingResId === startingRes.id;
 
+                      {/* Debug overlay - shows raw reservation IDs in this cell */}
+                      {(() => {
+                        const ids = activeResList.map(r => r.id.slice(0,8)).join(',');
+                        if (ids) return <div className="absolute bottom-0 right-0 text-[6px] text-slate-600 leading-none">{ids}</div>;
+                        return null;
+                      })()}
+
                       return (
                         <div
                           key={`${room.number}-${date}`}
@@ -515,6 +522,13 @@ export default function TapechartPage() {
                               <Plus className="h-3 w-3 text-slate-600" />
                             </div>
                           )}
+
+                          {/* Debug overlay - shows raw reservation IDs in this cell */}
+                          {(() => {
+                            const ids = activeResList.map(r => r.id.slice(0,8)).join(',');
+                            if (ids) return <div className="absolute bottom-0 right-0 text-[6px] text-slate-600 leading-none z-50">{ids}</div>;
+                            return null;
+                          })()}
                         </div>
                       );
                     })}
