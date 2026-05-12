@@ -32,7 +32,7 @@ import {
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
-import { Reservation as ApiReservation, Room, getReservations, getRooms, checkInReservation, checkOutReservation, cancelReservation, assignRoom } from "@/lib/api";
+import { Reservation as ApiReservation, Room, getReservations, getRooms, getReservationDetail, checkInReservation, checkOutReservation, cancelReservation, assignRoom } from "@/lib/api";
 
 interface Charge {
   id: string;
@@ -91,23 +91,67 @@ export default function ReservationDetailPage(props: { params: Promise<{ id: str
     setLoading(true);
     setError(null);
     try {
-      const [allRes, allRooms] = await Promise.all([getReservations(), getRooms()]);
-      const found = allRes.find((r) => r.id === id);
+      const [detail, allRooms] = await Promise.all([
+        getReservationDetail(id).catch(() => null),
+        getRooms(),
+      ]);
+      
+      let found: Reservation | null = null;
+      
+      if (detail) {
+        found = {
+          ...detail,
+          id: detail.id,
+          guest_name: detail.guest.name,
+          email: detail.guest.email,
+          phone: detail.guest.phone,
+          room_number: detail.room.room_number,
+          room_type: detail.room.room_type,
+          check_in: detail.dates.check_in,
+          check_out: detail.dates.check_out,
+          adults: detail.party.adults,
+          children: detail.party.children,
+          status: detail.status as any,
+          source: detail.source as any,
+          total: detail.financials.total,
+          balance: detail.financials.balance,
+          special_requests: detail.special_requests,
+          vip: detail.guest.vip,
+          created_at: detail.created_at,
+          updated_at: detail.updated_at,
+          // Enrich with fields API doesn't have yet
+          address: detail.guest.address || "123 Park Avenue, New York",
+          country: detail.guest.country || "United States",
+          nights: detail.room.total_nights,
+          paid: detail.financials.paid || detail.financials.total - detail.financials.balance,
+          deposit: detail.financials.deposit_paid || 100,
+          createdAt: detail.created_at?.split("T")[0] || "",
+          checkedInAt: detail.status === "checked_in" ? detail.updated_at : undefined,
+          checkedOutAt: detail.status === "checked_out" ? detail.updated_at : undefined,
+          loyalty_id: undefined,
+        };
+      } else {
+        // Fallback to old method
+        const allRes = await getReservations();
+        const r = allRes.find((r) => r.id === id);
+        if (r) {
+          found = {
+            ...r,
+            address: "123 Park Avenue, New York",
+            country: "United States",
+            nights: Math.max(1, Math.round((new Date(r.check_out).getTime() - new Date(r.check_in).getTime()) / (1000 * 60 * 60 * 24))),
+            paid: r.total - r.balance,
+            deposit: 100,
+            createdAt: r.created_at?.split("T")[0] || "",
+          };
+        }
+      }
+      
       if (!found) {
         setError("Reservation not found");
         return;
       }
-      // Enrich with mock fields that API doesn't have yet
-      const enriched: Reservation = {
-        ...found,
-        address: "123 Park Avenue, New York",
-        country: "United States",
-        nights: Math.max(1, Math.round((new Date(found.check_out).getTime() - new Date(found.check_in).getTime()) / (1000 * 60 * 60 * 24))),
-        paid: found.total - found.balance,
-        deposit: 100,
-        createdAt: found.created_at?.split("T")[0] || "",
-      };
-      setRes(enriched);
+      setRes(found);
       setRooms(allRooms);
     } catch (e: any) {
       setError(e.message || "Failed to load reservation");

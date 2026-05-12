@@ -828,3 +828,222 @@ export async function updateAdminUser(id: string, payload: { name?: string; role
 export async function deleteAdminUser(id: string): Promise<{ status: string }> {
   return api<{ status: string }>(`/v1/admin/users?id=${id}`, { method: "DELETE" });
 }
+
+/* ─── Revenue Dashboard API ─── */
+
+export interface RevenueDashboard {
+  tenant_id: string;
+  date: string;
+  total_revenue: number;
+  room_revenue: number;
+  extra_revenue: number;
+  tax_revenue: number;
+  total_rooms: number;
+  occupied_rooms: number;
+  available_rooms: number;
+  occupancy_rate: number;
+  adr: number;
+  revpar: number;
+  arrivals: number;
+  departures: number;
+  stayovers: number;
+  walk_ins: number;
+  no_shows: number;
+  cancellations: number;
+}
+
+export interface RevenueForecast {
+  date: string;
+  projected_revenue: number;
+  projected_occupancy: number;
+  confidence: number;
+  booked_rooms: number;
+  total_rooms: number;
+}
+
+export interface PricingRule {
+  id: string;
+  tenant_id: string;
+  name: string;
+  room_type: string;
+  condition: string;
+  trigger_value: number;
+  adjustment_type: string;
+  adjustment_value: number;
+  min_rate: number;
+  max_rate: number;
+  is_active: boolean;
+  priority: number;
+  config?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChannelRevenueBreakdown {
+  channel: string;
+  bookings: number;
+  revenue: number;
+  commission: number;
+  net_revenue: number;
+  avg_rate: number;
+}
+
+export interface RoomTypeRevenue {
+  room_type: string;
+  nights_sold: number;
+  revenue: number;
+  avg_rate: number;
+  occupancy_pct: number;
+}
+
+export async function getRevenueDashboard(from?: string, to?: string): Promise<{ stats: RevenueDashboard[]; period: { from: string; to: string } }> {
+  const params = new URLSearchParams();
+  if (from) params.append("from", from);
+  if (to) params.append("to", to);
+  return api(`/v1/revenue/dashboard?${params.toString()}`);
+}
+
+export async function getRevenueForecast(): Promise<{ forecast: RevenueForecast[] }> {
+  return api("/v1/revenue/forecast");
+}
+
+export async function getChannelRevenue(): Promise<{ breakdown: ChannelRevenueBreakdown[] }> {
+  return api("/v1/revenue/channels");
+}
+
+export async function getRoomTypeRevenue(): Promise<{ room_types: RoomTypeRevenue[] }> {
+  return api("/v1/revenue/room-types");
+}
+
+export async function getPricingRules(): Promise<{ rules: PricingRule[] }> {
+  return api("/v1/revenue/pricing-rules");
+}
+
+export async function createPricingRule(payload: Omit<PricingRule, "id" | "tenant_id" | "created_at" | "updated_at">): Promise<PricingRule> {
+  return api<PricingRule>("/v1/revenue/pricing-rules", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/* ─── Reservation Detail API ─── */
+
+export interface ReservationDetail {
+  id: string;
+  tenant_id: string;
+  guest: {
+    name: string;
+    email: string;
+    phone: string;
+    address?: string;
+    city?: string;
+    country?: string;
+    id_type?: string;
+    id_number?: string;
+    birth_date?: string;
+    nationality?: string;
+    vip: boolean;
+  };
+  room: {
+    room_number: string;
+    room_type: string;
+    floor?: string;
+    bed_type?: string;
+    rate_night: number;
+    total_nights: number;
+  };
+  dates: {
+    check_in: string;
+    check_out: string;
+    arrival_time?: string;
+    departure_time?: string;
+    late_checkout?: boolean;
+    early_checkin?: boolean;
+  };
+  party: {
+    adults: number;
+    children: number;
+    infants?: number;
+  };
+  financials: {
+    room_total: number;
+    extras_total?: number;
+    tax_total?: number;
+    discount?: number;
+    total: number;
+    paid?: number;
+    balance: number;
+    currency: string;
+    deposit_required?: number;
+    deposit_paid?: number;
+  };
+  status: string;
+  source: string;
+  special_requests?: string;
+  internal_notes?: string;
+  communication_log?: Array<{
+    id: string;
+    channel: string;
+    direction: string;
+    content: string;
+    sent_at: string;
+    status: string;
+  }>;
+  activity_log?: Array<{
+    id: string;
+    user_id: string;
+    user_name: string;
+    action: string;
+    details?: string;
+    created_at: string;
+  }>;
+  documents?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    url: string;
+    uploaded_at: string;
+  }>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RoomDailyStatus {
+  room_number: string;
+  room_type: string;
+  status: string;
+  guest_name?: string;
+  reservation_id?: string;
+  check_in?: boolean;
+  check_out?: boolean;
+  housekeeping?: string;
+  rate?: number;
+}
+
+export interface RoomStatusView {
+  date: string;
+  rooms: RoomDailyStatus[];
+  occupancy: number;
+  revenue: number;
+  arrivals: number;
+  departures: number;
+  stayovers: number;
+}
+
+export async function getReservationDetail(id: string): Promise<ReservationDetail> {
+  return api<ReservationDetail>(`/v1/reservations/${id}`);
+}
+
+export async function getRoomStatusView(date?: string, view?: string): Promise<{ view: string; dates: RoomStatusView[] }> {
+  const params = new URLSearchParams();
+  if (date) params.append("date", date);
+  if (view) params.append("view", view);
+  return api(`/v1/room-status?${params.toString()}`);
+}
+
+export async function createBulkReservations(payload: { reservations: CreateReservationPayload[] }): Promise<{ created: number; reservations: Reservation[] }> {
+  return api("/v1/reservations/bulk", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
