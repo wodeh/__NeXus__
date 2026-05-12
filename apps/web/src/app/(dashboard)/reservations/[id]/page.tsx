@@ -32,7 +32,7 @@ import {
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
-import { Reservation as ApiReservation, Room, getReservations, getRooms, getReservationDetail, checkInReservation, checkOutReservation, cancelReservation, assignRoom } from "@/lib/api";
+import { Reservation as ApiReservation, Room, getReservations, getRooms, getReservationDetail, checkInReservation, checkOutReservation, cancelReservation, assignRoom, restoreReservation } from "@/lib/api";
 
 interface Charge {
   id: string;
@@ -255,6 +255,11 @@ export default function ReservationDetailPage(props: { params: Promise<{ id: str
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {res.status === "cancelled" && (
+            <button onClick={handleRestore} className="btn-primary gap-2 bg-emerald-600 hover:bg-emerald-500">
+              <CheckCircle2 className="h-4 w-4" /> Restore
+            </button>
+          )}
           {res.status === "confirmed" && (
             <button onClick={() => setShowCheckInOut("checkin")} className="btn-primary gap-2">
               <DoorOpen className="h-4 w-4" /> Check In

@@ -437,12 +437,13 @@ export default function TapechartPage() {
                     </div>
                     {dates.map((date) => {
                       const resList = getReservationsForRoomDate(room.number, date);
+                      const activeResList = resList.filter((r) => r.status !== "cancelled");
                       const isToday = date === today;
                       const isHovered = hoveredCell?.room === room.number && hoveredCell?.date === date;
-                      const isDropTarget = draggingRes && isHovered && resList.filter((r) => r.id !== draggingRes.id).length === 0;
+                      const isDropTarget = draggingRes && isHovered && activeResList.filter((r) => r.id !== draggingRes.id).length === 0;
 
                       /* Find the reservation that STARTS on this visible day */
-                      const startingRes = resList.find(
+                      const startingRes = activeResList.find(
                         (r) => isFirstVisibleDay(r, date, startDate)
                       );
                       const spanDays = startingRes ? getVisibleSpanDays(startingRes, startDate, dayCount) : 0;
@@ -451,7 +452,7 @@ export default function TapechartPage() {
                       return (
                         <div
                           key={`${room.number}-${date}`}
-                          className={`relative w-20 shrink-0 border-r border-slate-700/30 min-h-[48px] ${isToday ? "bg-nexus-500/5" : ""} ${isDropTarget ? "bg-emerald-500/10 ring-1 ring-emerald-500/30" : ""} ${!resList.length && !draggingRes ? "cursor-pointer hover:bg-slate-800/40" : ""}`}
+                          className={`relative w-20 shrink-0 border-r border-slate-700/30 min-h-[48px] ${isToday ? "bg-nexus-500/5" : ""} ${isDropTarget ? "bg-emerald-500/10 ring-1 ring-emerald-500/30" : ""} ${!activeResList.length && !draggingRes ? "cursor-pointer hover:bg-slate-800/40" : ""}`}
                           onMouseEnter={() => setHoveredCell({ room: room.number, date })}
                           onMouseLeave={() => setHoveredCell(null)}
                           onClick={() => handleCellClick(room, date)}
@@ -493,7 +494,7 @@ export default function TapechartPage() {
                           )}
 
                           {/* Empty cell hover hint */}
-                          {!resList.length && !draggingRes && isHovered && (
+                          {!activeResList.length && !draggingRes && isHovered && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                               <Plus className="h-3 w-3 text-slate-600" />
                             </div>

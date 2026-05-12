@@ -229,6 +229,22 @@ func (r *ReservationRepository) Cancel(ctx context.Context, tenantID string, id 
 	return nil
 }
 
+// Restore updates reservation status back to confirmed.
+func (r *ReservationRepository) Restore(ctx context.Context, tenantID string, id uuid.UUID) error {
+	cmdTag, err := r.pool.Exec(ctx, `
+		UPDATE reservations
+		SET status = 'confirmed', updated_at = NOW(), version = version + 1
+		WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL AND status = 'cancelled'
+	`, id, tenantID)
+	if err != nil {
+		return fmt.Errorf("restore reservation: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("reservation %s: not found or not cancelled", id)
+	}
+	return nil
+}
+
 // AssignRoom assigns a room number to a reservation.
 func (r *ReservationRepository) AssignRoom(ctx context.Context, tenantID string, id uuid.UUID, roomNumber string) error {
 	cmdTag, err := r.pool.Exec(ctx, `

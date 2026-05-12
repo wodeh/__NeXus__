@@ -88,6 +88,17 @@ func (s *Server) handleReservationDetailView(w http.ResponseWriter, r *http.Requ
 			}
 			writeJSON(w, http.StatusOK, map[string]string{"status": "cancelled"})
 			return
+		case "restore":
+			if r.Method != http.MethodPatch {
+				http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+				return
+			}
+			if err := repo.Restore(ctx, tenantIDStr, id); err != nil {
+				http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]string{"status": "restored"})
+			return
 		case "assign-room", "assign":
 			if r.Method != http.MethodPatch {
 				http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)

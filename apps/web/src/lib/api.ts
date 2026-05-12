@@ -234,6 +234,10 @@ export async function cancelReservation(id: string): Promise<Reservation> {
   return api<Reservation>(`/v1/reservations/${id}/cancel`, { method: "PATCH" });
 }
 
+export async function restoreReservation(id: string): Promise<Reservation> {
+  return api<Reservation>(`/v1/reservations/${id}/restore`, { method: "PATCH" });
+}
+
 export async function moveReservation(id: string, payload: { room_number?: string; check_in?: string; check_out?: string }): Promise<Reservation> {
   return api<Reservation>(`/v1/reservations/${id}/move`, {
     method: "PATCH",
