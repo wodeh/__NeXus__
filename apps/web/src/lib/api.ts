@@ -4,16 +4,20 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || "demo";
 
 async function api<T>(path: string, opts?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const url = `${API_BASE}${path}`;
+  const options = {
     headers: {
       "Content-Type": "application/json",
       "X-Tenant-ID": TENANT_ID,
       ...(opts?.headers || {}),
     },
     ...opts,
-  });
+  };
+  console.log(`[API] ${options.method || "GET"} ${url}`, options.body);
+  const res = await fetch(url, options);
   if (!res.ok) {
     const body = await res.text();
+    console.error(`[API ERROR] ${res.status}: ${body}`);
     throw new Error(`API ${res.status}: ${body}`);
   }
   return res.json();
