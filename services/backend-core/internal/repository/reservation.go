@@ -253,6 +253,7 @@ func diffDays(a, b string) int {
 
 // Move updates room number and/or dates for a reservation, and syncs room status.
 func (r *ReservationRepository) Move(ctx context.Context, tenantID string, id uuid.UUID, req *domain.ReservationMoveRequest) error {
+	fmt.Printf("[BACKEND] Move called: tenant=%s id=%s req=%+v\n", tenantID, id, req)
 	// Get current reservation to know old room
 	var oldRoom string
 	err := r.pool.QueryRow(ctx, `
@@ -260,8 +261,10 @@ func (r *ReservationRepository) Move(ctx context.Context, tenantID string, id uu
 		WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`,
 		id, tenantID).Scan(&oldRoom)
 	if err != nil {
+		fmt.Printf("[BACKEND] Move: fetch old room failed: %v\n", err)
 		return fmt.Errorf("move: fetch old room: %w", err)
 	}
+	fmt.Printf("[BACKEND] Move: oldRoom=%q\n", oldRoom)
 
 	updates := []string{}
 	args := []interface{}{id, tenantID}
@@ -289,11 +292,14 @@ func (r *ReservationRepository) Move(ctx context.Context, tenantID string, id uu
 
 	updates = append(updates, "updated_at = NOW(), version = version + 1")
 	sql := fmt.Sprintf("UPDATE reservations SET %s WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL", joinUpdates(updates))
+	fmt.Printf("[BACKEND] Move: SQL=%s args=%v\n", sql, args)
 
 	cmdTag, err := r.pool.Exec(ctx, sql, args...)
 	if err != nil {
+		fmt.Printf("[BACKEND] Move: exec failed: %v\n", err)
 		return fmt.Errorf("move reservation: %w", err)
 	}
+	fmt.Printf("[BACKEND] Move: rows affected=%d\n", cmdTag.RowsAffected())
 	if cmdTag.RowsAffected() == 0 {
 		return fmt.Errorf("reservation %s: %w", id, ErrNotFound)
 	}
@@ -323,6 +329,7 @@ func (r *ReservationRepository) Move(ctx context.Context, tenantID string, id uu
 		}
 	}
 
+	fmt.Printf("[BACKEND] Move: success\n")
 	return nil
 }
 

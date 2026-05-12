@@ -125,17 +125,21 @@ export default function TapechartPage() {
   const scrollRef = useDragScroll();
 
   const fetchData = useCallback(async () => {
+    console.log("[TAPECHART] fetchData starting");
     setLoading(true);
     setError(null);
     try {
       const [res, rms] = await Promise.all([getReservations(), getRooms()]);
+      console.log("[TAPECHART] fetchData got reservations count", res.length, "first few:", res.slice(0, 3).map((r) => ({id: r.id, guest: r.guest_name, room: r.room_number, in: r.check_in, out: r.check_out})));
       const colored = res.map((r) => ({ ...r, color: r.color || resColors[hashStringToIndex(r.id, resColors.length)] }));
       setReservations(colored);
       setRooms(rms);
     } catch (e: any) {
+      console.error("[TAPECHART] fetchData error", e);
       setError(e.message || "Failed to load data");
     } finally {
       setLoading(false);
+      console.log("[TAPECHART] fetchData done");
     }
   }, []);
 
@@ -189,53 +193,66 @@ export default function TapechartPage() {
   };
 
   const handleDrop = async (roomNumber: string, date: string) => {
-    if (!draggingRes) return;
+    console.log("[TAPECHART] handleDrop called", { roomNumber, date, draggingResId: draggingRes?.id, draggingResDates: draggingRes ? {in: draggingRes.check_in, out: draggingRes.check_out} : null });
+    if (!draggingRes) {
+      console.log("[TAPECHART] handleDrop: draggingRes is null, returning early");
+      return;
+    }
 
     // 1. Collision check — check EVERY day of the stay, not just the drop day
     const stayLength = Math.max(1, Math.round(
       (new Date(draggingRes.check_out + "T00:00:00").getTime() - new Date(draggingRes.check_in + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24)
     ));
+    console.log("[TAPECHART] handleDrop: stayLength", stayLength);
     for (let i = 0; i < stayLength; i++) {
       const checkDate = addDays(date, i);
       const conflicts = getReservationsForRoomDate(roomNumber, checkDate).filter(
         (r) => r.id !== draggingRes.id && r.status !== "cancelled"
       );
       if (conflicts.length > 0) {
+        console.log("[TAPECHART] handleDrop: collision found on", checkDate, conflicts[0].id);
         setToast({ msg: `Room ${roomNumber} occupied on ${checkDate}`, type: "error" });
         setDraggingRes(null);
         setHoveredCell(null);
         return;
       }
     }
+    console.log("[TAPECHART] handleDrop: no collision, proceeding");
 
     const oldRoom = draggingRes.room_number;
     const movedId = draggingRes.id;
 
     // Preserve original stay length when moving dates
     const newCheckOut = addDays(date, stayLength);
+    console.log("[TAPECHART] handleDrop: newCheckOut", newCheckOut, "oldRoom", oldRoom, "movedId", movedId);
 
     // 2. Optimistic UI: immediately show bar at new position
     setMovingResId(movedId);
-    setReservations((prev) =>
-      prev.map((r) =>
+    setReservations((prev) => {
+      const next = prev.map((r) =>
         r.id === movedId
           ? { ...r, room_number: roomNumber, check_in: date, check_out: newCheckOut }
           : r
-      )
-    );
+      );
+      const updated = next.find((r) => r.id === movedId);
+      console.log("[TAPECHART] handleDrop: optimistic update", updated);
+      return next;
+    });
     setDraggingRes(null);
     setHoveredCell(null);
 
     // 3. Sync with server (backend handles room status sync — don't double-write)
     try {
-      await moveReservation(movedId, {
-        room_number: roomNumber,
-        check_in: date,
-        check_out: newCheckOut,
-      });
+      const payload = { room_number: roomNumber, check_in: date, check_out: newCheckOut };
+      console.log("[TAPECHART] handleDrop: calling moveReservation", movedId, payload);
+      const res = await moveReservation(movedId, payload);
+      console.log("[TAPECHART] handleDrop: moveReservation success", res);
       setToast({ msg: "Reservation moved successfully", type: "success" });
+      console.log("[TAPECHART] handleDrop: calling fetchData");
       await fetchData();
+      console.log("[TAPECHART] handleDrop: fetchData done");
     } catch (e: any) {
+      console.error("[TAPECHART] handleDrop: moveReservation error", e);
       setToast({ msg: "Move failed: " + e.message, type: "error" });
       await fetchData(); // Revert by refetching
     } finally {
@@ -441,6 +458,7 @@ export default function TapechartPage() {
                           onDragOver={(e) => { e.preventDefault(); setHoveredCell({ room: room.number, date }); }}
                           onDrop={(e) => {
                             e.preventDefault();
+                            console.log("[TAPECHART] onDrop fired", { room: room.number, date });
                             handleDrop(room.number, date);
                           }}
                         >
