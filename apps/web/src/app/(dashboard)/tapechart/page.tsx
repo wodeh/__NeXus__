@@ -31,6 +31,15 @@ interface TapechartReservation extends Reservation {
 }
 
 /* ─── Helpers ─── */
+function hashStringToIndex(str: string, max: number): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash) % max;
+}
+
 function formatDateLocal(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -119,7 +128,7 @@ export default function TapechartPage() {
     setError(null);
     try {
       const [res, rms] = await Promise.all([getReservations(), getRooms()]);
-      const colored = res.map((r, i) => ({ ...r, color: r.color || resColors[i % resColors.length] }));
+      const colored = res.map((r) => ({ ...r, color: r.color || resColors[hashStringToIndex(r.id, resColors.length)] }));
       setReservations(colored);
       setRooms(rms);
     } catch (e: any) {
@@ -201,12 +210,18 @@ export default function TapechartPage() {
     const oldRoom = draggingRes.room_number;
     const movedId = draggingRes.id;
 
+    // Preserve original stay length when moving dates
+    const stayLength = Math.max(1, Math.round(
+      (new Date(draggingRes.check_out + "T00:00:00").getTime() - new Date(draggingRes.check_in + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24)
+    ));
+    const newCheckOut = addDays(date, stayLength);
+
     // 2. Optimistic UI: immediately show bar at new position
     setMovingResId(movedId);
     setReservations((prev) =>
       prev.map((r) =>
         r.id === movedId
-          ? { ...r, room_number: roomNumber, check_in: date }
+          ? { ...r, room_number: roomNumber, check_in: date, check_out: newCheckOut }
           : r
       )
     );
@@ -218,7 +233,7 @@ export default function TapechartPage() {
       await moveReservation(movedId, {
         room_number: roomNumber,
         check_in: date,
-        check_out: draggingRes.check_out,
+        check_out: newCheckOut,
       });
       setToast({ msg: "Reservation moved successfully", type: "success" });
       await fetchData();

@@ -35,6 +35,15 @@ const resColors = [
 ];
 
 /* ─── Helpers ─── */
+function hashStringToIndex(str: string, max: number): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash) % max;
+}
+
 function addDays(dateStr: string, days: number): string {
   const d = new Date(dateStr + "T00:00:00");
   d.setDate(d.getDate() + days);
@@ -81,7 +90,7 @@ export default function ReservationsPage() {
     try {
       const [res, rms] = await Promise.all([getReservations(), getRooms()]);
       // Assign colors to reservations for tapechart
-      const colored = res.map((r, i) => ({ ...r, color: r.color || resColors[i % resColors.length] }));
+      const colored = res.map((r) => ({ ...r, color: r.color || resColors[hashStringToIndex(r.id, resColors.length)] }));
       setReservations(colored);
       setRooms(rms);
     } catch (e: any) {
@@ -109,9 +118,9 @@ export default function ReservationsPage() {
             <button onClick={() => setView("list")} className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium ${view === "list" ? "bg-slate-700 text-white" : "text-slate-400 hover:text-white"}`}>
               <List className="h-3.5 w-3.5" /> List
             </button>
-            <button onClick={() => setView("tapechart")} className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium ${view === "tapechart" ? "bg-slate-700 text-white" : "text-slate-400 hover:text-white"}`}>
+            <Link href="/tapechart" className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium ${view === "tapechart" ? "bg-slate-700 text-white" : "text-slate-400 hover:text-white"}`}>
               <Grid3X3 className="h-3.5 w-3.5" /> Tapechart
-            </button>
+            </Link>
             <button onClick={() => setView("calendar")} className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium ${view === "calendar" ? "bg-slate-700 text-white" : "text-slate-400 hover:text-white"}`}>
               <CalendarDays className="h-3.5 w-3.5" /> Calendar
             </button>
@@ -139,7 +148,6 @@ export default function ReservationsPage() {
       ) : (
         <>
           {view === "list" && <ListView reservations={reservations} rooms={rooms} today={today} onRefresh={fetchData} />}
-          {view === "tapechart" && <TapechartView reservations={reservations} rooms={rooms} today={today} onRefresh={fetchData} />}
           {view === "calendar" && (
             <div className="flex h-96 items-center justify-center rounded-lg border border-dashed border-slate-700 text-slate-500">
               Calendar view coming soon
@@ -374,7 +382,7 @@ function ListView({ reservations, rooms, today, onRefresh }: { reservations: Res
   );
 }
 
-/* ─── Tapechart View ─── */
+/* ─── List View ─── */
 function TapechartView({ reservations, rooms, today, onRefresh }: { reservations: Reservation[]; rooms: Room[]; today: string; onRefresh: () => void }) {
   const [startDate, setStartDate] = useState(today);
   const [dayCount, setDayCount] = useState(14);
