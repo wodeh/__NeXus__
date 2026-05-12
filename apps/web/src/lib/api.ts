@@ -206,7 +206,7 @@ export interface ChannelSyncLog {
 
 export async function getReservations(): Promise<Reservation[]> {
   const data = await api<{ reservations: Reservation[] }>("/v1/reservations");
-  return data.reservations;
+  return data.reservations || [];
 }
 
 export async function getReservation(id: string): Promise<Reservation> {
@@ -243,7 +243,7 @@ export async function moveReservation(id: string, payload: { room_number?: strin
 
 export async function getRooms(): Promise<Room[]> {
   const data = await api<{ rooms: Room[] }>("/v1/rooms");
-  return data.rooms;
+  return data.rooms || [];
 }
 
 export async function updateRoomStatus(number: string, status: string): Promise<void> {
@@ -257,7 +257,7 @@ export async function updateRoomStatus(number: string, status: string): Promise<
 
 export async function getProperties(): Promise<Property[]> {
   const data = await api<{ properties: Property[] }>("/v1/properties");
-  return data.properties;
+  return data.properties || [];
 }
 
 export async function getProperty(id: string): Promise<Property> {
@@ -268,7 +268,7 @@ export async function getProperty(id: string): Promise<Property> {
 
 export async function getUsers(): Promise<User[]> {
   const data = await api<{ users: User[] }>("/v1/admin/users");
-  return data.users;
+  return data.users || [];
 }
 
 export async function createUser(payload: Omit<User, "id" | "created_at" | "updated_at">): Promise<User> {
@@ -293,7 +293,7 @@ export async function deleteUser(id: string): Promise<void> {
 
 export async function getRoles(): Promise<Role[]> {
   const data = await api<{ roles: Role[] }>("/v1/admin/roles");
-  return data.roles;
+  return data.roles || [];
 }
 
 export async function createRole(payload: Omit<Role, "id" | "is_system" | "created_at" | "updated_at">): Promise<Role> {
@@ -318,7 +318,7 @@ export async function deleteRole(id: string): Promise<void> {
 
 export async function getHousekeepingTasks(): Promise<HousekeepingTask[]> {
   const data = await api<{ tasks: HousekeepingTask[] }>("/v1/housekeeping/tasks");
-  return data.tasks;
+  return data.tasks || [];
 }
 
 export async function createHousekeepingTask(payload: Omit<HousekeepingTask, "id" | "tenant_id" | "status" | "created_at" | "updated_at">): Promise<HousekeepingTask> {
@@ -352,7 +352,7 @@ export async function updateTenantConfig(tenantId: string, payload: Partial<Tena
 
 export async function getHousekeepingStaff(): Promise<HousekeepingStaff[]> {
   const data = await api<{ staff: HousekeepingStaff[] }>("/v1/housekeeping/staff");
-  return data.staff;
+  return data.staff || [];
 }
 
 export async function assignRoom(reservationId: string, roomNumber: string): Promise<Reservation> {
@@ -371,7 +371,7 @@ export async function createProperty(payload: { name: string; timezone?: string;
 
 export async function getAgents(): Promise<Agent[]> {
   const data = await api<{ agents: Agent[] }>("/v1/agents");
-  return data.agents;
+  return data.agents || [];
 }
 
 export async function createAgent(payload: Omit<Agent, "id" | "tenant_id" | "is_active" | "created_at" | "updated_at">): Promise<Agent> {
@@ -396,7 +396,7 @@ export async function deleteAgent(id: string): Promise<void> {
 
 export async function getChannels(): Promise<Channel[]> {
   const data = await api<{ channels: Channel[] }>("/v1/channels");
-  return data.channels;
+  return data.channels || [];
 }
 
 export async function createChannel(payload: Omit<Channel, "id" | "tenant_id" | "is_active" | "last_sync_at" | "last_sync_status" | "created_at" | "updated_at">): Promise<Channel> {
@@ -419,7 +419,7 @@ export async function deleteChannel(id: string): Promise<void> {
 
 export async function getChannelSyncLogs(channelId: string): Promise<ChannelSyncLog[]> {
   const data = await api<{ logs: ChannelSyncLog[] }>(`/v1/channels/${channelId}/sync-logs`);
-  return data.logs;
+  return data.logs || [];
 }
 
 /* ─── Smart Lock API ─── */
@@ -466,7 +466,7 @@ export interface AccessCode {
 
 export async function getLocks(): Promise<SmartLock[]> {
   const data = await api<{ locks: SmartLock[] }>("/v1/locks");
-  return data.locks;
+  return data.locks || [];
 }
 
 export async function createLock(payload: Partial<SmartLock>): Promise<SmartLock> {
@@ -485,12 +485,12 @@ export async function updateLock(id: string, payload: Partial<SmartLock>): Promi
 
 export async function getLockEvents(lockId: string): Promise<LockEvent[]> {
   const data = await api<{ events: LockEvent[] }>(`/v1/locks/${lockId}/events`);
-  return data.events;
+  return data.events || [];
 }
 
 export async function getLockAccessCodes(lockId: string): Promise<AccessCode[]> {
   const data = await api<{ codes: AccessCode[] }>(`/v1/locks/${lockId}/access-codes`);
-  return data.codes;
+  return data.codes || [];
 }
 
 export async function createAccessCode(lockId: string, payload: { code: string; label: string; valid_from: string; valid_until?: string; max_uses?: number }): Promise<AccessCode> {
@@ -546,12 +546,12 @@ export interface WhatsAppTemplate {
 
 export async function getWhatsAppConversations(): Promise<WhatsAppConversation[]> {
   const data = await api<{ conversations: WhatsAppConversation[] }>("/v1/whatsapp/conversations");
-  return data.conversations;
+  return data.conversations || [];
 }
 
 export async function getWhatsAppMessages(conversationId: string): Promise<WhatsAppMessage[]> {
   const data = await api<{ messages: WhatsAppMessage[] }>(`/v1/whatsapp/conversations/${conversationId}/messages`);
-  return data.messages;
+  return data.messages || [];
 }
 
 export async function sendWhatsAppMessage(conversationId: string, body: string): Promise<WhatsAppMessage> {
@@ -574,7 +574,7 @@ export async function updateWhatsAppConfig(payload: Partial<WhatsAppBotConfig>):
 
 export async function getWhatsAppTemplates(): Promise<WhatsAppTemplate[]> {
   const data = await api<{ templates: WhatsAppTemplate[] }>("/v1/whatsapp/templates");
-  return data.templates;
+  return data.templates || [];
 }
 
 /* ─── Review API ─── */
@@ -614,7 +614,7 @@ export interface ReviewStats {
 
 export async function getReviews(): Promise<Review[]> {
   const data = await api<{ reviews: Review[] }>("/v1/reviews");
-  return data.reviews;
+  return data.reviews || [];
 }
 
 export async function getReviewStats(): Promise<ReviewStats> {
@@ -662,7 +662,7 @@ export interface AuditStats {
 
 export async function getAuditLogs(): Promise<AuditLog[]> {
   const data = await api<{ logs: AuditLog[] }>("/v1/audit/logs");
-  return data.logs;
+  return data.logs || [];
 }
 
 export async function getAuditStats(): Promise<AuditStats> {
@@ -708,17 +708,17 @@ export interface IPTVRoomStatus {
 
 export async function getIPTVChannels(): Promise<IPTVChannel[]> {
   const data = await api<{ channels: IPTVChannel[] }>("/v1/iptv/channels");
-  return data.channels;
+  return data.channels || [];
 }
 
 export async function getIPTVContent(): Promise<IPTVContent[]> {
   const data = await api<{ content: IPTVContent[] }>("/v1/iptv/content");
-  return data.content;
+  return data.content || [];
 }
 
 export async function getIPTVRooms(): Promise<IPTVRoomStatus[]> {
   const data = await api<{ rooms: IPTVRoomStatus[] }>("/v1/iptv/rooms");
-  return data.rooms;
+  return data.rooms || [];
 }
 
 /* ─── Communications API ─── */
@@ -759,17 +759,17 @@ export interface CommScheduled {
 
 export async function getCommTemplates(): Promise<CommTemplate[]> {
   const data = await api<{ templates: CommTemplate[] }>("/v1/communications/templates");
-  return data.templates;
+  return data.templates || [];
 }
 
 export async function getCommSequences(): Promise<CommSequence[]> {
   const data = await api<{ sequences: CommSequence[] }>("/v1/communications/sequences");
-  return data.sequences;
+  return data.sequences || [];
 }
 
 export async function getCommScheduled(): Promise<CommScheduled[]> {
   const data = await api<{ scheduled: CommScheduled[] }>("/v1/communications/scheduled");
-  return data.scheduled;
+  return data.scheduled || [];
 }
 
 
@@ -1187,7 +1187,7 @@ export interface RateShopConfig {
 
 export async function getJourneys(): Promise<GuestJourney[]> {
   const data = await api<{ journeys: GuestJourney[] }>("/v1/journeys");
-  return data.journeys;
+  return data.journeys || [];
 }
 
 export async function createJourney(payload: Omit<GuestJourney, "id" | "tenant_id" | "created_at" | "updated_at">): Promise<GuestJourney> {
@@ -1204,12 +1204,12 @@ export async function deleteJourney(id: string): Promise<void> {
 
 export async function getJourneyExecutions(): Promise<GuestJourneyExecution[]> {
   const data = await api<{ executions: GuestJourneyExecution[] }>("/v1/journey-executions");
-  return data.executions;
+  return data.executions || [];
 }
 
 export async function getUpsellOffers(): Promise<UpsellOffer[]> {
   const data = await api<{ offers: UpsellOffer[] }>("/v1/upsell-offers");
-  return data.offers;
+  return data.offers || [];
 }
 
 export async function createUpsellOffer(payload: Omit<UpsellOffer, "id" | "tenant_id" | "total_sold" | "revenue_generated" | "created_at" | "updated_at">): Promise<UpsellOffer> {
@@ -1226,12 +1226,12 @@ export async function deleteUpsellOffer(id: string): Promise<void> {
 
 export async function getUpsellPurchases(): Promise<UpsellPurchase[]> {
   const data = await api<{ purchases: UpsellPurchase[] }>("/v1/upsell-purchases");
-  return data.purchases;
+  return data.purchases || [];
 }
 
 export async function getCompetitors(): Promise<CompetitorHotel[]> {
   const data = await api<{ competitors: CompetitorHotel[] }>("/v1/competitors");
-  return data.competitors;
+  return data.competitors || [];
 }
 
 export async function createCompetitor(payload: Omit<CompetitorHotel, "id" | "tenant_id" | "created_at" | "updated_at">): Promise<CompetitorHotel> {
@@ -1244,12 +1244,12 @@ export async function deleteCompetitor(id: string): Promise<void> {
 
 export async function getCompetitorRates(): Promise<CompetitorRate[]> {
   const data = await api<{ rates: CompetitorRate[] }>("/v1/competitor-rates");
-  return data.rates;
+  return data.rates || [];
 }
 
 export async function getRateRecommendations(): Promise<RateRecommendation[]> {
   const data = await api<{ recommendations: RateRecommendation[] }>("/v1/rate-recommendations");
-  return data.recommendations;
+  return data.recommendations || [];
 }
 
 export async function applyRateRecommendation(id: string): Promise<{ status: string }> {
@@ -1370,7 +1370,7 @@ export interface VillaRevenueStats {
 
 export async function getVillas(): Promise<VillaProperty[]> {
   const data = await api<{ villas: VillaProperty[] }>("/v1/villas");
-  return data.villas;
+  return data.villas || [];
 }
 
 export async function createVilla(payload: Omit<VillaProperty, "id" | "tenant_id" | "created_at" | "updated_at">): Promise<VillaProperty> {
@@ -1387,7 +1387,7 @@ export async function deleteVilla(id: string): Promise<void> {
 
 export async function getVillaReservations(): Promise<VillaReservation[]> {
   const data = await api<{ reservations: VillaReservation[] }>("/v1/villa-reservations");
-  return data.reservations;
+  return data.reservations || [];
 }
 
 export async function createVillaReservation(payload: Omit<VillaReservation, "id" | "tenant_id" | "created_at" | "updated_at" | "completed_at">): Promise<VillaReservation> {
@@ -1413,7 +1413,7 @@ export async function getVillaRevenue(start: string, end: string): Promise<Villa
 
 export async function getSensorLogs(villaId: string): Promise<CleanerSensorLog[]> {
   const data = await api<{ logs: CleanerSensorLog[] }>(`/v1/sensor-logs?villa_id=${villaId}`);
-  return data.logs;
+  return data.logs || [];
 }
 
 export async function recordSensorLog(payload: Omit<CleanerSensorLog, "id" | "tenant_id" | "created_at">): Promise<CleanerSensorLog> {

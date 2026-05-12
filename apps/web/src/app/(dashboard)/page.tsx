@@ -78,10 +78,10 @@ export default function DashboardPage() {
     const available = rooms.filter((r) => r.status === "vacant_clean").length;
     const blocked = rooms.filter((r) => r.status === "blocked").length;
     const maintenance = rooms.filter((r) => r.status === "maintenance").length;
-    const arrivalsToday = reservations.filter((r) => r.check_in === today && r.status !== "checked_in").length;
-    const departuresToday = reservations.filter((r) => r.check_out === today && r.status === "checked_in").length;
-    const inHouse = reservations.filter((r) => r.status === "checked_in").length;
-    const vipArrivals = reservations.filter((r) => r.check_in === today && r.vip).length;
+    const arrivalsToday = (reservations || []).filter((r) => r.check_in === today && r.status !== "checked_in").length;
+    const departuresToday = (reservations || []).filter((r) => r.check_out === today && r.status === "checked_in").length;
+    const inHouse = (reservations || []).filter((r) => r.status === "checked_in").length;
+    const vipArrivals = (reservations || []).filter((r) => r.check_in === today && r.vip).length;
     const occupancyRate = totalRooms ? Math.round((occupied / totalRooms) * 100) : 0;
 
     return {
@@ -97,12 +97,12 @@ export default function DashboardPage() {
       occupancyRate,
       revenueToday: 8432,
       revenueYesterday: 7650,
-      pendingBalance: reservations.reduce((sum, r) => sum + (r.balance || 0), 0),
+      pendingBalance: (reservations || []).reduce((sum, r) => sum + (r.balance || 0), 0),
     };
   }, [rooms, reservations]);
 
   const arrivals = useMemo(() =>
-    reservations
+    (reservations || [])
       .filter((r) => r.check_in === today && r.status !== "checked_in")
       .map((r) => ({
         id: r.id,
@@ -117,7 +117,7 @@ export default function DashboardPage() {
   );
 
   const departures = useMemo(() =>
-    reservations
+    (reservations || [])
       .filter((r) => r.check_out === today && r.status === "checked_in")
       .map((r) => ({
         id: r.id,
