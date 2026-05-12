@@ -80,11 +80,12 @@ func (s *Server) handleReservationDetail(w http.ResponseWriter, r *http.Request)
 				http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
 				return
 			}
-			if err := repo.Move(ctx, tenantID, id, &req); err != nil {
+			updated, err := repo.Move(ctx, tenantID, id, &req)
+			if err != nil {
 				http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
 				return
 			}
-			writeJSON(w, http.StatusOK, map[string]string{"status": "moved"})
+			writeJSON(w, http.StatusOK, updated)
 			return
 			
 		case "checkin":

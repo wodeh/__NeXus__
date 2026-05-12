@@ -245,12 +245,19 @@ export default function TapechartPage() {
     try {
       const payload = { room_number: roomNumber, check_in: date, check_out: newCheckOut };
       console.log("[TAPECHART] handleDrop: calling moveReservation", movedId, payload);
-      const res = await moveReservation(movedId, payload);
-      console.log("[TAPECHART] handleDrop: moveReservation success", res);
+      const updated = await moveReservation(movedId, payload);
+      console.log("[TAPECHART] handleDrop: moveReservation success", updated);
       setToast({ msg: "Reservation moved successfully", type: "success" });
-      console.log("[TAPECHART] handleDrop: calling fetchData");
-      await fetchData();
-      console.log("[TAPECHART] handleDrop: fetchData done");
+      // Merge returned reservation into state instead of full refetch
+      setReservations((prev) => {
+        const next = prev.map((r) =>
+          r.id === movedId
+            ? { ...r, room_number: updated.room_number || roomNumber, check_in: updated.check_in || date, check_out: updated.check_out || newCheckOut, updated_at: updated.updated_at }
+            : r
+        );
+        console.log("[TAPECHART] handleDrop: merged updated reservation", next.find((r) => r.id === movedId));
+        return next;
+      });
     } catch (e: any) {
       console.error("[TAPECHART] handleDrop: moveReservation error", e);
       setToast({ msg: "Move failed: " + e.message, type: "error" });

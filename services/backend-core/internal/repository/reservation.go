@@ -268,7 +268,7 @@ func diffDays(a, b string) int {
 }
 
 // Move updates room number and/or dates for a reservation, and syncs room status.
-func (r *ReservationRepository) Move(ctx context.Context, tenantID string, id uuid.UUID, req *domain.ReservationMoveRequest) error {
+func (r *ReservationRepository) Move(ctx context.Context, tenantID string, id uuid.UUID, req *domain.ReservationMoveRequest) (*domain.Reservation, error) {
 	fmt.Printf("[BACKEND] Move called: tenant=%s id=%s req=%+v\n", tenantID, id, req)
 	// Get current reservation to know old room
 	var oldRoom string
@@ -278,7 +278,7 @@ func (r *ReservationRepository) Move(ctx context.Context, tenantID string, id uu
 		id, tenantID).Scan(&oldRoom)
 	if err != nil {
 		fmt.Printf("[BACKEND] Move: fetch old room failed: %v\n", err)
-		return fmt.Errorf("move: fetch old room: %w", err)
+		return nil, fmt.Errorf("move: fetch old room: %w", err)
 	}
 	fmt.Printf("[BACKEND] Move: oldRoom=%q\n", oldRoom)
 
@@ -303,7 +303,7 @@ func (r *ReservationRepository) Move(ctx context.Context, tenantID string, id uu
 	}
 
 	if len(updates) == 0 {
-		return fmt.Errorf("no fields to update")
+		return nil, fmt.Errorf("no fields to update")
 	}
 
 	updates = append(updates, "updated_at = NOW(), version = version + 1")
@@ -313,11 +313,11 @@ func (r *ReservationRepository) Move(ctx context.Context, tenantID string, id uu
 	cmdTag, err := r.pool.Exec(ctx, sql, args...)
 	if err != nil {
 		fmt.Printf("[BACKEND] Move: exec failed: %v\n", err)
-		return fmt.Errorf("move reservation: %w", err)
+		return nil, fmt.Errorf("move reservation: %w", err)
 	}
 	fmt.Printf("[BACKEND] Move: rows affected=%d\n", cmdTag.RowsAffected())
 	if cmdTag.RowsAffected() == 0 {
-		return fmt.Errorf("reservation %s: %w", id, ErrNotFound)
+		return nil, fmt.Errorf("reservation %s: %w", id, ErrNotFound)
 	}
 
 	// Sync room statuses: new room → occupied, old room → check if still occupied
@@ -345,8 +345,14 @@ func (r *ReservationRepository) Move(ctx context.Context, tenantID string, id uu
 		}
 	}
 
-	fmt.Printf("[BACKEND] Move: success\n")
-	return nil
+	// Fetch updated reservation
+	updated, err := r.Get(ctx, tenantID, id)
+	if err != nil {
+		fmt.Printf("[BACKEND] Move: fetch updated reservation failed: %v\n", err)
+		return nil, fmt.Errorf("move: fetch updated reservation: %w", err)
+	}
+	fmt.Printf("[BACKEND] Move: returning updated reservation check_in=%s check_out=%s room=%s\n", updated.CheckIn, updated.CheckOut, *updated.RoomNumber)
+	return updated, nil
 }
 
 func joinUpdates(updates []string) string {
