@@ -258,13 +258,14 @@ export default function TapechartPage() {
       setToast({ msg: "Reservation moved successfully", type: "success" });
       // Merge returned reservation into state instead of full refetch
       setReservations((prev) => {
-        const next = prev.map((r) =>
+        const merged = prev.map((r) =>
           r.id === movedId
             ? { ...r, room_number: updated.room_number || roomNumber, check_in: updated.check_in || date, check_out: updated.check_out || newCheckOut, updated_at: updated.updated_at }
             : r
         );
-        console.log("[TAPECHART] handleDrop: merged reservation dates check_in=" + merged?.check_in + " check_out=" + merged?.check_out);
-        return next;
+        const mergedRes = merged.find((r) => r.id === movedId);
+        console.log("[TAPECHART] handleDrop: merged reservation dates check_in=" + mergedRes?.check_in + " check_out=" + mergedRes?.check_out);
+        return merged;
       });
     } catch (e: any) {
       console.error("[TAPECHART] handleDrop: moveReservation error", e);
