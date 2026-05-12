@@ -78,12 +78,8 @@ export default function Sidebar({ tenantConfig }: { tenantConfig: TenantConfig |
 
   const filteredNav = navItems.filter((item) => {
     if (!tenantConfig) return true;
-    // Villa tenants: only show villa + dashboard items
-    if (isVillaTenant) {
-      return item.cap.startsWith("villa:") || item.href === "/" || item.href === "/settings";
-    }
-    // Hotel tenants: hide villa-only items
-    return hasCapability(tenantConfig, item.cap) && !item.cap.startsWith("villa:");
+    // Show all items the tenant has capability for (hotel + villa can coexist)
+    return hasCapability(tenantConfig, item.cap);
   });
 
   return (

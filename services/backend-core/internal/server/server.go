@@ -184,6 +184,7 @@ func (s *Server) handleTenantAPI(w http.ResponseWriter, r *http.Request) {
 					"revenue:revenue_forecasting", "revenue:agent_management",
 					"enterprise:multi_property", "enterprise:advanced_crm",
 					"enterprise:api_access", "enterprise:white_label", "enterprise:custom_reports",
+					"villa:dashboard", "villa:properties", "villa:reservations", "villa:revenue", "villa:cleaner_tracking",
 				},
 				"settings": map[string]interface{}{
 					"timezone":      "UTC",
