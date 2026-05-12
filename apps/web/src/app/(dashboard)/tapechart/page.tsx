@@ -246,7 +246,7 @@ export default function TapechartPage() {
       const payload = { room_number: roomNumber, check_in: date, check_out: newCheckOut };
       console.log("[TAPECHART] handleDrop: calling moveReservation", movedId, payload);
       const updated = await moveReservation(movedId, payload);
-      console.log("[TAPECHART] handleDrop: moveReservation success", updated);
+      console.log("[TAPECHART] handleDrop: moveReservation returned check_in=" + updated.check_in + " check_out=" + updated.check_out + " room=" + updated.room_number);
       setToast({ msg: "Reservation moved successfully", type: "success" });
       // Merge returned reservation into state instead of full refetch
       setReservations((prev) => {
@@ -255,7 +255,7 @@ export default function TapechartPage() {
             ? { ...r, room_number: updated.room_number || roomNumber, check_in: updated.check_in || date, check_out: updated.check_out || newCheckOut, updated_at: updated.updated_at }
             : r
         );
-        console.log("[TAPECHART] handleDrop: merged updated reservation", next.find((r) => r.id === movedId));
+        console.log("[TAPECHART] handleDrop: merged reservation dates check_in=" + merged?.check_in + " check_out=" + merged?.check_out);
         return next;
       });
     } catch (e: any) {
@@ -455,15 +455,6 @@ export default function TapechartPage() {
                       );
                       const spanDays = startingRes ? getVisibleSpanDays(startingRes, startDate, dayCount) : 0;
                       const isMoving = startingRes && movingResId === startingRes.id;
-
-                      {/* DEBUG: log specific reservation rendering */}
-                      {(() => {
-                        const debugRes = activeResList.find(r => r.guest_name === "Derek Roberts");
-                        if (debugRes && isFirstVisibleDay(debugRes, date, startDate)) {
-                          console.log("[TAPECHART RENDER] Derek Roberts at", date, "check_in:", debugRes.check_in, "check_out:", debugRes.check_out, "span:", getVisibleSpanDays(debugRes, startDate, dayCount));
-                        }
-                        return null;
-                      })()}
 
                       return (
                         <div
