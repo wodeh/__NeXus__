@@ -479,6 +479,13 @@ export default function TapechartPage() {
                       const isToday = date === today;
                       const isHovered = hoveredCell?.room === room.number && hoveredCell?.date === date;
                       const isDropTarget = draggingRes && isHovered && activeResList.filter((r) => r.id !== draggingRes.id).length === 0;
+                      {/* Debug: log why isDropTarget is false for Derek's cell during drag */}
+                      {(() => {
+                        if (draggingRes && room.number === "103" && ["2026-05-12","2026-05-13","2026-05-14","2026-05-15"].includes(date)) {
+                          console.log("[TAPECHART DROP-DBG] Room " + room.number + " @ " + date + " draggingRes=" + (draggingRes ? draggingRes.id.slice(0,8) : "null") + " isHovered=" + isHovered + " activeLen=" + activeResList.length + " isDropTarget=" + isDropTarget);
+                        }
+                        return null;
+                      })()}
 
                       /* Find the reservation that STARTS on this visible day */
                       const startingRes = activeResList.find(
