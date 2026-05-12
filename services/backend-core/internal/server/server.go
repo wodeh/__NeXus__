@@ -69,6 +69,7 @@ func (s *Server) Start(ctx context.Context) error {
 	s.registerAuditHandlers(mux)
 	s.registerIPTVHandlers(mux)
 	s.registerCommHandlers(mux)
+	s.registerGuestJourneyHandlers(mux)
 
 	s.httpServer = &http.Server{
 		Addr:         ":" + s.cfg.HTTPPort,

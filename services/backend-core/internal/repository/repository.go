@@ -17,6 +17,7 @@ type Store struct {
 	Channel              *ChannelRepository
 	ReservationDetail    *ReservationDetailRepository
 	Revenue              *RevenueRepository
+	GuestJourney         *GuestJourneyRepository
 }
 
 // NewStore creates a repository instance.
@@ -28,6 +29,7 @@ func NewStore(pool *db.Pool) *Store {
 		Channel:           NewChannelRepository(pool),
 		ReservationDetail: NewReservationDetailRepository(pool),
 		Revenue:           NewRevenueRepository(pool),
+		GuestJourney:      NewGuestJourneyRepository(pool),
 	}
 }
 
