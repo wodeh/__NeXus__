@@ -158,6 +158,7 @@ export default function TapechartPage() {
       await moveReservation(draggingRes.id, {
         room_number: roomNumber,
         check_in: date,
+        check_out: draggingRes.check_out,
       });
       // Refresh data to reflect the move
       fetchData();

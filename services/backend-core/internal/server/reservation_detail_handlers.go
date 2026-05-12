@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -20,6 +21,9 @@ func (s *Server) handleReservationDetailView(w http.ResponseWriter, r *http.Requ
 	ctx := r.Context()
 	tenantIDStr, _ := ctx.Value("tenant_id").(string)
 	tenantID, _ := uuid.Parse(tenantIDStr)
+
+	// DEBUG: log all requests to this handler
+	slog.Info("reservation detail handler", slog.String("method", r.Method), slog.String("path", r.URL.Path))
 
 	path := r.URL.Path[len("/v1/reservations/"):]
 	parts := splitPath(path)
