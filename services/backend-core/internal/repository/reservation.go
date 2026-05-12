@@ -37,7 +37,7 @@ func (r *ReservationRepository) execer(tx pgx.Tx) interface {
 func (r *ReservationRepository) List(ctx context.Context, tenantID string) ([]domain.Reservation, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, tenant_id, property_id, guest_name, email, phone, room_number, room_type,
-			check_in, check_out, adults, children, status, source, total, balance,
+			check_in::text, check_out::text, adults, children, status, source, total, balance,
 			special_requests, vip, color, config, created_at, updated_at, deleted_at, version
 		FROM reservations
 		WHERE tenant_id = $1 AND deleted_at IS NULL
@@ -79,7 +79,7 @@ func (r *ReservationRepository) List(ctx context.Context, tenantID string) ([]do
 func (r *ReservationRepository) Get(ctx context.Context, tenantID string, id uuid.UUID) (*domain.Reservation, error) {
 	row := r.pool.QueryRow(ctx, `
 		SELECT id, tenant_id, property_id, guest_name, email, phone, room_number, room_type,
-			check_in, check_out, adults, children, status, source, total, balance,
+			check_in::text, check_out::text, adults, children, status, source, total, balance,
 			special_requests, vip, color, config, created_at, updated_at, deleted_at, version
 		FROM reservations
 		WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL

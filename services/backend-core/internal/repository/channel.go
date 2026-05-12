@@ -18,7 +18,7 @@ func NewChannelRepository(pool *db.Pool) *ChannelRepository { return &ChannelRep
 /* ─── Channel Reservations ─── */
 
 func (r *ChannelRepository) ListChannelReservations(ctx context.Context, tenantID uuid.UUID, source string) ([]domain.ChannelReservation, error) {
-	query := `SELECT id, tenant_id, channel_source, external_ref, guest_name, guest_email, guest_phone, room_type, room_number, check_in, check_out, adults, children, total, currency, status, special_requests, raw_payload, created_at, updated_at FROM channel_reservations WHERE tenant_id=$1`
+	query := `SELECT id, tenant_id, channel_source, external_ref, guest_name, guest_email, guest_phone, room_type, room_number, check_in::text, check_out::text, adults, children, total, currency, status, special_requests, raw_payload, created_at, updated_at FROM channel_reservations WHERE tenant_id=$1`
 	args := []interface{}{tenantID}
 	if source != "" {
 		query += ` AND channel_source=$2`
