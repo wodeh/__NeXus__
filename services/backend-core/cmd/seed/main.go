@@ -99,7 +99,7 @@ func main() {
 				Type:       roomType,
 				BedType:    strPtr(bedType),
 				Status:     status,
-				RateNight:  float64(rate),
+				RateNight:  rate,
 			}); err != nil {
 				logger.Warn("room insert failed", slog.String("number", roomNum), slog.String("error", err.Error()))
 			} else {
