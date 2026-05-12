@@ -154,6 +154,14 @@ export default function TapechartPage() {
     return () => clearTimeout(t);
   }, [toast]);
 
+  /* ─── Log reservations state changes for debugging ─── */
+  useEffect(() => {
+    const derek = reservations.find((r) => r.guest_name === "Derek Roberts");
+    if (derek) {
+      console.log("[TAPECHART STATE] reservations updated: Derek check_in=" + derek.check_in + " check_out=" + derek.check_out + " room=" + derek.room_number + " status=" + derek.status);
+    }
+  }, [reservations]);
+
   const dates = useMemo(() => {
     return Array.from({ length: dayCount }, (_, i) => addDays(startDate, i));
   }, [startDate, dayCount]);
