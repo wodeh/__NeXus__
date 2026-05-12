@@ -26,6 +26,7 @@ const fallbackConfig: TenantConfig = {
     "revenue:iptv_premium", "revenue:iptv_welcome", "revenue:iptv_content", "revenue:access_codes",
     "enterprise:multi_property", "enterprise:advanced_crm",
     "enterprise:api_access", "enterprise:white_label", "enterprise:custom_reports",
+    "villa:dashboard", "villa:properties", "villa:reservations", "villa:revenue", "villa:cleaner_tracking",
   ],
   settings: { timezone: "UTC", currency_code: "USD", date_format: "YYYY-MM-DD", language: "en" },
   created_at: "",
@@ -43,7 +44,7 @@ export default function DashboardLayout({
   useEffect(() => {
     const tenant = localStorage.getItem("nexus-tenant") || "demo";
     apiClient
-      .get(`/tenants/${tenant}/config`)
+      .get(`/v1/tenant/${tenant}`)
       .then((data) => {
         setTenantConfig(data as TenantConfig);
         setLoading(false);
