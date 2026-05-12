@@ -11,7 +11,6 @@ import (
 
 func (s *Server) registerReservationHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/v1/reservations", s.withTenant(s.handleReservations))
-	mux.HandleFunc("/v1/reservations/", s.withTenant(s.handleReservationDetail))
 }
 
 func (s *Server) handleReservations(w http.ResponseWriter, r *http.Request) {
