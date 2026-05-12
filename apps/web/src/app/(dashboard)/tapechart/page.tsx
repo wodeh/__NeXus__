@@ -174,15 +174,21 @@ export default function TapechartPage() {
   const handleDrop = async (roomNumber: string, date: string) => {
     if (!draggingRes) return;
 
-    // 1. Collision check — don't drop on occupied cell (unless it's the same reservation)
-    const existing = getReservationsForRoomDate(roomNumber, date).filter(
-      (r) => r.id !== draggingRes.id && r.status !== "cancelled"
-    );
-    if (existing.length > 0) {
-      setToast({ msg: `Room ${roomNumber} occupied on ${date}`, type: "error" });
-      setDraggingRes(null);
-      setHoveredCell(null);
-      return;
+    // 1. Collision check — check EVERY day of the stay, not just the drop day
+    const stayLength = Math.max(1, Math.round(
+      (new Date(draggingRes.check_out + "T00:00:00").getTime() - new Date(draggingRes.check_in + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24)
+    ));
+    for (let i = 0; i < stayLength; i++) {
+      const checkDate = addDays(date, i);
+      const conflicts = getReservationsForRoomDate(roomNumber, checkDate).filter(
+        (r) => r.id !== draggingRes.id && r.status !== "cancelled"
+      );
+      if (conflicts.length > 0) {
+        setToast({ msg: `Room ${roomNumber} occupied on ${checkDate}`, type: "error" });
+        setDraggingRes(null);
+        setHoveredCell(null);
+        return;
+      }
     }
 
     const oldRoom = draggingRes.room_number;
@@ -200,19 +206,7 @@ export default function TapechartPage() {
     setDraggingRes(null);
     setHoveredCell(null);
 
-    // 3. Update old room status (vacant if no other reservations today)
-    if (oldRoom) {
-      const stillOccupied = reservations.some(
-        (r) => r.room_number === oldRoom && r.id !== movedId && isDateInRange(today, r.check_in, r.check_out) && r.status !== "cancelled"
-      );
-      if (!stillOccupied) {
-        updateRoomStatus(oldRoom, "vacant_clean").catch(() => {});
-      }
-    }
-    // New room becomes occupied
-    updateRoomStatus(roomNumber, "occupied").catch(() => {});
-
-    // 4. Sync with server
+    // 3. Sync with server (backend handles room status sync — don't double-write)
     try {
       await moveReservation(movedId, {
         room_number: roomNumber,
@@ -441,10 +435,10 @@ export default function TapechartPage() {
                                   setDraggingRes(startingRes);
                                 }}
                                 onDragEnd={() => setDraggingRes(null)}
-                                className="absolute left-0 top-0 bottom-0 w-5 cursor-grab active:cursor-grabbing flex items-center justify-center hover:bg-black/20"
+                                className="absolute left-0 top-0 bottom-0 w-7 cursor-grab active:cursor-grabbing flex items-center justify-center bg-black/30 hover:bg-black/50 z-20"
                                 title="Drag to move"
                               >
-                                <GripVertical className="h-4 w-3 text-white/70" />
+                                <GripVertical className="h-5 w-4 text-white" />
                               </div>
                               {/* Clickable detail area */}
                               <div
