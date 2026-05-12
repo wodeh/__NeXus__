@@ -1261,3 +1261,163 @@ export async function getRateShopConfig(): Promise<RateShopConfig> {
 export async function updateRateShopConfig(payload: Partial<RateShopConfig>): Promise<RateShopConfig> {
   return api<RateShopConfig>("/v1/rate-shop-config", { method: "PATCH", body: JSON.stringify(payload) });
 }
+
+/* ─── Villa Rental API ─── */
+
+export interface VillaProperty {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description: string;
+  address: string;
+  city: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+  elevation: number;
+  bedrooms: number;
+  bathrooms: number;
+  max_guests: number;
+  amenities: string[];
+  images: string[];
+  price_per_night: number;
+  currency: string;
+  cleaning_fee: number;
+  security_deposit: number;
+  is_active: boolean;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VillaReservation {
+  id: string;
+  tenant_id: string;
+  villa_id: string;
+  villa_name: string;
+  guest_name: string;
+  guest_phone: string;
+  guest_email: string;
+  guest_count: number;
+  check_in_date: string;
+  check_out_date: string;
+  nights: number;
+  total_amount: number;
+  currency: string;
+  status: string;
+  source: string;
+  internal_notes: string;
+  down_payment?: {
+    amount: number;
+    method: string;
+    status: string;
+    received_at: string;
+    reference: string;
+    notes: string;
+  };
+  balance_due: number;
+  balance_paid: boolean;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string;
+}
+
+export interface CleanerSensorLog {
+  id: string;
+  tenant_id: string;
+  villa_id: string;
+  villa_name: string;
+  cleaner_id: string;
+  cleaner_name: string;
+  temperature: number;
+  latitude: number;
+  longitude: number;
+  altitude: number;
+  floor: number;
+  location_type: string;
+  battery_level: number;
+  recorded_at: string;
+  created_at: string;
+}
+
+export interface VillaAvailability {
+  villa_id: string;
+  date: string;
+  status: string;
+  reservation_id?: string;
+}
+
+export interface VillaRevenueStats {
+  tenant_id: string;
+  period_start: string;
+  period_end: string;
+  total_revenue: number;
+  total_reservations: number;
+  occupancy_rate: number;
+  avg_booking_value: number;
+  down_payment_total: number;
+  pending_balance: number;
+  villa_breakdown: Array<{
+    villa_id: string;
+    villa_name: string;
+    revenue: number;
+    nights_booked: number;
+    occupancy_pct: number;
+  }>;
+}
+
+export async function getVillas(): Promise<VillaProperty[]> {
+  const data = await api<{ villas: VillaProperty[] }>("/v1/villas");
+  return data.villas;
+}
+
+export async function createVilla(payload: Omit<VillaProperty, "id" | "tenant_id" | "created_at" | "updated_at">): Promise<VillaProperty> {
+  return api<VillaProperty>("/v1/villas", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function updateVilla(id: string, payload: Partial<VillaProperty>): Promise<VillaProperty> {
+  return api<VillaProperty>(`/v1/villas/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+}
+
+export async function deleteVilla(id: string): Promise<void> {
+  await api(`/v1/villas/${id}`, { method: "DELETE" });
+}
+
+export async function getVillaReservations(): Promise<VillaReservation[]> {
+  const data = await api<{ reservations: VillaReservation[] }>("/v1/villa-reservations");
+  return data.reservations;
+}
+
+export async function createVillaReservation(payload: Omit<VillaReservation, "id" | "tenant_id" | "created_at" | "updated_at" | "completed_at">): Promise<VillaReservation> {
+  return api<VillaReservation>("/v1/villa-reservations", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function updateVillaReservation(id: string, payload: Partial<VillaReservation>): Promise<VillaReservation> {
+  return api<VillaReservation>(`/v1/villa-reservations/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+}
+
+export async function deleteVillaReservation(id: string): Promise<void> {
+  await api(`/v1/villa-reservations/${id}`, { method: "DELETE" });
+}
+
+export async function getVillaAvailability(villaId: string, start: string, end: string): Promise<VillaAvailability[]> {
+  const data = await api<{ availability: VillaAvailability[] }>(`/v1/villa-availability?villa_id=${villaId}&start=${start}&end=${end}`);
+  return data.availability;
+}
+
+export async function getVillaRevenue(start: string, end: string): Promise<VillaRevenueStats> {
+  return api<VillaRevenueStats>(`/v1/villa-revenue?start=${start}&end=${end}`);
+}
+
+export async function getSensorLogs(villaId: string): Promise<CleanerSensorLog[]> {
+  const data = await api<{ logs: CleanerSensorLog[] }>(`/v1/sensor-logs?villa_id=${villaId}`);
+  return data.logs;
+}
+
+export async function recordSensorLog(payload: Omit<CleanerSensorLog, "id" | "tenant_id" | "created_at">): Promise<CleanerSensorLog> {
+  return api<CleanerSensorLog>("/v1/sensor-logs", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function getLatestSensorLog(villaId: string, cleanerId: string): Promise<CleanerSensorLog> {
+  return api<CleanerSensorLog>(`/v1/sensor-logs/latest?villa_id=${villaId}&cleaner_id=${cleanerId}`);
+}
