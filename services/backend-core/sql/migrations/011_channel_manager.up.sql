@@ -30,28 +30,6 @@ CREATE INDEX idx_channel_res_status ON channel_reservations(status);
 CREATE INDEX idx_channel_res_dates ON channel_reservations(check_in, check_out);
 CREATE INDEX idx_channel_res_external ON channel_reservations(external_ref);
 
-CREATE TABLE IF NOT EXISTS channels (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID NOT NULL,
-    source VARCHAR(50) NOT NULL, -- booking_com, expedia, airbnb
-    display_name VARCHAR(255) NOT NULL,
-    is_active BOOLEAN DEFAULT true,
-    commission_pct NUMERIC(5,2) DEFAULT 0,
-    api_key VARCHAR(255),
-    api_secret VARCHAR(255),
-    webhook_url VARCHAR(500),
-    last_sync_at TIMESTAMPTZ,
-    last_sync_status VARCHAR(20) DEFAULT 'n/a', -- success, warning, error, n/a
-    config JSONB,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ
-);
-
-CREATE INDEX idx_channels_tenant ON channels(tenant_id);
-CREATE INDEX idx_channels_source ON channels(source);
-CREATE INDEX idx_channels_active ON channels(tenant_id, is_active) WHERE deleted_at IS NULL;
-
 CREATE TABLE IF NOT EXISTS channel_availability (
     tenant_id UUID NOT NULL,
     room_type VARCHAR(50) NOT NULL,
@@ -85,13 +63,9 @@ CREATE TRIGGER trg_channel_reservations_updated_at
 
 -- RLS
 ALTER TABLE channel_reservations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE channels ENABLE ROW LEVEL SECURITY;
 ALTER TABLE channel_availability ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY channel_res_tenant_isolation ON channel_reservations
-    USING (tenant_id::TEXT = current_setting('app.current_tenant', true));
-
-CREATE POLICY channels_tenant_isolation ON channels
     USING (tenant_id::TEXT = current_setting('app.current_tenant', true));
 
 CREATE POLICY availability_tenant_isolation ON channel_availability
