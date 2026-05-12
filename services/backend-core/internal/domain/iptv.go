@@ -49,3 +49,15 @@ type IPTVRoomStatus struct {
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
+
+// IPTVWelcomeScreen holds data for the smart TV welcome display.
+type IPTVWelcomeScreen struct {
+	VillaID        string `json:"villa_id"`
+	VillaName      string `json:"villa_name"`
+	GuestName      string `json:"guest_name"`
+	CheckInDate    string `json:"check_in_date"`
+	CheckOutDate   string `json:"check_out_date"`
+	Nights         int    `json:"nights"`
+	WelcomeMessage string `json:"welcome_message"`
+	HasReservation bool   `json:"has_reservation"`
+}

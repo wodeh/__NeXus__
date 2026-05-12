@@ -219,7 +219,31 @@ func (r *VillaRepository) DeleteVillaReservation(ctx context.Context, id string)
 	return err
 }
 
-// --- Cleaner Sensor Logs ---
+func (r *VillaRepository) GetVillaReservationByDate(ctx context.Context, villaID string, date string) (*VillaReservation, error) {
+	query := `
+		SELECT id, tenant_id, villa_id, villa_name, guest_name, guest_phone, guest_email,
+		       guest_count, check_in_date, check_out_date, nights, total_amount, currency,
+		       status, source, internal_notes, down_payment, balance_due, balance_paid,
+		       created_at, updated_at, completed_at
+		FROM villa_reservations
+		WHERE villa_id = $1 AND check_in_date <= $2::date AND check_out_date > $2::date
+		  AND status IN ('reserved', 'completed')
+		ORDER BY check_in_date DESC
+		LIMIT 1
+	`
+	var res VillaReservation
+	err := r.pool.QueryRow(ctx, query, villaID, date).Scan(
+		&res.ID, &res.TenantID, &res.VillaID, &res.VillaName, &res.GuestName, &res.GuestPhone,
+		&res.GuestEmail, &res.GuestCount, &res.CheckInDate, &res.CheckOutDate, &res.Nights,
+		&res.TotalAmount, &res.Currency, &res.Status, &res.Source, &res.InternalNotes,
+		&res.DownPayment, &res.BalanceDue, &res.BalancePaid,
+		&res.CreatedAt, &res.UpdatedAt, &res.CompletedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
 
 func (r *VillaRepository) RecordSensorLog(ctx context.Context, log *domain.CleanerSensorLog) error {
 	query := `

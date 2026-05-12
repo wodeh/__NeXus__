@@ -14,6 +14,7 @@ func (s *Server) registerIPTVHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/v1/iptv/channels", s.withTenant(s.handleGetChannels))
 	mux.HandleFunc("/v1/iptv/content", s.withTenant(s.handleGetContent))
 	mux.HandleFunc("/v1/iptv/rooms", s.withTenant(s.handleGetIPTVRooms))
+	mux.HandleFunc("/v1/iptv/welcome/", s.withTenant(s.handleIPTVWelcome))
 }
 
 // handleGetChannels returns TV channels.
@@ -62,6 +63,59 @@ func (s *Server) handleGetIPTVRooms(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"rooms": statuses})
+}
+
+// handleIPTVWelcome returns welcome screen data for a villa's smart TV.
+func (s *Server) handleIPTVWelcome(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
+
+	villaID := extractID(r.URL.Path, "/v1/iptv/welcome/")
+	if villaID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing villa id"})
+		return
+	}
+
+	ctx := r.Context()
+	today := time.Now().Format("2006-01-02")
+
+	// Try to get active reservation for this villa today
+	res, err := s.repo.Villa.GetVillaReservationByDate(ctx, villaID, today)
+	if err != nil || res == nil {
+		// No active reservation — return villa-only welcome
+		villa, vErr := s.repo.Villa.GetVillaByID(ctx, villaID)
+		if vErr != nil {
+			writeJSON(w, http.StatusOK, domain.IPTVWelcomeScreen{
+				VillaID:        villaID,
+				VillaName:      "Villa",
+				WelcomeMessage: "Welcome to your villa",
+				HasReservation: false,
+			})
+			return
+		}
+		writeJSON(w, http.StatusOK, domain.IPTVWelcomeScreen{
+			VillaID:        villaID,
+			VillaName:      villa.Name,
+			WelcomeMessage: "Welcome to " + villa.Name,
+			HasReservation: false,
+		})
+		return
+	}
+
+	// Build welcome screen with guest info
+	welcome := domain.IPTVWelcomeScreen{
+		VillaID:        villaID,
+		VillaName:      res.VillaName,
+		GuestName:      res.GuestName,
+		CheckInDate:    res.CheckInDate,
+		CheckOutDate:   res.CheckOutDate,
+		Nights:         res.Nights,
+		WelcomeMessage: "Welcome, " + res.GuestName + "! Enjoy your stay at " + res.VillaName,
+		HasReservation: true,
+	}
+	writeJSON(w, http.StatusOK, welcome)
 }
 
 func demoChannels(tenantID string) []domain.IPTVChannel {

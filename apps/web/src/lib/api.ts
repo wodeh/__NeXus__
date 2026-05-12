@@ -727,6 +727,21 @@ export async function getIPTVRooms(): Promise<IPTVRoomStatus[]> {
   return data.rooms || [];
 }
 
+export interface IPTVWelcomeScreen {
+  villa_id: string;
+  villa_name: string;
+  guest_name: string;
+  check_in_date: string;
+  check_out_date: string;
+  nights: number;
+  welcome_message: string;
+  has_reservation: boolean;
+}
+
+export async function getIPTVWelcome(villaId: string): Promise<IPTVWelcomeScreen> {
+  return api<IPTVWelcomeScreen>(`/v1/iptv/welcome/${villaId}`);
+}
+
 /* ─── Communications API ─── */
 
 export interface CommTemplate {
