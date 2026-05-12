@@ -1,11 +1,13 @@
 import { TenantConfig } from "@/lib/tenant";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || "demo";
 
 async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: {
       "Content-Type": "application/json",
+      "X-Tenant-ID": TENANT_ID,
       ...(opts?.headers || {}),
     },
     ...opts,
