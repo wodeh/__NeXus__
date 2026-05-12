@@ -207,7 +207,7 @@ export default function TapechartPage() {
     for (let i = 0; i < stayLength; i++) {
       const checkDate = addDays(date, i);
       const conflicts = getReservationsForRoomDate(roomNumber, checkDate).filter(
-        (r) => r.id !== draggingRes.id && r.status !== "cancelled"
+        (r) => r.id !== draggingRes.id && (r.status === "confirmed" || r.status === "checked_in")
       );
       if (conflicts.length > 0) {
         console.log("[TAPECHART] handleDrop: collision found on", checkDate, conflicts[0].id);
@@ -444,7 +444,7 @@ export default function TapechartPage() {
                     </div>
                     {dates.map((date) => {
                       const resList = getReservationsForRoomDate(room.number, date);
-                      const activeResList = resList.filter((r) => r.status !== "cancelled");
+                      const activeResList = resList.filter((r) => r.status === "confirmed" || r.status === "checked_in");
                       const isToday = date === today;
                       const isHovered = hoveredCell?.room === room.number && hoveredCell?.date === date;
                       const isDropTarget = draggingRes && isHovered && activeResList.filter((r) => r.id !== draggingRes.id).length === 0;
