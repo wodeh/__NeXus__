@@ -172,17 +172,23 @@ export default function TapechartPage() {
   };
 
   const handleDrop = async (roomNumber: string, date: string) => {
-    if (!draggingRes) return;
+    console.log("[TAPECHART] handleDrop called:", { roomNumber, date, draggingRes: draggingRes?.guest_name, id: draggingRes?.id });
+    if (!draggingRes) {
+      console.log("[TAPECHART] handleDrop: no draggingRes, aborting");
+      return;
+    }
 
     // 1. Collision check — check EVERY day of the stay, not just the drop day
     const stayLength = Math.max(1, Math.round(
       (new Date(draggingRes.check_out + "T00:00:00").getTime() - new Date(draggingRes.check_in + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24)
     ));
+    console.log("[TAPECHART] Collision check: stayLength=", stayLength, "from", date);
     for (let i = 0; i < stayLength; i++) {
       const checkDate = addDays(date, i);
       const conflicts = getReservationsForRoomDate(roomNumber, checkDate).filter(
         (r) => r.id !== draggingRes.id && r.status !== "cancelled"
       );
+      console.log("[TAPECHART] Checking", checkDate, "conflicts:", conflicts.length);
       if (conflicts.length > 0) {
         setToast({ msg: `Room ${roomNumber} occupied on ${checkDate}`, type: "error" });
         setDraggingRes(null);
@@ -193,6 +199,7 @@ export default function TapechartPage() {
 
     const oldRoom = draggingRes.room_number;
     const movedId = draggingRes.id;
+    console.log("[TAPECHART] Moving", movedId, "from room", oldRoom, "to", roomNumber, "date", date);
 
     // 2. Optimistic UI: immediately show bar at new position
     setMovingResId(movedId);
@@ -208,14 +215,16 @@ export default function TapechartPage() {
 
     // 3. Sync with server (backend handles room status sync — don't double-write)
     try {
-      await moveReservation(movedId, {
+      const result = await moveReservation(movedId, {
         room_number: roomNumber,
         check_in: date,
         check_out: draggingRes.check_out,
       });
+      console.log("[TAPECHART] moveReservation success:", result);
       setToast({ msg: "Reservation moved successfully", type: "success" });
       await fetchData();
     } catch (e: any) {
+      console.log("[TAPECHART] moveReservation FAILED:", e.message);
       setToast({ msg: "Move failed: " + e.message, type: "error" });
       await fetchData(); // Revert by refetching
     } finally {
@@ -419,7 +428,11 @@ export default function TapechartPage() {
                           onMouseLeave={() => setHoveredCell(null)}
                           onClick={() => handleCellClick(room, date)}
                           onDragOver={(e) => { e.preventDefault(); setHoveredCell({ room: room.number, date }); }}
-                          onDrop={(e) => { e.preventDefault(); handleDrop(room.number, date); }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            console.log("[TAPECHART] onDrop:", room.number, date, "dragging:", draggingRes?.guest_name, draggingRes?.id);
+                            handleDrop(room.number, date);
+                          }}
                         >
                           {/* Reservation bar — only on first visible day */}
                           {startingRes && spanDays > 0 && (
@@ -427,22 +440,26 @@ export default function TapechartPage() {
                               className={`absolute inset-y-0.5 left-0.5 z-10 rounded overflow-hidden ${startingRes.color || "bg-sky-500"} ${isMoving ? "opacity-60" : ""} hover:brightness-110 transition-opacity`}
                               style={{ width: `${Math.max(spanDays, 1) * 5 - 0.25}rem`, minWidth: "4.5rem" }}
                             >
-                              {/* Drag handle (left edge) */}
+                              {/* Drag handle — LEFT EDGE, very obvious */}
                               <div
                                 draggable
                                 onDragStart={(e) => {
                                   e.dataTransfer.effectAllowed = "move";
+                                  console.log("[TAPECHART] Drag start:", startingRes.guest_name, startingRes.id);
                                   setDraggingRes(startingRes);
                                 }}
-                                onDragEnd={() => setDraggingRes(null)}
-                                className="absolute left-0 top-0 bottom-0 w-7 cursor-grab active:cursor-grabbing flex items-center justify-center bg-black/30 hover:bg-black/50 z-20"
-                                title="Drag to move"
+                                onDragEnd={() => {
+                                  console.log("[TAPECHART] Drag end");
+                                  setDraggingRes(null);
+                                }}
+                                className="absolute left-0 top-0 bottom-0 w-8 cursor-grab active:cursor-grabbing flex items-center justify-center bg-black/60 hover:bg-black/80 border-r border-white/20 z-30"
+                                title="Drag to move reservation"
                               >
-                                <GripVertical className="h-5 w-4 text-white" />
+                                <GripVertical className="h-5 w-5 text-white drop-shadow" />
                               </div>
-                              {/* Clickable detail area */}
+                              {/* Clickable detail area — rest of the bar */}
                               <div
-                                className="absolute inset-0 left-5 flex items-center px-1 overflow-hidden cursor-pointer"
+                                className="absolute inset-0 left-8 flex items-center px-1.5 overflow-hidden cursor-pointer"
                                 onClick={(e) => { e.stopPropagation(); setSelectedRes(startingRes); }}
                               >
                                 <span className="text-[9px] font-medium text-white truncate">{startingRes.guest_name}</span>
