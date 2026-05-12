@@ -162,6 +162,20 @@ export default function TapechartPage() {
     }
   }, [reservations]);
 
+  /* ─── Log which grid cells contain Derek (definitive render check) ─── */
+  useEffect(() => {
+    const derek = reservations.find((r) => r.guest_name === "Derek Roberts");
+    if (!derek) return;
+    const cells: string[] = [];
+    for (let i = 0; i < dayCount; i++) {
+      const d = addDays(startDate, i);
+      if (isDateInRange(d, derek.check_in, derek.check_out) && derek.room_number === "103") {
+        cells.push(d);
+      }
+    }
+    console.log("[TAPECHART GRID-MAP] Derek should appear in room 103 on dates:", cells.join(", "), "(check_in=" + derek.check_in + ")");
+  }, [reservations, startDate, dayCount]);
+
   const dates = useMemo(() => {
     return Array.from({ length: dayCount }, (_, i) => addDays(startDate, i));
   }, [startDate, dayCount]);
@@ -180,9 +194,17 @@ export default function TapechartPage() {
 
   const getReservationsForRoomDate = useCallback(
     (roomNumber: string, date: string) => {
-      return reservations.filter(
+      const result = reservations.filter(
         (r) => r.room_number === roomNumber && isDateInRange(date, r.check_in, r.check_out)
       );
+      // DEBUG: log Derek Roberts specifically for room 103 on May 12-15
+      if (roomNumber === "103" && ["2026-05-12","2026-05-13","2026-05-14","2026-05-15"].includes(date)) {
+        const derek = result.find(r => r.guest_name === "Derek Roberts");
+        if (derek) {
+          console.log("[TAPECHART GRID] Room " + roomNumber + " @ " + date + " -> Derek found: check_in=" + derek.check_in + " check_out=" + derek.check_out);
+        }
+      }
+      return result;
     },
     [reservations]
   );
