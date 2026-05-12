@@ -175,7 +175,7 @@ CREATE INDEX idx_reviews_published ON reviews(is_published) WHERE is_published =
 CREATE TABLE IF NOT EXISTS audit_logs (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    user_id     UUID REFERENCES users(id) ON DELETE SET NULL,
+    user_id     UUID,
     user_email  TEXT,
     action      TEXT NOT NULL,
     resource    TEXT NOT NULL,
