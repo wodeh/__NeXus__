@@ -12,18 +12,18 @@ import (
 /* ─── Guest Journey Handlers ─── */
 
 func (s *Server) registerGuestJourneyHandlers(mux *http.ServeMux) {
-	mux.HandleFunc("/v1/journeys", s.handleJourneys)
-	mux.HandleFunc("/v1/journeys/", s.handleJourneyDetail)
-	mux.HandleFunc("/v1/journey-executions", s.handleJourneyExecutions)
-	mux.HandleFunc("/v1/upsell-offers", s.handleUpsellOffers)
-	mux.HandleFunc("/v1/upsell-offers/", s.handleUpsellOfferDetail)
-	mux.HandleFunc("/v1/upsell-purchases", s.handleUpsellPurchases)
-	mux.HandleFunc("/v1/competitors", s.handleCompetitors)
-	mux.HandleFunc("/v1/competitors/", s.handleCompetitorDetail)
-	mux.HandleFunc("/v1/competitor-rates", s.handleCompetitorRates)
-	mux.HandleFunc("/v1/rate-recommendations", s.handleRateRecommendations)
-	mux.HandleFunc("/v1/rate-recommendations/apply", s.handleApplyRecommendation)
-	mux.HandleFunc("/v1/rate-shop-config", s.handleRateShopConfig)
+	mux.HandleFunc("/v1/journeys", s.withTenant(s.handleJourneys))
+	mux.HandleFunc("/v1/journeys/", s.withTenant(s.handleJourneyDetail))
+	mux.HandleFunc("/v1/journey-executions", s.withTenant(s.handleJourneyExecutions))
+	mux.HandleFunc("/v1/upsell-offers", s.withTenant(s.handleUpsellOffers))
+	mux.HandleFunc("/v1/upsell-offers/", s.withTenant(s.handleUpsellOfferDetail))
+	mux.HandleFunc("/v1/upsell-purchases", s.withTenant(s.handleUpsellPurchases))
+	mux.HandleFunc("/v1/competitors", s.withTenant(s.handleCompetitors))
+	mux.HandleFunc("/v1/competitors/", s.withTenant(s.handleCompetitorDetail))
+	mux.HandleFunc("/v1/competitor-rates", s.withTenant(s.handleCompetitorRates))
+	mux.HandleFunc("/v1/rate-recommendations", s.withTenant(s.handleRateRecommendations))
+	mux.HandleFunc("/v1/rate-recommendations/apply", s.withTenant(s.handleApplyRecommendation))
+	mux.HandleFunc("/v1/rate-shop-config", s.withTenant(s.handleRateShopConfig))
 }
 
 func (s *Server) handleJourneys(w http.ResponseWriter, r *http.Request) {

@@ -88,12 +88,12 @@ export const CAPABILITIES = {
 
 export function hasCapability(config: TenantConfig | null, cap: string): boolean {
   if (!config) return false;
-  return config.capabilities.includes(cap);
+  return config.capabilities?.includes(cap) ?? false;
 }
 
 export function hasAnyCapability(config: TenantConfig | null, caps: string[]): boolean {
   if (!config) return false;
-  return caps.some((c) => config.capabilities.includes(c));
+  return caps.some((c) => config.capabilities?.includes(c) ?? false);
 }
 
 export function tierName(tier: string): string {

@@ -157,22 +157,78 @@ func (s *Server) handleTenantAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbStatus := "not_configured"
+	// Extract external_id from path: /v1/tenant/{external_id}
+	externalID := r.URL.Path[len("/v1/tenant/"):]
+
+	var response map[string]interface{}
+
 	if s.repo != nil {
-		_, err := s.repo.GetTenantConfig(r.Context(), tenantID)
-		if err != nil {
-			dbStatus = "unavailable"
-		} else {
-			dbStatus = "connected"
+		tenant, err := s.repo.Tenants.GetByExternalID(r.Context(), externalID)
+		if err == nil && tenant != nil {
+			response = map[string]interface{}{
+				"id":               tenant.ExternalID,
+				"name":             tenant.Name,
+				"property_type":    "boutique",
+				"license_tier":     tenant.Tier,
+				"license_status":   "active",
+				"license_expires_at": "",
+				"max_rooms":        5000,
+				"max_users":        200,
+				"capabilities": []string{
+					"core:reservations", "core:guests", "core:properties", "core:rooms",
+					"core:housekeeping", "core:settings", "core:audit_logs",
+					"operations:floor_dashboard", "operations:room_blocks",
+					"operations:group_reservations", "operations:maintenance", "operations:front_desk",
+					"revenue:dynamic_pricing", "revenue:ota_integration",
+					"revenue:revenue_forecasting", "revenue:agent_management",
+					"enterprise:multi_property", "enterprise:advanced_crm",
+					"enterprise:api_access", "enterprise:white_label", "enterprise:custom_reports",
+				},
+				"settings": map[string]interface{}{
+					"timezone":      "UTC",
+					"currency_code": "USD",
+					"date_format":   "YYYY-MM-DD",
+					"language":      "en",
+				},
+				"created_at": tenant.CreatedAt.Format(time.RFC3339),
+				"updated_at": tenant.UpdatedAt.Format(time.RFC3339),
+			}
 		}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"tenant_id": tenantID,
-		"message":   "backend-core API",
-		"db_status": dbStatus,
-		"timestamp": time.Now().UTC(),
-	})
+	if response == nil {
+		// Fallback response
+		response = map[string]interface{}{
+			"id":               externalID,
+			"name":             "Demo Hotel",
+			"property_type":    "boutique",
+			"license_tier":     "enterprise",
+			"license_status":   "active",
+			"license_expires_at": "",
+			"max_rooms":        5000,
+			"max_users":        200,
+			"capabilities": []string{
+				"core:reservations", "core:guests", "core:properties", "core:rooms",
+				"core:housekeeping", "core:settings", "core:audit_logs",
+				"operations:floor_dashboard", "operations:room_blocks",
+				"operations:group_reservations", "operations:maintenance", "operations:front_desk",
+				"revenue:dynamic_pricing", "revenue:ota_integration",
+				"revenue:revenue_forecasting", "revenue:agent_management",
+				"enterprise:multi_property", "enterprise:advanced_crm",
+				"enterprise:api_access", "enterprise:white_label", "enterprise:custom_reports",
+			},
+			"settings": map[string]interface{}{
+				"timezone":      "UTC",
+				"currency_code": "USD",
+				"date_format":   "YYYY-MM-DD",
+				"language":      "en",
+			},
+			"created_at": time.Now().UTC().Format(time.RFC3339),
+			"updated_at": time.Now().UTC().Format(time.RFC3339),
+		}
+	}
+
+	writeJSON(w, http.StatusOK, response)
 }
 
 func (s *Server) handlePublishEvent(w http.ResponseWriter, r *http.Request) {

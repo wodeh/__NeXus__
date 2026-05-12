@@ -35,7 +35,13 @@ export function useTenant() {
     const tenant = localStorage.getItem("nexus-tenant") || "demo";
     getTenantConfig(tenant)
       .then((data) => {
-        setConfig(data);
+        // Normalize: ensure capabilities array exists
+        if (!data || !Array.isArray(data.capabilities)) {
+          console.warn("Tenant config missing capabilities, using fallback");
+          setConfig(fallbackConfig);
+        } else {
+          setConfig(data);
+        }
         setLoading(false);
       })
       .catch((err) => {
