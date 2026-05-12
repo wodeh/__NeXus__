@@ -99,6 +99,8 @@ func main() {
 			RateNight:  r.RateNight,
 		}); err != nil {
 			logger.Warn("room insert failed (may already exist)", slog.String("number", r.Number), slog.String("error", err.Error()))
+		} else {
+			logger.Info("room inserted", slog.String("number", r.Number))
 		}
 	}
 	logger.Info("rooms seeded", slog.Int("count", len(roomData)))
@@ -121,6 +123,8 @@ func main() {
 	for _, req := range reservations {
 		if _, err := resRepo.Create(ctx, nil, tenantID, &req); err != nil {
 			logger.Warn("reservation insert failed", slog.String("guest", req.GuestName), slog.String("error", err.Error()))
+		} else {
+			logger.Info("reservation inserted", slog.String("guest", req.GuestName))
 		}
 	}
 	logger.Info("reservations seeded", slog.Int("count", len(reservations)))
