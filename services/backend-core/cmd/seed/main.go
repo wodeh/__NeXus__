@@ -143,7 +143,7 @@ func main() {
 
 	// Seed channels
 	channelRepo := repository.NewChannelRepository(pool)
-	channels := []domain.ChannelCreateRequest{
+	channels := []domain.Channel{
 		{Source: "booking_com", DisplayName: "Booking.com", CommissionPct: 15},
 		{Source: "expedia", DisplayName: "Expedia", CommissionPct: 18},
 		{Source: "airbnb", DisplayName: "Airbnb", CommissionPct: 3},
@@ -152,7 +152,7 @@ func main() {
 	}
 
 	for _, c := range channels {
-		if _, err := channelRepo.Create(ctx, tenantID, &c); err != nil {
+		if err := channelRepo.CreateChannel(ctx, &c); err != nil {
 			logger.Warn("channel insert failed (may already exist)", slog.String("source", c.Source), slog.String("error", err.Error()))
 		}
 	}
