@@ -71,9 +71,13 @@ func (s *Server) Start(ctx context.Context) error {
 	s.registerGuestJourneyHandlers(mux)
 	s.registerVillaHandlers(mux)
 
+	// Wrap all routes with CORS, then metrics
+	corsHandler := withCORS(mux.ServeHTTP)
+	wrapped := s.withMetrics(http.HandlerFunc(corsHandler))
+
 	s.httpServer = &http.Server{
 		Addr:         ":" + s.cfg.HTTPPort,
-		Handler:      s.withMetrics(mux),
+		Handler:      wrapped,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
