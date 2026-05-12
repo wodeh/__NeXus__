@@ -456,6 +456,15 @@ export default function TapechartPage() {
                       const spanDays = startingRes ? getVisibleSpanDays(startingRes, startDate, dayCount) : 0;
                       const isMoving = startingRes && movingResId === startingRes.id;
 
+                      {/* DEBUG: log specific reservation rendering */}
+                      {(() => {
+                        const debugRes = activeResList.find(r => r.guest_name === "Derek Roberts");
+                        if (debugRes && isFirstVisibleDay(debugRes, date, startDate)) {
+                          console.log("[TAPECHART RENDER] Derek Roberts at", date, "check_in:", debugRes.check_in, "check_out:", debugRes.check_out, "span:", getVisibleSpanDays(debugRes, startDate, dayCount));
+                        }
+                        return null;
+                      })()}
+
                       return (
                         <div
                           key={`${room.number}-${date}`}
