@@ -525,10 +525,14 @@ export default function TapechartPage() {
                               <div
                                 draggable
                                 onDragStart={(e) => {
+                                  console.log("[TAPECHART DRAG] onDragStart: startingRes.id=" + startingRes.id.slice(0,8) + " guest=" + startingRes.guest_name + " room=" + startingRes.room_number + " check_in=" + startingRes.check_in);
                                   e.dataTransfer.effectAllowed = "move";
                                   setDraggingRes(startingRes);
                                 }}
-                                onDragEnd={() => setDraggingRes(null)}
+                                onDragEnd={() => {
+                                  console.log("[TAPECHART DRAG] onDragEnd: clearing draggingRes");
+                                  setDraggingRes(null);
+                                }}
                                 className="absolute left-0 top-0 bottom-0 w-8 cursor-grab active:cursor-grabbing flex items-center justify-center bg-black/60 hover:bg-black/80 border-r border-white/20 z-30"
                                 title="Drag to move reservation"
                               >
