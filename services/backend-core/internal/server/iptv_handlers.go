@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nexus-platform/backend-core/internal/domain"
+	"github.com/nexus-platform/backend-core/internal/repository"
 )
 
 func (s *Server) registerIPTVHandlers(mux *http.ServeMux) {
@@ -16,9 +17,11 @@ func (s *Server) registerIPTVHandlers(mux *http.ServeMux) {
 }
 
 // handleGetChannels returns TV channels.
-func (s *Server) handleGetChannels(w http.ResponseWriter, r *http.Request, tenantID string) {
+func (s *Server) handleGetChannels(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tenantID, _ := ctx.Value("tenant_id").(string)
 	repo := repository.NewIPTVRepository(s.repo.Pool())
-	channels, err := repo.ListChannels(r.Context(), tenantID)
+	channels, err := repo.ListChannels(ctx, tenantID)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -30,9 +33,11 @@ func (s *Server) handleGetChannels(w http.ResponseWriter, r *http.Request, tenan
 }
 
 // handleGetContent returns on-demand content.
-func (s *Server) handleGetContent(w http.ResponseWriter, r *http.Request, tenantID string) {
+func (s *Server) handleGetContent(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tenantID, _ := ctx.Value("tenant_id").(string)
 	repo := repository.NewIPTVRepository(s.repo.Pool())
-	content, err := repo.ListContent(r.Context(), tenantID)
+	content, err := repo.ListContent(ctx, tenantID)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -44,9 +49,11 @@ func (s *Server) handleGetContent(w http.ResponseWriter, r *http.Request, tenant
 }
 
 // handleGetIPTVRooms returns IPTV room status.
-func (s *Server) handleGetIPTVRooms(w http.ResponseWriter, r *http.Request, tenantID string) {
+func (s *Server) handleGetIPTVRooms(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tenantID, _ := ctx.Value("tenant_id").(string)
 	repo := repository.NewIPTVRepository(s.repo.Pool())
-	statuses, err := repo.ListRoomStatus(r.Context(), tenantID)
+	statuses, err := repo.ListRoomStatus(ctx, tenantID)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -87,5 +94,3 @@ func demoContent(tenantID string) []domain.IPTVContent {
 		{ID: uuid.MustParse("cccc0002-0000-0000-0000-000000000007"), TenantID: tid, Title: "Local Attractions", Type: "info", Description: "Top 10 places to visit within 5km of the hotel", Category: "tourism", IsActive: true, CreatedAt: now, UpdatedAt: now},
 	}
 }
-
-func intPtr(i int) *int { return &i }

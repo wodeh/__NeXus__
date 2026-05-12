@@ -1,27 +1,36 @@
 package domain
 
-import "time"
+import (
+	"time"
 
+	"github.com/google/uuid"
+)
+
+// Property represents a hotel property managed by a tenant.
 type Property struct {
-	ID        string                 `json:"id"`
-	TenantID  string                 `json:"tenant_id"`
-	Name      string                 `json:"name"`
-	Code      string                 `json:"code"`
-	Address   string                 `json:"address"`
-	City      string                 `json:"city"`
-	Country   string                 `json:"country"`
-	Timezone  string                 `json:"timezone"`
-	Status    string                 `json:"status"`
-	Settings  map[string]interface{} `json:"settings"`
-	CreatedAt time.Time              `json:"created_at"`
-	UpdatedAt time.Time              `json:"updated_at"`
+	ID          uuid.UUID              `json:"id"`
+	TenantID    uuid.UUID              `json:"tenant_id"`
+	Name        string                 `json:"name"`
+	Address     string                 `json:"address"`
+	City        string                 `json:"city"`
+	Country     string                 `json:"country"`
+	Phone       string                 `json:"phone"`
+	Email       string                 `json:"email"`
+	Timezone    string                 `json:"timezone"`
+	Currency    string                 `json:"currency"`
+	StarRating  int                    `json:"star_rating"`
+	IsActive    bool                   `json:"is_active"`
+	Config      map[string]interface{} `json:"config,omitempty"`
+	CreatedAt   time.Time              `json:"created_at"`
+	UpdatedAt   time.Time              `json:"updated_at"`
 }
 
+// PropertySummary is a lightweight view for listing.
 type PropertySummary struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Code     string `json:"code"`
-	Status   string `json:"status"`
-	City     string `json:"city"`
-	RoomCount int   `json:"room_count"`
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	City      string    `json:"city"`
+	Country   string    `json:"country"`
+	IsActive  bool      `json:"is_active"`
+	RoomCount int       `json:"room_count"`
 }

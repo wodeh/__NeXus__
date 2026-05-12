@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"nexus-hospitality-platform/services/backend-core/internal/domain"
+	"github.com/nexus-platform/backend-core/internal/domain"
 )
 
 /* ─── Guest Journey Handlers ─── */
@@ -56,13 +56,13 @@ func (s *Server) handleJourneys(w http.ResponseWriter, r *http.Request) {
 				},
 			}
 		}
-		respondJSON(w, http.StatusOK, map[string]interface{}{"journeys": journeys})
+		writeJSON(w, http.StatusOK, map[string]interface{}{"journeys": journeys})
 		return
 	}
 	if r.Method == http.MethodPost {
 		var req domain.GuestJourney
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondError(w, http.StatusBadRequest, "invalid body")
+			writeJSONError(w, http.StatusBadRequest, "invalid body")
 			return
 		}
 		req.ID = uuid.New().String()
@@ -70,46 +70,46 @@ func (s *Server) handleJourneys(w http.ResponseWriter, r *http.Request) {
 		req.CreatedAt = time.Now()
 		req.UpdatedAt = time.Now()
 		if err := s.repo.GuestJourney.CreateJourney(r.Context(), &req); err != nil {
-			respondError(w, http.StatusInternalServerError, err.Error())
+			writeJSONError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		respondJSON(w, http.StatusCreated, req)
+		writeJSON(w, http.StatusCreated, req)
 		return
 	}
-	respondError(w, http.StatusMethodNotAllowed, "method not allowed")
+	writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 }
 
 func (s *Server) handleJourneyDetail(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.Context().Value("tenant_id").(string)
 	id := r.URL.Path[len("/v1/journeys/"):]
 	if id == "" {
-		respondError(w, http.StatusBadRequest, "missing id")
+		writeJSONError(w, http.StatusBadRequest, "missing id")
 		return
 	}
 	if r.Method == http.MethodPatch {
 		var req domain.GuestJourney
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondError(w, http.StatusBadRequest, "invalid body")
+			writeJSONError(w, http.StatusBadRequest, "invalid body")
 			return
 		}
 		req.ID = id
 		req.TenantID = tenantID
 		if err := s.repo.GuestJourney.UpdateJourney(r.Context(), &req); err != nil {
-			respondError(w, http.StatusInternalServerError, err.Error())
+			writeJSONError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		respondJSON(w, http.StatusOK, req)
+		writeJSON(w, http.StatusOK, req)
 		return
 	}
 	if r.Method == http.MethodDelete {
 		if err := s.repo.GuestJourney.DeleteJourney(r.Context(), id, tenantID); err != nil {
-			respondError(w, http.StatusInternalServerError, err.Error())
+			writeJSONError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		respondJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+		writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 		return
 	}
-	respondError(w, http.StatusMethodNotAllowed, "method not allowed")
+	writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 }
 
 func (s *Server) handleJourneyExecutions(w http.ResponseWriter, r *http.Request) {
@@ -122,10 +122,10 @@ func (s *Server) handleJourneyExecutions(w http.ResponseWriter, r *http.Request)
 				{ID: uuid.New().String(), TenantID: tenantID, JourneyID: uuid.New().String(), ReservationID: uuid.New().String(), GuestPhone: "+1-555-0456", CurrentStep: 4, TotalSteps: 4, Status: "completed", StartedAt: time.Now().Add(-48 * time.Hour)},
 			}
 		}
-		respondJSON(w, http.StatusOK, map[string]interface{}{"executions": execs})
+		writeJSON(w, http.StatusOK, map[string]interface{}{"executions": execs})
 		return
 	}
-	respondError(w, http.StatusMethodNotAllowed, "method not allowed")
+	writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 }
 
 /* ─── Upsell Offer Handlers ─── */
@@ -143,13 +143,13 @@ func (s *Server) handleUpsellOffers(w http.ResponseWriter, r *http.Request) {
 				{ID: uuid.New().String(), TenantID: tenantID, Name: "Early Check-in", Description: "Check in from 10AM", Category: "early_checkin", Price: 35.00, Currency: "USD", IsActive: true, AutoOffer: true, DisplayOrder: 5, TotalSold: 12, RevenueGenerated: 420, CreatedAt: time.Now(), UpdatedAt: time.Now()},
 			}
 		}
-		respondJSON(w, http.StatusOK, map[string]interface{}{"offers": offers})
+		writeJSON(w, http.StatusOK, map[string]interface{}{"offers": offers})
 		return
 	}
 	if r.Method == http.MethodPost {
 		var req domain.UpsellOffer
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondError(w, http.StatusBadRequest, "invalid body")
+			writeJSONError(w, http.StatusBadRequest, "invalid body")
 			return
 		}
 		req.ID = uuid.New().String()
@@ -157,46 +157,46 @@ func (s *Server) handleUpsellOffers(w http.ResponseWriter, r *http.Request) {
 		req.CreatedAt = time.Now()
 		req.UpdatedAt = time.Now()
 		if err := s.repo.GuestJourney.CreateOffer(r.Context(), &req); err != nil {
-			respondError(w, http.StatusInternalServerError, err.Error())
+			writeJSONError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		respondJSON(w, http.StatusCreated, req)
+		writeJSON(w, http.StatusCreated, req)
 		return
 	}
-	respondError(w, http.StatusMethodNotAllowed, "method not allowed")
+	writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 }
 
 func (s *Server) handleUpsellOfferDetail(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.Context().Value("tenant_id").(string)
 	id := r.URL.Path[len("/v1/upsell-offers/"):]
 	if id == "" {
-		respondError(w, http.StatusBadRequest, "missing id")
+		writeJSONError(w, http.StatusBadRequest, "missing id")
 		return
 	}
 	if r.Method == http.MethodPatch {
 		var req domain.UpsellOffer
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondError(w, http.StatusBadRequest, "invalid body")
+			writeJSONError(w, http.StatusBadRequest, "invalid body")
 			return
 		}
 		req.ID = id
 		req.TenantID = tenantID
 		if err := s.repo.GuestJourney.UpdateOffer(r.Context(), &req); err != nil {
-			respondError(w, http.StatusInternalServerError, err.Error())
+			writeJSONError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		respondJSON(w, http.StatusOK, req)
+		writeJSON(w, http.StatusOK, req)
 		return
 	}
 	if r.Method == http.MethodDelete {
 		if err := s.repo.GuestJourney.DeleteOffer(r.Context(), id, tenantID); err != nil {
-			respondError(w, http.StatusInternalServerError, err.Error())
+			writeJSONError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		respondJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+		writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 		return
 	}
-	respondError(w, http.StatusMethodNotAllowed, "method not allowed")
+	writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 }
 
 /* ─── Upsell Purchase Handlers ─── */
@@ -212,10 +212,10 @@ func (s *Server) handleUpsellPurchases(w http.ResponseWriter, r *http.Request) {
 				{ID: uuid.New().String(), TenantID: tenantID, ReservationID: uuid.New().String(), GuestPhone: "+1-555-0789", OfferID: uuid.New().String(), OfferName: "Breakfast Package", Price: 25.00, Currency: "USD", Status: "pending", PaymentMethod: "on_bill", FolioPosted: false, CreatedAt: time.Now()},
 			}
 		}
-		respondJSON(w, http.StatusOK, map[string]interface{}{"purchases": purchases})
+		writeJSON(w, http.StatusOK, map[string]interface{}{"purchases": purchases})
 		return
 	}
-	respondError(w, http.StatusMethodNotAllowed, "method not allowed")
+	writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 }
 
 /* ─── Competitor Handlers ─── */
@@ -231,13 +231,13 @@ func (s *Server) handleCompetitors(w http.ResponseWriter, r *http.Request) {
 				{ID: uuid.New().String(), TenantID: tenantID, Name: "Downtown Business Inn", Address: "321 Commerce St", City: "Miami", Country: "USA", StarRating: 3, RoomCount: 150, IsActive: true, CreatedAt: time.Now(), UpdatedAt: time.Now()},
 			}
 		}
-		respondJSON(w, http.StatusOK, map[string]interface{}{"competitors": competitors})
+		writeJSON(w, http.StatusOK, map[string]interface{}{"competitors": competitors})
 		return
 	}
 	if r.Method == http.MethodPost {
 		var req domain.CompetitorHotel
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondError(w, http.StatusBadRequest, "invalid body")
+			writeJSONError(w, http.StatusBadRequest, "invalid body")
 			return
 		}
 		req.ID = uuid.New().String()
@@ -245,31 +245,31 @@ func (s *Server) handleCompetitors(w http.ResponseWriter, r *http.Request) {
 		req.CreatedAt = time.Now()
 		req.UpdatedAt = time.Now()
 		if err := s.repo.GuestJourney.CreateCompetitor(r.Context(), &req); err != nil {
-			respondError(w, http.StatusInternalServerError, err.Error())
+			writeJSONError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		respondJSON(w, http.StatusCreated, req)
+		writeJSON(w, http.StatusCreated, req)
 		return
 	}
-	respondError(w, http.StatusMethodNotAllowed, "method not allowed")
+	writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 }
 
 func (s *Server) handleCompetitorDetail(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.Context().Value("tenant_id").(string)
 	id := r.URL.Path[len("/v1/competitors/"):]
 	if id == "" {
-		respondError(w, http.StatusBadRequest, "missing id")
+		writeJSONError(w, http.StatusBadRequest, "missing id")
 		return
 	}
 	if r.Method == http.MethodDelete {
 		if err := s.repo.GuestJourney.DeleteCompetitor(r.Context(), id, tenantID); err != nil {
-			respondError(w, http.StatusInternalServerError, err.Error())
+			writeJSONError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		respondJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+		writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 		return
 	}
-	respondError(w, http.StatusMethodNotAllowed, "method not allowed")
+	writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 }
 
 func (s *Server) handleCompetitorRates(w http.ResponseWriter, r *http.Request) {
@@ -286,10 +286,10 @@ func (s *Server) handleCompetitorRates(w http.ResponseWriter, r *http.Request) {
 				{ID: uuid.New().String(), TenantID: tenantID, CompetitorID: uuid.New().String(), CompetitorName: "Downtown Business Inn", RoomType: "Standard", Date: today, Rate: 129.00, Currency: "USD", Availability: 20, MinStay: 1, IsPromo: false, Source: "booking_com", ScrapedAt: time.Now()},
 			}
 		}
-		respondJSON(w, http.StatusOK, map[string]interface{}{"rates": rates})
+		writeJSON(w, http.StatusOK, map[string]interface{}{"rates": rates})
 		return
 	}
-	respondError(w, http.StatusMethodNotAllowed, "method not allowed")
+	writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 }
 
 /* ─── Rate Recommendation Handlers ─── */
@@ -307,10 +307,10 @@ func (s *Server) handleRateRecommendations(w http.ResponseWriter, r *http.Reques
 				{ID: uuid.New().String(), TenantID: tenantID, RoomType: "Suite", Date: today, CurrentRate: 499.00, RecommendedRate: 449.00, Confidence: 0.61, Reason: "Below 40% occupancy for suites, consider promotional pricing", Factors: []string{"low_occupancy"}, Applied: false, CreatedAt: time.Now()},
 			}
 		}
-		respondJSON(w, http.StatusOK, map[string]interface{}{"recommendations": recs})
+		writeJSON(w, http.StatusOK, map[string]interface{}{"recommendations": recs})
 		return
 	}
-	respondError(w, http.StatusMethodNotAllowed, "method not allowed")
+	writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 }
 
 func (s *Server) handleApplyRecommendation(w http.ResponseWriter, r *http.Request) {
@@ -320,17 +320,17 @@ func (s *Server) handleApplyRecommendation(w http.ResponseWriter, r *http.Reques
 			ID string `json:"id"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondError(w, http.StatusBadRequest, "invalid body")
+			writeJSONError(w, http.StatusBadRequest, "invalid body")
 			return
 		}
 		if err := s.repo.GuestJourney.ApplyRecommendation(r.Context(), req.ID, tenantID); err != nil {
-			respondError(w, http.StatusInternalServerError, err.Error())
+			writeJSONError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		respondJSON(w, http.StatusOK, map[string]string{"status": "applied"})
+		writeJSON(w, http.StatusOK, map[string]string{"status": "applied"})
 		return
 	}
-	respondError(w, http.StatusMethodNotAllowed, "method not allowed")
+	writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 }
 
 /* ─── Rate Shop Config Handler ─── */
@@ -345,25 +345,23 @@ func (s *Server) handleRateShopConfig(w http.ResponseWriter, r *http.Request) {
 				CreatedAt: time.Now(), UpdatedAt: time.Now(),
 			}
 		}
-		respondJSON(w, http.StatusOK, config)
+		writeJSON(w, http.StatusOK, config)
 		return
 	}
 	if r.Method == http.MethodPatch {
 		var req domain.RateShopConfig
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondError(w, http.StatusBadRequest, "invalid body")
+			writeJSONError(w, http.StatusBadRequest, "invalid body")
 			return
 		}
 		req.TenantID = tenantID
 		req.UpdatedAt = time.Now()
 		if err := s.repo.GuestJourney.SaveRateShopConfig(r.Context(), &req); err != nil {
-			respondError(w, http.StatusInternalServerError, err.Error())
+			writeJSONError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		respondJSON(w, http.StatusOK, req)
+		writeJSON(w, http.StatusOK, req)
 		return
 	}
-	respondError(w, http.StatusMethodNotAllowed, "method not allowed")
+	writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 }
-
-func strPtr(s string) *string { return &s }

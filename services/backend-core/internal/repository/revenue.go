@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nexus-platform/backend-core/internal/db"
-	"nexus-hospitality-platform/services/backend-core/internal/domain"
+	"github.com/nexus-platform/backend-core/internal/domain"
 )
 
 // RevenueRepository handles revenue analytics and forecasting.

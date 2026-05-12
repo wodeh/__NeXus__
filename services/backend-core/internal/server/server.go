@@ -62,7 +62,6 @@ func (s *Server) Start(ctx context.Context) error {
 	s.registerChannelManagerHandlers(mux)
 	s.registerRevenueHandlers(mux)
 	s.registerAgentHandlers(mux)
-	s.registerChannelHandlers(mux)
 	s.registerLockHandlers(mux)
 	s.registerWhatsAppHandlers(mux)
 	s.registerReviewHandlers(mux)
@@ -192,4 +191,8 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(data)
+}
+
+func writeJSONError(w http.ResponseWriter, status int, message string) {
+	writeJSON(w, status, map[string]string{"error": message})
 }

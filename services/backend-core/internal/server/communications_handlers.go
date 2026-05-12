@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nexus-platform/backend-core/internal/domain"
+	"github.com/nexus-platform/backend-core/internal/repository"
 )
 
 func (s *Server) registerCommHandlers(mux *http.ServeMux) {
@@ -16,9 +17,11 @@ func (s *Server) registerCommHandlers(mux *http.ServeMux) {
 }
 
 // handleGetTemplates returns communication templates.
-func (s *Server) handleGetTemplates(w http.ResponseWriter, r *http.Request, tenantID string) {
+func (s *Server) handleGetTemplates(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tenantID, _ := ctx.Value("tenant_id").(string)
 	repo := repository.NewCommRepository(s.repo.Pool())
-	templates, err := repo.ListTemplates(r.Context(), tenantID)
+	templates, err := repo.ListTemplates(ctx, tenantID)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -30,9 +33,11 @@ func (s *Server) handleGetTemplates(w http.ResponseWriter, r *http.Request, tena
 }
 
 // handleGetSequences returns communication sequences.
-func (s *Server) handleGetSequences(w http.ResponseWriter, r *http.Request, tenantID string) {
+func (s *Server) handleGetSequences(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tenantID, _ := ctx.Value("tenant_id").(string)
 	repo := repository.NewCommRepository(s.repo.Pool())
-	sequences, err := repo.ListSequences(r.Context(), tenantID)
+	sequences, err := repo.ListSequences(ctx, tenantID)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -44,9 +49,11 @@ func (s *Server) handleGetSequences(w http.ResponseWriter, r *http.Request, tena
 }
 
 // handleGetScheduled returns scheduled communications.
-func (s *Server) handleGetScheduled(w http.ResponseWriter, r *http.Request, tenantID string) {
+func (s *Server) handleGetScheduled(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tenantID, _ := ctx.Value("tenant_id").(string)
 	repo := repository.NewCommRepository(s.repo.Pool())
-	scheduled, err := repo.ListScheduled(r.Context(), tenantID)
+	scheduled, err := repo.ListScheduled(ctx, tenantID)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -93,5 +100,3 @@ func demoScheduled(tenantID string) []domain.CommScheduled {
 		{ID: uuid.MustParse("cccc0005-0000-0000-0000-000000000004"), TenantID: tid, GuestName: "David Kim", Channel: "whatsapp", Body: body("Check-in reminder: tomorrow 3PM"), Status: "failed", ScheduledAt: now.Add(-2 * time.Hour), Error: strPtr("Invalid phone number"), CreatedAt: now},
 	}
 }
-
-func strPtr(s string) *string { return &s }

@@ -6,16 +6,17 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"nexus-hospitality-platform/services/backend-core/internal/domain"
+	"github.com/nexus-platform/backend-core/internal/domain"
+	"github.com/nexus-platform/backend-core/internal/repository"
 )
 
 func (s *Server) registerReservationDetailHandlers(mux *http.ServeMux) {
-	mux.HandleFunc("/v1/reservations/", s.withTenant(s.handleReservationDetail))
+	mux.HandleFunc("/v1/reservations/", s.withTenant(s.handleReservationDetailView))
 	mux.HandleFunc("/v1/reservations/bulk", s.withTenant(s.handleBulkReservations))
 	mux.HandleFunc("/v1/room-status", s.withTenant(s.handleRoomStatusView))
 }
 
-func (s *Server) handleReservationDetail(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleReservationDetailView(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	tenantIDStr, _ := ctx.Value("tenant_id").(string)
 	tenantID, _ := uuid.Parse(tenantIDStr)
@@ -116,8 +117,9 @@ func (s *Server) handleBulkReservations(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var created []domain.Reservation
+	repo := repository.NewReservationRepository(s.repo.Pool())
 	for _, createReq := range req.Reservations {
-		res, err := s.repo.Reservations.Create(ctx, nil, tenantID.String(), &createReq)
+		res, err := repo.Create(ctx, nil, tenantID.String(), &createReq)
 		if err != nil {
 			continue
 		}

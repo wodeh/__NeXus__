@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"nexus-hospitality-platform/services/backend-core/internal/db"
-	"nexus-hospitality-platform/services/backend-core/internal/domain"
+	"github.com/nexus-platform/backend-core/internal/db"
+	"github.com/nexus-platform/backend-core/internal/domain"
 )
 
 type GuestJourneyRepository struct {

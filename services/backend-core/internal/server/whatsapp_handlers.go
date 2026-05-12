@@ -195,7 +195,7 @@ func (s *Server) handleWhatsAppTemplates(w http.ResponseWriter, r *http.Request)
 	if r.Method == http.MethodGet {
 		tmpls, err := repo.ListTemplates(ctx, tenantID)
 		if err != nil {
-			writeJSON(w, http.StatusOK, map[string]interface{}{"templates": demoTemplates(tenantID)})
+			writeJSON(w, http.StatusOK, map[string]interface{}{"templates": demoWhatsAppTemplates(tenantID)})
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]interface{}{"templates": tmpls})
@@ -249,7 +249,7 @@ func demoConfig(tenantID string) *domain.WhatsAppBotConfig {
 	}
 }
 
-func demoTemplates(tenantID string) []domain.WhatsAppTemplate {
+func demoWhatsAppTemplates(tenantID string) []domain.WhatsAppTemplate {
 	now := time.Now()
 	tid := tenantUUID(tenantID)
 	return []domain.WhatsAppTemplate{

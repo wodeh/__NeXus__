@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"nexus-hospitality-platform/services/backend-core/internal/db"
-	"nexus-hospitality-platform/services/backend-core/internal/domain"
+	"github.com/nexus-platform/backend-core/internal/db"
+	"github.com/nexus-platform/backend-core/internal/domain"
 )
 
 // VillaRepository handles villa rental data access.
@@ -388,7 +388,9 @@ func (r *VillaRepository) GetVillaRevenueStats(ctx context.Context, start, end s
 		stats.VillaBreakdown = append(stats.VillaBreakdown, vb)
 	}
 
-	daysInPeriod := int(time.Time(end).Sub(time.Time(start)).Hours()/24) + 1
+	startT, _ := time.Parse("2006-01-02", start)
+	endT, _ := time.Parse("2006-01-02", end)
+	daysInPeriod := int(endT.Sub(startT).Hours()/24) + 1
 	if daysInPeriod > 0 {
 		stats.OccupancyRate = float64(totalVillaNights) / float64(len(stats.VillaBreakdown)*daysInPeriod) * 100
 	}

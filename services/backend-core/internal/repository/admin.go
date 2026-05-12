@@ -2,12 +2,12 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/nexus-platform/backend-core/internal/db"
-	"nexus-hospitality-platform/services/backend-core/internal/domain"
+	"github.com/nexus-platform/backend-core/internal/domain"
 )
 
 // AdminRepository handles admin CRUD for users, properties, and system config.
@@ -68,7 +68,7 @@ func (r *AdminRepository) ListUsers(ctx context.Context, tenantID uuid.UUID) ([]
 	var out []domain.UserWithRole
 	for rows.Next() {
 		var u domain.UserWithRole
-		var lastLogin pgx.NullTime
+		var lastLogin sql.NullTime
 		if err := rows.Scan(&u.ID, &u.TenantID, &u.Email, &u.Name, &u.Role, &u.IsActive, &lastLogin, &u.CreatedAt); err != nil { continue }
 		if lastLogin.Valid { t := lastLogin.Time; u.LastLoginAt = &t }
 		out = append(out, u)
@@ -78,7 +78,7 @@ func (r *AdminRepository) ListUsers(ctx context.Context, tenantID uuid.UUID) ([]
 
 func (r *AdminRepository) GetUser(ctx context.Context, tenantID, id uuid.UUID) (*domain.UserWithRole, error) {
 	var u domain.UserWithRole
-	var lastLogin pgx.NullTime
+	var lastLogin sql.NullTime
 	err := r.pool.QueryRow(ctx, `
 		SELECT id, tenant_id, email, name, role, is_active, last_login_at, created_at
 		FROM users WHERE tenant_id=$1 AND id=$2 AND deleted_at IS NULL`, tenantID, id).

@@ -212,4 +212,3 @@ func demoAccessCodes(lockID string) []domain.AccessCode {
 	}
 }
 
-func intPtr(v int) *int { return &v }

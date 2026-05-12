@@ -3,10 +3,9 @@ package server
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"time"
 
-	"nexus-hospitality-platform/services/backend-core/internal/domain"
+	"github.com/nexus-platform/backend-core/internal/domain"
 )
 
 func (s *Server) registerVillaHandlers(mux *http.ServeMux) {
