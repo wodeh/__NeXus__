@@ -104,7 +104,8 @@ const statusBadge: Record<string, string> = {
 export default function TapechartPage() {
   const today = useMemo(() => {
     const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "T")[0], []);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
   const [startDate, setStartDate] = useState(today);
   const [dayCount, setDayCount] = useState(14);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -211,9 +212,6 @@ export default function TapechartPage() {
     const movedId = draggingRes.id;
 
     // Preserve original stay length when moving dates
-    const stayLength = Math.max(1, Math.round(
-      (new Date(draggingRes.check_out + "T00:00:00").getTime() - new Date(draggingRes.check_in + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24)
-    ));
     const newCheckOut = addDays(date, stayLength);
 
     // 2. Optimistic UI: immediately show bar at new position
