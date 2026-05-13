@@ -206,9 +206,9 @@ export default function GuestJourneyPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="h-2 w-24 rounded-full bg-slate-800">
-                        <div className="h-full rounded-full bg-nexus-500" style={{ width: `${(e.current_step / Math.max(e.total_steps, 1)) * 100}%` }} />
+                        <div className="h-full rounded-full bg-nexus-500" style={{ width: `${((e.current_step || 0) / Math.max(e.total_steps || 1, 1)) * 100}%` }} />
                       </div>
-                      <span className="text-xs text-slate-400">{e.current_step}/{e.total_steps}</span>
+                      <span className="text-xs text-slate-400">{e.current_step || 0}/{e.total_steps || 0}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
