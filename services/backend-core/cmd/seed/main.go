@@ -237,7 +237,18 @@ func main() {
 		err := pool.QueryRow(ctx, `
 			INSERT INTO villa_properties (tenant_id, name, description, address, city, country, bedrooms, bathrooms, max_guests, amenities, price_per_night, currency, cleaning_fee, security_deposit, is_active, status)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'USD', $12, $13, true, 'available')
-			ON CONFLICT DO NOTHING
+			ON CONFLICT (tenant_id, name) DO UPDATE SET
+				description = EXCLUDED.description,
+				address = EXCLUDED.address,
+				city = EXCLUDED.city,
+				country = EXCLUDED.country,
+				bedrooms = EXCLUDED.bedrooms,
+				bathrooms = EXCLUDED.bathrooms,
+				max_guests = EXCLUDED.max_guests,
+				amenities = EXCLUDED.amenities,
+				price_per_night = EXCLUDED.price_per_night,
+				cleaning_fee = EXCLUDED.cleaning_fee,
+				security_deposit = EXCLUDED.security_deposit
 			RETURNING id
 		`, tenantID, v.name, v.description, v.address, v.city, v.country, v.bedrooms, v.bathrooms, v.maxGuests, v.amenities, v.pricePerNight, v.cleaningFee, v.securityDep).Scan(&id)
 		if err != nil {
