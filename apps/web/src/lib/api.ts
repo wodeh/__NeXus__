@@ -1,56 +1,57 @@
 
-/* ─── Upsell API ─── */
+/* ─── WhatsApp API ─── */
 
-export interface UpsellOffer {
+export interface WhatsAppConfig {
   id: string;
   tenant_id: string;
-  name: string;
-  description?: string;
-  category: string;
-  price: number;
-  image_url?: string;
+  phone_number: string;
+  api_key?: string;
+  webhook_url?: string;
   is_active: boolean;
-  inventory_count?: number;
-  max_per_guest?: number;
-  requires_approval: boolean;
+  welcome_message?: string;
+  auto_reply_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
 
-export interface UpsellPurchase {
+export async function getWhatsAppConfig(): Promise<WhatsAppConfig> {
+  return api("/v1/whatsapp/config");
+}
+
+export async function updateWhatsAppConfig(payload: Partial<WhatsAppConfig>): Promise<WhatsAppConfig> {
+  return api("/v1/whatsapp/config", { method: "PATCH", body: JSON.stringify(payload) });
+}
+
+/* ─── Tenant API ─── */
+
+export async function getTenantConfig(): Promise<TenantConfig> {
+  return api("/v1/tenant/config");
+}
+
+/* ─── Agent API ─── */
+
+export interface Agent {
   id: string;
   tenant_id: string;
-  offer_id: string;
-  offer_name: string;
-  reservation_id: string;
-  guest_name: string;
-  room_number?: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  status: "pending" | "approved" | "delivered" | "cancelled" | "refunded";
-  requested_at: string;
-  fulfilled_at?: string;
+  name: string;
+  email: string;
+  role: string;
+  phone?: string;
+  commission_rate?: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
-export async function getUpsellOffers(): Promise<UpsellOffer[]> {
-  const data = await api<{ offers: UpsellOffer[] }>("/v1/upsells");
-  return data.offers || [];
+export async function getAgents(): Promise<Agent[]> {
+  const data = await api<{ agents: Agent[] }>("/v1/agents");
+  return data.agents || [];
 }
 
-export async function getUpsellPurchases(): Promise<UpsellPurchase[]> {
-  const data = await api<{ purchases: UpsellPurchase[] }>("/v1/upsells/purchases");
-  return data.purchases || [];
+export async function updateAgent(id: string, payload: Partial<Agent>): Promise<Agent> {
+  return api(`/v1/agents/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
 }
 
-export async function createUpsellOffer(payload: Omit<UpsellOffer, "id" | "tenant_id" | "created_at" | "updated_at">): Promise<UpsellOffer> {
-  return api("/v1/upsells", { method: "POST", body: JSON.stringify(payload) });
-}
-
-export async function updateUpsellOffer(id: string, payload: Partial<UpsellOffer>): Promise<UpsellOffer> {
-  return api(`/v1/upsells/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
-}
-
-export async function deleteUpsellOffer(id: string): Promise<void> {
-  return api(`/v1/upsells/${id}`, { method: "DELETE" });
+export async function deleteAgent(id: string): Promise<void> {
+  return api(`/v1/agents/${id}`, { method: "DELETE" });
 }
