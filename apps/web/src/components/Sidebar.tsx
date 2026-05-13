@@ -65,6 +65,7 @@ const navItems: NavItem[] = [
   { label: "Settings", href: "/settings", icon: Settings, cap: CAPABILITIES.CORE.SETTINGS },
   { label: "My Villas", href: "/villas", icon: Home, cap: CAPABILITIES.VILLA.PROPERTIES },
   { label: "Bookings", href: "/villa-reservations", icon: CalendarDays, cap: CAPABILITIES.VILLA.RESERVATIONS },
+  { label: "Tapechart", href: "/villa-tapechart", icon: CalendarDays, cap: CAPABILITIES.VILLA.RESERVATIONS },
   { label: "Villa Revenue", href: "/villa-revenue", icon: TrendingUp, cap: CAPABILITIES.VILLA.REVENUE },
   { label: "Cleaner Tracking", href: "/cleaner-tracking", icon: Smartphone, cap: CAPABILITIES.VILLA.CLEANER_TRACKING },
 ];

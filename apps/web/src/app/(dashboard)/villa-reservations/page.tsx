@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Calendar, Plus, Edit3, Trash2, CheckCircle2, X, RefreshCw, AlertTriangle,
   Phone, MessageSquare, DollarSign, Clock, User, ChevronRight,
-  CreditCard, Banknote, ArrowRightLeft, Wallet,
+  CreditCard, Banknote, ArrowRightLeft, Wallet, LayoutGrid,
 } from "lucide-react";
+import Link from "next/link";
 import {
   getVillaReservations, getVillas, createVillaReservation, updateVillaReservation, deleteVillaReservation,
   VillaReservation, VillaProperty,
@@ -122,9 +123,14 @@ export default function VillaReservationsPage() {
           </h1>
           <p className="text-sm text-slate-400">Day-based villa bookings · Down payment tracking · WhatsApp/Phone sources</p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="btn-primary gap-2">
-          <Plus className="h-4 w-4" /> New Booking
-        </button>
+        <div className="flex items-center gap-2">
+          <Link href="/villa-tapechart" className="btn-secondary gap-2 text-sm">
+            <LayoutGrid className="h-4 w-4" /> Tapechart View
+          </Link>
+          <button onClick={() => setShowCreate(true)} className="btn-primary gap-2">
+            <Plus className="h-4 w-4" /> New Booking
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
