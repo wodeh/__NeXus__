@@ -207,6 +207,10 @@ export interface RateShopConfig {
   tenant_id: string;
   enabled: boolean;
   frequency: string;
+  frequency_hours?: number;
+  lookahead_days?: number;
+  auto_adjust?: boolean;
+  max_adjustment_pct?: number;
   competitors: string[];
   room_types: string[];
   alert_threshold_pct: number;
