@@ -63,7 +63,7 @@ jobs:
       - name: Run tests
         run: |
           cd services/pms-integration
-          go test -v -race -coverprofile=coverage.out ./... || true
+          go test -v -race -coverprofile=coverage.out ./...
       - name: Build binary
         run: |
           cd services/pms-integration

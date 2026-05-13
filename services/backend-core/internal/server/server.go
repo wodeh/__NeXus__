@@ -4,18 +4,46 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/nexus-platform/backend-core/internal/auth"
 	"github.com/nexus-platform/backend-core/internal/config"
 	"github.com/nexus-platform/backend-core/internal/events"
 	"github.com/nexus-platform/backend-core/internal/health"
 	"github.com/nexus-platform/backend-core/internal/metrics"
 	"github.com/nexus-platform/backend-core/internal/repository"
 )
+
+// jwtAudience is the expected JWT audience claim.
+const jwtAudience = "nexus-api"
+
+// isPublicRoute returns true for routes that do not require JWT authentication.
+func isPublicRoute(path string) bool {
+	// Exact match routes
+	if path == "/health" || path == "/ready" || path == "/live" {
+		return true
+	}
+	// Auth endpoints (allow registration too if added later)
+	if path == "/v1/auth/login" || strings.HasPrefix(path, "/v1/auth/login") {
+		return true
+	}
+	return false
+}
+
+// jwtSecretFromEnv returns the HMAC secret for JWT validation.
+// Falls back to a development-only key (NOT safe for production).
+func jwtSecretFromEnv() []byte {
+	secret := os.Getenv("JWT_SECRET")
+	if secret != "" {
+		return []byte(secret)
+	}
+	// Fallback development key — NOT for production
+	return []byte("nexus-dev-jwt-secret-do-not-use-in-production-2024")
+}
 
 // Server wraps the HTTP server with observability and tenant isolation.
 type Server struct {
@@ -74,9 +102,27 @@ func (s *Server) Start(ctx context.Context) error {
 	s.registerAuthHandlers(mux)
 	s.registerVillaHandlers(mux)
 	s.registerHousekeepingHandlers(mux)
-	// Wrap all routes with CORS, then metrics
+
+	// Build middleware chain: CORS → JWT → Metrics
+	// CORS is outermost, then JWT auth, then metrics tracking
+	jwtValidator := auth.NewHMACValidator(jwtSecretFromEnv(), "nexus-backend", jwtAudience)
+	jwtMiddleware := auth.JWTMiddleware(jwtValidator)
+
+	// CORS wraps everything
 	corsHandler := withCORS(mux.ServeHTTP)
-	wrapped := s.withMetrics(http.HandlerFunc(corsHandler))
+
+	// Apply JWT middleware to the CORS-wrapped handler, but skip for public routes
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isPublicRoute(r.URL.Path) {
+			// Public route: skip JWT, but still apply CORS and metrics
+			corsHandler(w, r)
+			return
+		}
+		// Protected route: validate JWT first, then continue through CORS
+		jwtMiddleware(http.HandlerFunc(corsHandler)).ServeHTTP(w, r)
+	})
+
+	wrapped := s.withMetrics(handler)
 
 	s.httpServer = &http.Server{
 		Addr:         ":" + s.cfg.HTTPPort,
@@ -115,6 +161,12 @@ func (s *Server) withMetrics(next http.Handler) http.Handler {
 		duration := time.Since(start).Seconds()
 		tenantID := r.Header.Get("X-Tenant-ID")
 		if tenantID == "" {
+			// Try to get tenant_id from JWT context
+			if tid, ok := auth.TenantIDFromContext(r.Context()); ok {
+				tenantID = tid
+			}
+		}
+		if tenantID == "" {
 			tenantID = "unknown"
 		}
 		s.metrics.IncrementCounter("http_requests_total", tenantID)
@@ -124,44 +176,59 @@ func (s *Server) withMetrics(next http.Handler) http.Handler {
 
 func (s *Server) withTenant(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		headerValue := r.Header.Get("X-Tenant-ID")
-		if headerValue == "" {
-			http.Error(w, `{"error":"missing X-Tenant-ID header"}`, http.StatusBadRequest)
-			return
-		}
+		ctx := r.Context()
 
-		// Try parsing as UUID directly
-		tenantID := headerValue
-		if _, err := uuid.Parse(headerValue); err != nil {
-			// Not a UUID — look up by external_id
-			if s.repo == nil {
-				http.Error(w, `{"error":"database not configured"}`, http.StatusServiceUnavailable)
+		// First: try to get tenant_id from JWT claims (set by JWT middleware)
+		tenantID, hasJWTTenant := auth.TenantIDFromContext(ctx)
+
+		// Second: if no JWT tenant, fall back to X-Tenant-ID header for lookup
+		if !hasJWTTenant || tenantID == "" {
+			headerValue := r.Header.Get("X-Tenant-ID")
+			if headerValue == "" {
+				writeJSONError(w, http.StatusBadRequest, "missing X-Tenant-ID header")
 				return
 			}
-			tenant, err := s.repo.Tenants.GetByExternalID(r.Context(), headerValue)
-			if err != nil {
-				http.Error(w, fmt.Sprintf(`{"error":"tenant not found: %s"}`, headerValue), http.StatusNotFound)
-				return
+
+			// Try parsing as UUID directly
+			tenantID = headerValue
+			if _, err := uuid.Parse(headerValue); err != nil {
+				// Not a UUID — look up by external_id
+				if s.repo == nil {
+					writeJSONError(w, http.StatusServiceUnavailable, "database not configured")
+					return
+				}
+				tenant, err := s.repo.Tenants.GetByExternalID(r.Context(), headerValue)
+				if err != nil {
+					writeJSONError(w, http.StatusNotFound, "tenant not found")
+					return
+				}
+				tenantID = tenant.ID.String()
 			}
-			tenantID = tenant.ID.String()
 		}
 
-	// Bind tenant to DB session for RLS
+		// Bind tenant to DB session for RLS
 		if s.repo != nil {
 			if err := s.repo.SetTenant(r.Context(), tenantID); err != nil {
 				slog.Warn("failed to set db tenant", slog.String("error", err.Error()))
 			}
 		}
 
-		ctx := context.WithValue(r.Context(), "tenant_id", tenantID)
+		// Ensure tenant_id is in context for downstream handlers.
+		// We always set the raw string key for compatibility with existing
+		// handlers that use ctx.Value("tenant_id").(string).
+		ctx = context.WithValue(ctx, "tenant_id", tenantID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }
 
 func (s *Server) handleTenantAPI(w http.ResponseWriter, r *http.Request) {
-	tenantID, ok := r.Context().Value("tenant_id").(string)
+	ctx := r.Context()
+	tenantID, ok := auth.TenantIDFromContext(ctx)
 	if !ok || tenantID == "" {
-		http.Error(w, `{"error":"missing or invalid tenant context"}`, http.StatusInternalServerError)
+		tenantID, _ = ctx.Value("tenant_id").(string)
+	}
+	if tenantID == "" {
+		writeJSONError(w, http.StatusInternalServerError, "missing or invalid tenant context")
 		return
 	}
 
@@ -243,13 +310,17 @@ func (s *Server) handleTenantAPI(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handlePublishEvent(w http.ResponseWriter, r *http.Request) {
 	if s.producer == nil {
-		http.Error(w, `{"error":"event producer not configured"}`, http.StatusServiceUnavailable)
+		writeJSONError(w, http.StatusServiceUnavailable, "event producer not configured")
 		return
 	}
 
-	tenantID, ok := r.Context().Value("tenant_id").(string)
+	ctx := r.Context()
+	tenantID, ok := auth.TenantIDFromContext(ctx)
 	if !ok || tenantID == "" {
-		http.Error(w, `{"error":"missing or invalid tenant context"}`, http.StatusInternalServerError)
+		tenantID, _ = ctx.Value("tenant_id").(string)
+	}
+	if tenantID == "" {
+		writeJSONError(w, http.StatusInternalServerError, "missing or invalid tenant context")
 		return
 	}
 
@@ -258,18 +329,18 @@ func (s *Server) handlePublishEvent(w http.ResponseWriter, r *http.Request) {
 		Payload   map[string]interface{} `json:"payload"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	event, err := events.NewEvent(req.EventType, "1.0", tenantID, "", "backend-core", req.Payload)
 	if err != nil {
-		http.Error(w, `{"error":"failed to create event"}`, http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "failed to create event")
 		return
 	}
 
 	if err := s.producer.Publish(r.Context(), event); err != nil {
-		http.Error(w, `{"error":"failed to publish event"}`, http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "failed to publish event")
 		return
 	}
 
@@ -284,4 +355,6 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 
 func writeJSONError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
+}
+ message})
 }

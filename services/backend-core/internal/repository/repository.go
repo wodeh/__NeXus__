@@ -54,11 +54,17 @@ func (s *Store) Ping(ctx context.Context) error {
 
 // SetTenant binds the underlying pool to a tenant for RLS-aware queries.
 func (s *Store) SetTenant(ctx context.Context, tenantID string) error {
+	if s.pool == nil {
+		return fmt.Errorf("pool not initialized")
+	}
 	return s.pool.SetTenant(ctx, tenantID)
 }
 
 // ResetTenant clears the tenant binding.
 func (s *Store) ResetTenant(ctx context.Context) error {
+	if s.pool == nil {
+		return fmt.Errorf("pool not initialized")
+	}
 	return s.pool.ResetTenant(ctx)
 }
 

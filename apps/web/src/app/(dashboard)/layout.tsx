@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { apiClient } from "@/lib/api";
 import { TenantConfig } from "@/lib/tenant";
 import { useAuth } from "@/lib/auth";
@@ -45,7 +46,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, token, isLoading, isVillaOwner } = useAuth();
+  const { user, isLoading, isVillaOwner } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [tenantConfig, setTenantConfig] = useState<TenantConfig | null>(null);
@@ -63,16 +64,17 @@ export default function DashboardLayout({
       setLoading(false);
       return;
     }
-    const tenant = isVillaOwner ? "villa-owners" : (localStorage.getItem("nexus-tenant") || "demo");
+    // Use the tenant's external_id from auth context, or fall back to "demo"
+    const tenantExternalId = isVillaOwner ? "villa-owners" : (user?.tenant_id || "demo");
     apiClient
-      .get(`/v1/tenant/${tenant}`)
+      .get(`/v1/tenant/${tenantExternalId}`)
       .then((data) => {
         const cfg = data as TenantConfig;
         // Override capabilities for villa owners
         if (isVillaOwner) {
           cfg.capabilities = villaOwnerCapabilities;
           cfg.property_type = "villa";
-          cfg.name = user.name + " — Villa Owner";
+          cfg.name = user.name + " \u2014 Villa Owner";
         }
         setTenantConfig(cfg);
         setLoading(false);
@@ -82,7 +84,7 @@ export default function DashboardLayout({
         if (isVillaOwner) {
           cfg.capabilities = villaOwnerCapabilities;
           cfg.property_type = "villa";
-          cfg.name = user?.name + " — Villa Owner" || "Villa Owner";
+          cfg.name = user?.name + " \u2014 Villa Owner" || "Villa Owner";
         }
         setTenantConfig(cfg);
         setLoading(false);
@@ -102,12 +104,16 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar tenantConfig={tenantConfig || fallbackConfig} />
-      <div className="ml-60 flex flex-1 flex-col">
-        <Topbar tenantConfig={tenantConfig || fallbackConfig} />
-        <main className="flex-1 p-6">{children}</main>
+    <ErrorBoundary>
+      <div className="flex min-h-screen">
+        <Sidebar tenantConfig={tenantConfig || fallbackConfig} />
+        <div className="ml-60 flex flex-1 flex-col">
+          <Topbar tenantConfig={tenantConfig || fallbackConfig} />
+          <main className="flex-1 p-6">
+            <ErrorBoundary>{children}</ErrorBoundary>
+          </main>
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }

@@ -3,13 +3,27 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"time"
 
-	"github.com/google/uuid"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
+// jwtSecret returns the HMAC secret for signing JWTs.
+// In production this MUST be set via JWT_SECRET environment variable.
+// The fallback is only safe for local development.
+func jwtSecret() []byte {
+	secret := os.Getenv("JWT_SECRET")
+	if secret != "" {
+		return []byte(secret)
+	}
+	// Fallback development key — NOT for production
+	return []byte("nexus-dev-jwt-secret-do-not-use-in-production-2024")
+}
+
 func (s *Server) registerAuthHandlers(mux *http.ServeMux) {
-	mux.HandleFunc("/v1/auth/login", s.handleLogin)
+	mux.HandleFunc("/v1/auth/login", s.withRateLimit(s.handleLogin))
 	mux.HandleFunc("/v1/auth/me", s.withTenant(s.handleMe))
 }
 
@@ -59,15 +73,37 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		tenantName = tenant.Name
 		tenantExternalID = tenant.ExternalID
 	}
-	token := uuid.New().String()
+
+	// Build capability list based on role
 	capabilities := defaultCapabilities()
 	if creds.Role == "super_admin" || creds.Role == "admin" {
 		capabilities = adminCapabilities()
 	} else if creds.Role == "manager" && tenantExternalID == "villa-owners" {
 		capabilities = villaOwnerCapabilities()
 	}
+
+	// Generate proper JWT with claims
+	now := time.Now()
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":          creds.ID.String(),
+		"email":        creds.Email,
+		"role":         creds.Role,
+		"tenant_id":    creds.TenantID.String(),
+		"capabilities": capabilities,
+		"iat":          now.Unix(),
+		"exp":          now.Add(24 * time.Hour).Unix(),
+		"iss":          "nexus-backend",
+		"aud":          "nexus-api",
+	})
+
+	tokenString, err := token.SignedString(jwtSecret())
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to generate token")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"token": token,
+		"token": tokenString,
 		"user": map[string]interface{}{
 			"id": creds.ID, "email": creds.Email, "name": creds.Name,
 			"role": creds.Role, "tenant_id": creds.TenantID, "is_active": creds.IsActive,
@@ -82,7 +118,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	tenantID, _ := ctx.Value("tenant_id").(string)
-	writeJSON(w, http.StatusOK, map[string]interface{}{"tenant_id": tenantID})
+	userID, _ := ctx.Value("user_id").(string)
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"tenant_id": tenantID,
+		"user_id":   userID,
+	})
 }
 
 func defaultCapabilities() []string {

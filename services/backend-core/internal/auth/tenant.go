@@ -1,6 +1,9 @@
 package auth
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 type contextKey string
 
@@ -31,12 +34,12 @@ func TenantIDFromContext(ctx context.Context) (string, bool) {
 	return v, ok
 }
 
-// RequireTenantID returns the tenant ID or panics if missing.
-// Use only in handlers where middleware guarantees presence.
-func RequireTenantID(ctx context.Context) string {
+// RequireTenantID returns the tenant ID or an error if missing.
+// Use in handlers where middleware guarantees presence; callers must handle the error.
+func RequireTenantID(ctx context.Context) (string, error) {
 	v, ok := TenantIDFromContext(ctx)
 	if !ok {
-		panic("tenant_id missing from context")
+		return "", fmt.Errorf("tenant_id missing from context")
 	}
-	return v
+	return v, nil
 }

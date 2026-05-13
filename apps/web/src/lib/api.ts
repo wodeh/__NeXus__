@@ -3,21 +3,6 @@ import { TenantConfig } from "@/lib/tenant";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || "demo";
 
-function getAuthHeaders(): Record<string, string> {
-  const auth = typeof window !== "undefined" ? localStorage.getItem("nexus-auth") : null;
-  if (auth) {
-    try {
-      const parsed = JSON.parse(auth);
-      if (parsed.token) {
-        return { Authorization: `Bearer ${parsed.token}` };
-      }
-    } catch {
-      // ignore
-    }
-  }
-  return {};
-}
-
 function getTenantId(): string {
   if (typeof window !== "undefined") {
     const saved = localStorage.getItem("nexus-tenant");
@@ -28,14 +13,13 @@ function getTenantId(): string {
 
 async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   const isGet = !opts || !opts.method || opts.method === "GET";
-  const authHeaders = getAuthHeaders();
   const tenantId = getTenantId();
 
   const res = await fetch(`${API_BASE}${path}`, {
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       "X-Tenant-ID": tenantId,
-      ...authHeaders,
       ...(opts?.headers || {}),
     },
     cache: isGet ? "no-store" : undefined,
@@ -1000,474 +984,31 @@ export interface ReservationDetail {
     floor?: string;
     bed_type?: string;
     rate_night: number;
-    total_nights: number;
   };
-  dates: {
+  stay: {
     check_in: string;
     check_out: string;
-    arrival_time?: string;
-    departure_time?: string;
-    late_checkout?: boolean;
-    early_checkin?: boolean;
-  };
-  party: {
+    nights: number;
     adults: number;
     children: number;
-    infants?: number;
+    status: string;
+    source: string;
   };
-  financials: {
-    room_total: number;
-    extras_total?: number;
-    tax_total?: number;
-    discount?: number;
+  charges: {
+    subtotal: number;
+    tax: number;
     total: number;
-    paid?: number;
+    paid: number;
     balance: number;
-    currency: string;
-    deposit_required?: number;
-    deposit_paid?: number;
   };
-  status: string;
-  source: string;
-  special_requests?: string;
-  internal_notes?: string;
-  communication_log?: Array<{
-    id: string;
-    channel: string;
-    direction: string;
-    content: string;
-    sent_at: string;
-    status: string;
-  }>;
-  activity_log?: Array<{
-    id: string;
-    user_id: string;
-    user_name: string;
-    action: string;
-    details?: string;
-    created_at: string;
-  }>;
-  documents?: Array<{
-    id: string;
-    name: string;
-    type: string;
-    url: string;
-    uploaded_at: string;
-  }>;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface RoomDailyStatus {
-  room_number: string;
-  room_type: string;
-  status: string;
-  guest_name?: string;
-  reservation_id?: string;
-  check_in?: boolean;
-  check_out?: boolean;
-  housekeeping?: string;
-  rate?: number;
-}
-
-export interface RoomStatusView {
-  date: string;
-  rooms: RoomDailyStatus[];
-  occupancy: number;
-  revenue: number;
-  arrivals: number;
-  departures: number;
-  stayovers: number;
-}
-
-export async function getReservationDetail(id: string): Promise<ReservationDetail> {
-  return api<ReservationDetail>(`/v1/reservations/${id}`);
-}
-
-export async function getRoomStatusView(date?: string, view?: string): Promise<{ view: string; dates: RoomStatusView[] }> {
-  const params = new URLSearchParams();
-  if (date) params.append("date", date);
-  if (view) params.append("view", view);
-  return api(`/v1/room-status?${params.toString()}`);
-}
-
-export async function createBulkReservations(payload: { reservations: CreateReservationPayload[] }): Promise<{ created: number; reservations: Reservation[] }> {
-  return api("/v1/reservations/bulk", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
-/* ─── Guest Journey API ─── */
-
-export interface GuestJourney {
-  id: string;
-  tenant_id: string;
-  name: string;
-  trigger: string;
-  is_active: boolean;
-  steps: JourneyStep[];
-  created_at: string;
-  updated_at: string;
-}
-
-export interface JourneyStep {
-  id: string;
-  delay_hours: number;
-  channel: string;
-  template_id: string;
-  upsell_offer_id?: string;
-  condition: string;
-  is_active: boolean;
-}
-
-export interface GuestJourneyExecution {
-  id: string;
-  tenant_id: string;
-  journey_id: string;
-  reservation_id: string;
-  guest_phone: string;
-  current_step: number;
-  total_steps: number;
-  status: string;
-  started_at: string;
-  completed_at?: string;
-  next_trigger_at?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface UpsellOffer {
-  id: string;
-  tenant_id: string;
-  name: string;
-  description: string;
-  category: string;
-  price: number;
-  currency: string;
-  image_url?: string;
-  is_active: boolean;
-  auto_offer: boolean;
-  conditions?: Record<string, unknown>;
-  display_order: number;
-  total_sold: number;
-  revenue_generated: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface UpsellPurchase {
-  id: string;
-  tenant_id: string;
-  reservation_id: string;
-  guest_phone: string;
-  offer_id: string;
-  offer_name: string;
-  price: number;
-  currency: string;
-  status: string;
-  payment_method: string;
-  folio_posted: boolean;
-  journey_step_id?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CompetitorHotel {
-  id: string;
-  tenant_id: string;
-  name: string;
-  address?: string;
-  city?: string;
-  country?: string;
-  star_rating?: number;
-  room_count?: number;
-  website?: string;
-  booking_url?: string;
-  is_active: boolean;
-  last_scraped?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CompetitorRate {
-  id: string;
-  tenant_id: string;
-  competitor_id: string;
-  competitor_name: string;
-  room_type: string;
-  date: string;
-  rate: number;
-  currency: string;
-  availability: number;
-  min_stay: number;
-  is_promo: boolean;
-  source: string;
-  scraped_at: string;
-  created_at: string;
-}
-
-export interface RateRecommendation {
-  id: string;
-  tenant_id: string;
-  room_type: string;
-  date: string;
-  current_rate: number;
-  recommended_rate: number;
-  confidence: number;
-  reason: string;
-  factors: string[];
-  applied: boolean;
-  applied_at?: string;
-  created_at: string;
-}
-
-export interface RateShopConfig {
-  tenant_id: string;
-  enabled: boolean;
-  frequency_hours: number;
-  lookahead_days: number;
-  auto_adjust: boolean;
-  max_adjustment_pct: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export async function getJourneys(): Promise<GuestJourney[]> {
-  const data = await api<{ journeys: GuestJourney[] }>("/v1/journeys");
-  return data.journeys || [];
-}
-
-export async function createJourney(payload: Omit<GuestJourney, "id" | "tenant_id" | "created_at" | "updated_at">): Promise<GuestJourney> {
-  return api<GuestJourney>("/v1/journeys", { method: "POST", body: JSON.stringify(payload) });
-}
-
-export async function updateJourney(id: string, payload: Partial<GuestJourney>): Promise<GuestJourney> {
-  return api<GuestJourney>(`/v1/journeys/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
-}
-
-export async function deleteJourney(id: string): Promise<void> {
-  await api(`/v1/journeys/${id}`, { method: "DELETE" });
-}
-
-export async function getJourneyExecutions(): Promise<GuestJourneyExecution[]> {
-  const data = await api<{ executions: GuestJourneyExecution[] }>("/v1/journey-executions");
-  return data.executions || [];
-}
-
-export async function getUpsellOffers(): Promise<UpsellOffer[]> {
-  const data = await api<{ offers: UpsellOffer[] }>("/v1/upsell-offers");
-  return data.offers || [];
-}
-
-export async function createUpsellOffer(payload: Omit<UpsellOffer, "id" | "tenant_id" | "total_sold" | "revenue_generated" | "created_at" | "updated_at">): Promise<UpsellOffer> {
-  return api<UpsellOffer>("/v1/upsell-offers", { method: "POST", body: JSON.stringify(payload) });
-}
-
-export async function updateUpsellOffer(id: string, payload: Partial<UpsellOffer>): Promise<UpsellOffer> {
-  return api<UpsellOffer>(`/v1/upsell-offers/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
-}
-
-export async function deleteUpsellOffer(id: string): Promise<void> {
-  await api(`/v1/upsell-offers/${id}`, { method: "DELETE" });
-}
-
-export async function getUpsellPurchases(): Promise<UpsellPurchase[]> {
-  const data = await api<{ purchases: UpsellPurchase[] }>("/v1/upsell-purchases");
-  return data.purchases || [];
-}
-
-export async function getCompetitors(): Promise<CompetitorHotel[]> {
-  const data = await api<{ competitors: CompetitorHotel[] }>("/v1/competitors");
-  return data.competitors || [];
-}
-
-export async function createCompetitor(payload: Omit<CompetitorHotel, "id" | "tenant_id" | "created_at" | "updated_at">): Promise<CompetitorHotel> {
-  return api<CompetitorHotel>("/v1/competitors", { method: "POST", body: JSON.stringify(payload) });
-}
-
-export async function deleteCompetitor(id: string): Promise<void> {
-  await api(`/v1/competitors/${id}`, { method: "DELETE" });
-}
-
-export async function getCompetitorRates(): Promise<CompetitorRate[]> {
-  const data = await api<{ rates: CompetitorRate[] }>("/v1/competitor-rates");
-  return data.rates || [];
-}
-
-export async function getRateRecommendations(): Promise<RateRecommendation[]> {
-  const data = await api<{ recommendations: RateRecommendation[] }>("/v1/rate-recommendations");
-  return data.recommendations || [];
-}
-
-export async function applyRateRecommendation(id: string): Promise<{ status: string }> {
-  return api<{ status: string }>("/v1/rate-recommendations/apply", { method: "POST", body: JSON.stringify({ id }) });
-}
-
-export async function getRateShopConfig(): Promise<RateShopConfig> {
-  return api<RateShopConfig>("/v1/rate-shop-config");
-}
-
-export async function updateRateShopConfig(payload: Partial<RateShopConfig>): Promise<RateShopConfig> {
-  return api<RateShopConfig>("/v1/rate-shop-config", { method: "PATCH", body: JSON.stringify(payload) });
-}
-
-/* ─── Villa Rental API ─── */
-
-export interface VillaProperty {
-  id: string;
-  tenant_id: string;
-  name: string;
-  description: string;
-  address: string;
-  city: string;
-  country: string;
-  latitude: number;
-  longitude: number;
-  elevation: number;
-  bedrooms: number;
-  bathrooms: number;
-  max_guests: number;
-  amenities: string[];
-  images: string[];
-  price_per_night: number;
-  currency: string;
-  cleaning_fee: number;
-  security_deposit: number;
-  is_active: boolean;
-  status: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface VillaReservation {
-  id: string;
-  tenant_id: string;
-  villa_id: string;
-  villa_name: string;
-  guest_name: string;
-  guest_phone: string;
-  guest_email: string;
-  guest_count: number;
-  check_in_date: string;
-  check_out_date: string;
-  nights: number;
-  total_amount: number;
-  currency: string;
-  status: string;
-  source: string;
-  internal_notes: string;
-  down_payment?: {
+  extras: Array<{
+    description: string;
     amount: number;
-    method: string;
-    status: string;
-    received_at: string;
-    reference: string;
-    notes: string;
-  };
-  balance_due: number;
-  balance_paid: boolean;
-  created_at: string;
-  updated_at: string;
-  completed_at?: string;
-}
-
-export interface CleanerSensorLog {
-  id: string;
-  tenant_id: string;
-  villa_id: string;
-  villa_name: string;
-  cleaner_id: string;
-  cleaner_name: string;
-  temperature: number;
-  latitude: number;
-  longitude: number;
-  altitude: number;
-  floor: number;
-  location_type: string;
-  battery_level: number;
-  recorded_at: string;
-  created_at: string;
-}
-
-export interface VillaAvailability {
-  villa_id: string;
-  date: string;
-  status: string;
-  reservation_id?: string;
-}
-
-export interface VillaRevenueStats {
-  tenant_id: string;
-  period_start: string;
-  period_end: string;
-  total_revenue: number;
-  total_reservations: number;
-  occupancy_rate: number;
-  avg_booking_value: number;
-  down_payment_total: number;
-  pending_balance: number;
-  villa_breakdown: Array<{
-    villa_id: string;
-    villa_name: string;
-    revenue: number;
-    nights_booked: number;
-    occupancy_pct: number;
+    quantity: number;
   }>;
-}
-
-export async function getVillas(): Promise<VillaProperty[]> {
-  const data = await api<{ villas: VillaProperty[] }>("/v1/villas");
-  return data.villas || [];
-}
-
-export async function createVilla(payload: Omit<VillaProperty, "id" | "tenant_id" | "created_at" | "updated_at">): Promise<VillaProperty> {
-  return api<VillaProperty>("/v1/villas", { method: "POST", body: JSON.stringify(payload) });
-}
-
-export async function updateVilla(id: string, payload: Partial<VillaProperty>): Promise<VillaProperty> {
-  return api<VillaProperty>(`/v1/villas/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
-}
-
-export async function deleteVilla(id: string): Promise<void> {
-  await api(`/v1/villas/${id}`, { method: "DELETE" });
-}
-
-export async function getVillaReservations(): Promise<VillaReservation[]> {
-  const data = await api<{ reservations: VillaReservation[] }>("/v1/villa-reservations");
-  return data.reservations || [];
-}
-
-export async function createVillaReservation(payload: Omit<VillaReservation, "id" | "tenant_id" | "created_at" | "updated_at" | "completed_at">): Promise<VillaReservation> {
-  return api<VillaReservation>("/v1/villa-reservations", { method: "POST", body: JSON.stringify(payload) });
-}
-
-export async function updateVillaReservation(id: string, payload: Partial<VillaReservation>): Promise<VillaReservation> {
-  return api<VillaReservation>(`/v1/villa-reservations/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
-}
-
-export async function deleteVillaReservation(id: string): Promise<void> {
-  await api(`/v1/villa-reservations/${id}`, { method: "DELETE" });
-}
-
-export async function getVillaAvailability(villaId: string, start: string, end: string): Promise<VillaAvailability[]> {
-  const data = await api<{ availability: VillaAvailability[] }>(`/v1/villa-availability?villa_id=${villaId}&start=${start}&end=${end}`);
-  return data.availability;
-}
-
-export async function getVillaRevenue(start: string, end: string): Promise<VillaRevenueStats> {
-  return api<VillaRevenueStats>(`/v1/villa-revenue?start=${start}&end=${end}`);
-}
-
-export async function getSensorLogs(villaId: string): Promise<CleanerSensorLog[]> {
-  const data = await api<{ logs: CleanerSensorLog[] }>(`/v1/sensor-logs?villa_id=${villaId}`);
-  return data.logs || [];
-}
-
-export async function recordSensorLog(payload: Omit<CleanerSensorLog, "id" | "tenant_id" | "created_at">): Promise<CleanerSensorLog> {
-  return api<CleanerSensorLog>("/v1/sensor-logs", { method: "POST", body: JSON.stringify(payload) });
-}
-
-export async function getLatestSensorLog(villaId: string, cleanerId: string): Promise<CleanerSensorLog> {
-  return api<CleanerSensorLog>(`/v1/sensor-logs/latest?villa_id=${villaId}&cleaner_id=${cleanerId}`);
+  audit_trail: Array<{
+    action: string;
+    user: string;
+    timestamp: string;
+  }>;
 }

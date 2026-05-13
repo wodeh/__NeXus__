@@ -20,21 +20,16 @@ function getTenantId(): string {
   return localStorage.getItem("tenantId") || "demo";
 }
 
-function getToken(): string | null {
-  return localStorage.getItem("token");
-}
-
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const tenantId = getTenantId();
-  const token = getToken();
   const url = `${API_BASE}/tenants/${tenantId}${path}`;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
   const res = await fetch(url, {
+    credentials: "include",
     ...options,
     headers: { ...headers, ...((options?.headers as Record<string, string>) || {}) },
   });
@@ -338,4 +333,4 @@ function useApiFetch<T>(path: string): ApiResponse<T> {
   };
 }
 
-export { apiFetch, getTenantId, getToken };
+export { apiFetch, getTenantId };

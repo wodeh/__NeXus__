@@ -21,6 +21,10 @@ jobs:
       matrix:
         service:
           - pms-integration
+          - backend-core
+          - ai-platform
+          - iot-gateway
+          - iptv-middleware
     steps:
       - uses: actions/checkout@v4
       - name: Build ${{ matrix.service }}

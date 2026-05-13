@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useTenant } from "@/hooks/useTenant";
+import { useAuth } from "@/lib/auth";
 import { hasCapability, CAPABILITIES, tierName } from "@/lib/tenant";
 import { updateTenantConfig } from "@/lib/api";
 import {
@@ -38,6 +39,7 @@ const TIERS = [
 
 export default function SettingsPage() {
   const { config, loading: configLoading } = useTenant();
+  const { tenant } = useAuth();
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -75,8 +77,8 @@ export default function SettingsPage() {
     setSaveError(null);
     setSaveSuccess(false);
     try {
-      const tenant = localStorage.getItem("nexus-tenant") || "demo";
-      await updateTenantConfig(tenant, {
+      const tenantId = tenant?.external_id || "demo";
+      await updateTenantConfig(tenantId, {
         name: form.name,
         settings: {
           timezone: form.timezone,
@@ -98,8 +100,8 @@ export default function SettingsPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const tenant = localStorage.getItem("nexus-tenant") || "demo";
-      await updateTenantConfig(tenant, { license_tier: tier as any });
+      const tenantId = tenant?.external_id || "demo";
+      await updateTenantConfig(tenantId, { license_tier: tier as any });
       setSaveSuccess(true);
       setTimeout(() => {
         window.location.reload();
