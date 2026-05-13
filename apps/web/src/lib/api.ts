@@ -36,6 +36,7 @@ export interface Agent {
   name: string;
   email: string;
   role: string;
+  type?: string;
   phone?: string;
   commission_rate?: number;
   is_active: boolean;
@@ -54,4 +55,27 @@ export async function updateAgent(id: string, payload: Partial<Agent>): Promise<
 
 export async function deleteAgent(id: string): Promise<void> {
   return api(`/v1/agents/${id}`, { method: "DELETE" });
+}
+
+/* ─── WhatsApp API (continued) ─── */
+
+export interface WhatsAppTemplate {
+  id: string;
+  tenant_id: string;
+  name: string;
+  body: string;
+  language: string;
+  category: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getWhatsAppTemplates(): Promise<WhatsAppTemplate[]> {
+  const data = await api<{ templates: WhatsAppTemplate[] }>('/v1/whatsapp/templates');
+  return data.templates || [];
+}
+
+export async function sendWhatsAppMessage(payload: { to: string; body: string; template_name?: string }): Promise<{ status: string }> {
+  return api('/v1/whatsapp/send', { method: 'POST', body: JSON.stringify(payload) });
 }
