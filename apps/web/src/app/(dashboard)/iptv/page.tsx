@@ -29,6 +29,16 @@ function ToggleSwitch({ checked }: { checked: boolean }) {
   );
 }
 
+type WelcomeConfig = {
+  headline: string;
+  subheadline: string;
+  wifiName: string;
+  wifiPassword: string;
+  emergencyPhone: string;
+  checkInTime: string;
+  checkOutTime: string;
+};
+
 export default function IPTVPage() {
   const { config } = useTenant();
   const [tab, setTab] = useState<"channels" | "content" | "rooms" | "analytics" | "welcome">("channels");
@@ -38,7 +48,7 @@ export default function IPTVPage() {
   const [content, setContent] = useState<IPTVContent[]>([]);
   const [roomStatus, setRoomStatus] = useState<IPTVRoomStatus[]>([]);
   const [loading, setLoading] = useState(false);
-  const [welcomeConfig, setWelcomeConfig] = useState({
+  const [welcomeConfig, setWelcomeConfig] = useState<WelcomeConfig>({
     headline: "Welcome to Your Villa",
     subheadline: "Your luxury retreat awaits",
     wifiName: "VillaGuest",
@@ -347,7 +357,7 @@ function AnalyticsTab() {
   );
 }
 
-function VillaWelcomeTab({ config, onChange }: { config: typeof welcomeConfig; onChange: (c: typeof welcomeConfig) => void }) {
+function VillaWelcomeTab({ config, onChange }: { config: WelcomeConfig; onChange: (c: WelcomeConfig) => void }) {
   return (
     <div className="grid grid-cols-2 gap-6">
       <div className="space-y-4">
