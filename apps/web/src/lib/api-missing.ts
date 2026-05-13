@@ -249,6 +249,7 @@ export interface RateRecommendation {
   competitor_rate: number;
   confidence: number;
   reason: string;
+  factors?: string[];
   date: string;
   applied: boolean;
 }
