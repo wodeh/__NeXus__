@@ -1108,6 +1108,10 @@ export async function updateVillaReservation(id: string, payload: Partial<VillaR
   return api(`/v1/villa-reservations/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
 }
 
+export async function createVillaReservation(payload: Omit<VillaReservation, "id" | "tenant_id" | "created_at" | "updated_at">): Promise<VillaReservation> {
+  return api("/v1/villa-reservations", { method: "POST", body: JSON.stringify(payload) });
+}
+
 export interface CleanerSensorLog {
   id: string;
   villa_id: string;

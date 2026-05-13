@@ -86,8 +86,9 @@ export default function CleanerTrackingPage() {
     const watchId = navigator.geolocation.watchPosition(
       async (position) => {
         const { latitude, longitude, altitude } = position.coords;
-        const floor = altitude ? Math.round((altitude - villa.elevation) / 3.5) : 0;
-        const temp = altitude && altitude > villa.elevation + 2 ? 31.5 : 23.0;
+        const elevation = villa.elevation ?? 0;
+        const floor = altitude ? Math.round((altitude - elevation) / 3.5) : 0;
+        const temp = altitude && altitude > elevation + 2 ? 31.5 : 23.0;
         const locationType = temp > 25 ? "outside" : floor === 0 ? "inside" : floor > 0 ? "inside" : "outside";
 
         const payload = {
@@ -98,7 +99,7 @@ export default function CleanerTrackingPage() {
           temperature: temp,
           latitude,
           longitude,
-          altitude: altitude || villa.elevation,
+          altitude: altitude || elevation,
           floor: Math.max(0, floor),
           location_type: locationType,
           battery_level: 85,

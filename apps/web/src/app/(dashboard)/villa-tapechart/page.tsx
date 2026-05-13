@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   ChevronLeft, ChevronRight, CalendarDays, Plus, CheckCircle2, X, RefreshCw,
-  Phone, MessageSquare, Globe, Walk, ArrowRightLeft, Eye, AlertTriangle,
+  Phone, MessageSquare, Globe, Footprints, ArrowRightLeft, Eye, AlertTriangle,
   Calendar as CalendarIcon,
 } from "lucide-react";
 import {
