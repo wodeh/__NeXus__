@@ -515,7 +515,7 @@ export default function TapechartPage() {
                           {/* Reservation bar — only on first visible day */}
                           {startingRes && spanDays > 0 && (
                             <div
-                              className={`absolute inset-y-0.5 left-0.5 z-10 rounded overflow-hidden ${startingRes.color || "bg-sky-500"} ${isMoving ? "opacity-60" : ""} hover:brightness-110 transition-opacity`}
+                              className={`absolute inset-y-0.5 left-0.5 z-10 rounded overflow-hidden ${startingRes.color || "bg-sky-500"} ${isMoving ? "opacity-60" : ""} ${draggingRes?.id === startingRes.id ? "pointer-events-none" : ""} hover:brightness-110 transition-opacity`}
                               style={{ width: `${Math.max(spanDays, 1) * 5 - 0.25}rem`, minWidth: "4.5rem" }}
                             >
                               {/* Drag handle — LEFT EDGE, very obvious */}
