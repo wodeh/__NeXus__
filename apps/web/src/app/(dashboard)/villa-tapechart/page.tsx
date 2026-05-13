@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   ChevronLeft, ChevronRight, CalendarDays, Plus, CheckCircle2, X, RefreshCw,
   Phone, MessageSquare, Globe, Walk, ArrowRightLeft, Eye, AlertTriangle,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import {
   getVillaReservations, getVillas, updateVillaReservation, createVillaReservation,
@@ -57,6 +58,9 @@ export default function VillaTapechartPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [createDefaults, setCreateDefaults] = useState<{villaId?: string; date?: string}>({});
   const [selectedRes, setSelectedRes] = useState<VillaReservation | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
+  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
 
   const dayCount = viewMode === "week" ? 7 : 30;
 
@@ -112,16 +116,20 @@ export default function VillaTapechartPage() {
     } catch (e: any) { alert(e.message); }
   };
 
-  /* occupancy helper for suggesting alternatives */
+  const selectCalendarDate = (dateStr: string) => {
+    setViewStart(dateStr);
+    setShowCalendar(false);
+  };
+
   const getAlternativeVillas = (checkIn: string, checkOut: string, excludeVillaId: string) => {
     return villas
       .filter((v) => v.id !== excludeVillaId && v.status === "available")
       .map((v) => {
         const conflicts = reservations.filter(
           (r) => r.villa_id === v.id && r.status !== "cancelled" &&
-            isDateInRange(checkIn, r.check_in_date, r.check_out_date) ||
+            (isDateInRange(checkIn, r.check_in_date, r.check_out_date) ||
             isDateInRange(checkOut, r.check_in_date, r.check_out_date) ||
-            (new Date(checkIn) >= new Date(r.check_in_date) && new Date(checkOut) <= new Date(r.check_out_date))
+            (new Date(checkIn) >= new Date(r.check_in_date) && new Date(checkOut) <= new Date(r.check_out_date)))
         );
         return { villa: v, available: conflicts.length === 0 };
       })
@@ -169,6 +177,75 @@ export default function VillaTapechartPage() {
       {/* Controls */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
+          {/* Calendar Picker */}
+          <div className="relative">
+            <button
+              onClick={() => setShowCalendar(!showCalendar)}
+              className="rounded-lg border border-slate-700 p-2 hover:bg-slate-800 flex items-center gap-1"
+            >
+              <CalendarIcon className="h-4 w-4 text-nexus-400" />
+              <span className="text-xs text-slate-300">{viewStart}</span>
+            </button>
+            {showCalendar && (
+              <div className="absolute left-0 top-full z-50 mt-1 rounded-xl border border-slate-700 bg-slate-900 p-3 shadow-2xl w-72">
+                <div className="flex items-center justify-between mb-2">
+                  <button onClick={() => setCalendarMonth((m) => m === 0 ? (setCalendarYear((y) => y - 1), 11) : m - 1)} className="rounded p-1 hover:bg-slate-800 text-slate-400">
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="text-sm font-medium text-white">
+                    {new Date(calendarYear, calendarMonth).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                  </span>
+                  <button onClick={() => setCalendarMonth((m) => m === 11 ? (setCalendarYear((y) => y + 1), 0) : m + 1)} className="rounded p-1 hover:bg-slate-800 text-slate-400">
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-7 gap-1 mb-1">
+                  {["Su","Mo","Tu","We","Th","Fr","Sa"].map((d) => (
+                    <div key={d} className="text-center text-[10px] text-slate-500">{d}</div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                  {Array.from({ length: new Date(calendarYear, calendarMonth, 1).getDay() }, (_, i) => (
+                    <div key={`pad-${i}`} />
+                  ))}
+                  {Array.from({ length: new Date(calendarYear, calendarMonth + 1, 0).getDate() }, (_, i) => {
+                    const day = i + 1;
+                    const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                    const isToday = dateStr === formatDateLocal(new Date());
+                    const isSelected = dateStr === viewStart;
+                    return (
+                      <button
+                        key={day}
+                        onClick={() => selectCalendarDate(dateStr)}
+                        className={`rounded p-1.5 text-xs text-center transition-colors ${
+                          isSelected ? "bg-nexus-500 text-white" :
+                          isToday ? "bg-slate-700 text-nexus-400" :
+                          "text-slate-300 hover:bg-slate-800"
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    onClick={() => { const d = new Date(); setViewStart(formatDateLocal(d)); setShowCalendar(false); }}
+                    className="flex-1 rounded bg-slate-800 py-1.5 text-xs text-white hover:bg-slate-700"
+                  >
+                    Today
+                  </button>
+                  <button
+                    onClick={() => setShowCalendar(false)}
+                    className="flex-1 rounded bg-slate-800 py-1.5 text-xs text-slate-400 hover:bg-slate-700"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button onClick={() => nav(-1)} className="rounded-lg border border-slate-700 p-2 hover:bg-slate-800">
             <ChevronLeft className="h-4 w-4 text-slate-300" />
           </button>
@@ -189,7 +266,6 @@ export default function VillaTapechartPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Villa filter */}
           <select
             className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
             value={selectedVilla}
@@ -201,7 +277,6 @@ export default function VillaTapechartPage() {
             ))}
           </select>
 
-          {/* View toggle */}
           <div className="flex rounded-lg border border-slate-700 overflow-hidden">
             <button
               onClick={() => setViewMode("week")}
@@ -256,13 +331,11 @@ export default function VillaTapechartPage() {
                   className="grid"
                   style={{ gridTemplateColumns: `200px repeat(${dayCount}, minmax(${viewMode === "week" ? 120 : 40}px, 1fr))` }}
                 >
-                  {/* Villa Label */}
                   <div className="sticky left-0 z-10 border-b border-r border-slate-700 bg-slate-900 px-4 py-3">
                     <p className="text-sm font-medium text-white">{villa.name}</p>
                     <p className="text-[10px] text-slate-500">${villa.price_per_night}/night · {villa.bedrooms}BR</p>
                   </div>
 
-                  {/* Day Cells */}
                   {days.map((day) => {
                     const dayRes = villaReservations.filter((r) => isDateInRange(day, r.check_in_date, r.check_out_date));
                     const isToday = day === formatDateLocal(new Date());
@@ -274,9 +347,9 @@ export default function VillaTapechartPage() {
                     return (
                       <div
                         key={`${villa.id}-${day}`}
-                        className={`relative border-b border-r border-slate-700 min-h-[${viewMode === "week" ? 64 : 48}px] ${
-                          isToday ? "bg-nexus-500/5" : ""
-                        } ${!hasRes ? "hover:bg-slate-800/30 cursor-pointer" : ""}`}
+                        className={`relative border-b border-r border-slate-700 ${
+                          viewMode === "week" ? "min-h-[64px]" : "min-h-[48px]"
+                        } ${isToday ? "bg-nexus-500/5" : ""} ${!hasRes ? "hover:bg-slate-800/30 cursor-pointer" : ""}`}
                         onClick={() => {
                           if (!hasRes) {
                             setCreateDefaults({ villaId: villa.id, date: day });
@@ -375,6 +448,54 @@ export default function VillaTapechartPage() {
   );
 }
 
+/* ─── Calendar Picker Helper ─── */
+function CalendarPicker({ onSelect, onClose, initialDate }: { onSelect: (d: string) => void; onClose: () => void; initialDate: string }) {
+  const [month, setMonth] = useState(new Date(initialDate + "T00:00:00").getMonth());
+  const [year, setYear] = useState(new Date(initialDate + "T00:00:00").getFullYear());
+
+  return (
+    <div className="rounded-xl border border-slate-700 bg-slate-900 p-3 shadow-2xl w-72">
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={() => setMonth((m) => m === 0 ? (setYear((y) => y - 1), 11) : m - 1)} className="rounded p-1 hover:bg-slate-800 text-slate-400">
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <span className="text-sm font-medium text-white">
+          {new Date(year, month).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+        </span>
+        <button onClick={() => setMonth((m) => m === 11 ? (setYear((y) => y + 1), 0) : m + 1)} className="rounded p-1 hover:bg-slate-800 text-slate-400">
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {["Su","Mo","Tu","We","Th","Fr","Sa"].map((d) => (
+          <div key={d} className="text-center text-[10px] text-slate-500">{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {Array.from({ length: new Date(year, month, 1).getDay() }, (_, i) => (
+          <div key={`pad-${i}`} />
+        ))}
+        {Array.from({ length: new Date(year, month + 1, 0).getDate() }, (_, i) => {
+          const day = i + 1;
+          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const isToday = dateStr === formatDateLocal(new Date());
+          return (
+            <button
+              key={day}
+              onClick={() => onSelect(dateStr)}
+              className={`rounded p-1.5 text-xs text-center transition-colors ${
+                isToday ? "bg-nexus-500 text-white" : "text-slate-300 hover:bg-slate-800"
+              }`}
+            >
+              {day}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Res Detail Modal ─── */
 function ResDetailModal({ res, villas, alternatives, onApprove, onDeny, onClose, onUpdate }: {
   res: VillaReservation;
@@ -436,7 +557,6 @@ function ResDetailModal({ res, villas, alternatives, onApprove, onDeny, onClose,
           </div>
         </div>
 
-        {/* Alternative Villas */}
         {alternatives.length > 0 && (
           <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-3 space-y-2">
             <p className="text-xs font-medium text-slate-300">Alternative Villas Available:</p>
@@ -455,7 +575,6 @@ function ResDetailModal({ res, villas, alternatives, onApprove, onDeny, onClose,
           </div>
         )}
 
-        {/* Actions */}
         <div className="flex gap-2 pt-2">
           {res.status === "pending" && (
             <>

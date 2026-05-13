@@ -264,16 +264,16 @@ func main() {
 		balanceDue  float64
 		balancePaid bool
 	}{
-		{0, "Ahmad Khalil", "+970599123456", "ahmad@email.com", 4, "2024-06-15", "2024-06-20", 5, 1750, "reserved", "phone", 0, true},
-		{0, "Sarah Nassar", "+970599987654", "sarah@email.com", 3, "2024-07-01", "2024-07-05", 4, 1400, "pending", "whatsapp", 1400, false},
-		{1, "Layla Farhat", "+970599456789", "layla@email.com", 6, "2024-06-22", "2024-06-27", 5, 2250, "reserved", "phone", 750, false},
-		{1, "Mohammed Ali", "+970599111222", "mohammed@email.com", 4, "2024-08-10", "2024-08-15", 5, 2250, "pending", "walkin", 2250, false},
-		{2, "Fatima Hassan", "+970599333444", "fatima@email.com", 8, "2024-07-20", "2024-07-25", 5, 3000, "reserved", "website", 0, true},
-		{2, "Omar Khalil", "+970599555666", "omar@email.com", 5, "2024-09-01", "2024-09-07", 6, 3600, "pending", "whatsapp", 3600, false},
-		{3, "Nadia Ibrahim", "+970599777888", "nadia@email.com", 3, "2024-06-18", "2024-06-21", 3, 750, "completed", "phone", 0, true},
-		{3, "Khaled Omar", "+970599999000", "khaled@email.com", 2, "2024-08-05", "2024-08-08", 3, 750, "reserved", "walkin", 0, true},
-		{0, "Rania Suleiman", "+970599000111", "rania@email.com", 5, "2024-10-01", "2024-10-07", 6, 2100, "pending", "website", 2100, false},
-		{1, "Youssef Nasser", "+970599222333", "youssef@email.com", 4, "2024-11-15", "2024-11-20", 5, 2250, "reserved", "whatsapp", 500, false},
+		{0, "Ahmad Khalil", "+970599123456", "ahmad@email.com", 4, "2026-05-10", "2026-05-15", 5, 1750, "reserved", "phone", 0, true},
+		{0, "Sarah Nassar", "+970599987654", "sarah@email.com", 3, "2026-05-16", "2026-05-20", 4, 1400, "pending", "whatsapp", 1400, false},
+		{1, "Layla Farhat", "+970599456789", "layla@email.com", 6, "2026-05-12", "2026-05-17", 5, 2250, "reserved", "phone", 750, false},
+		{1, "Mohammed Ali", "+970599111222", "mohammed@email.com", 4, "2026-05-18", "2026-05-23", 5, 2250, "pending", "walkin", 2250, false},
+		{2, "Fatima Hassan", "+970599333444", "fatima@email.com", 8, "2026-05-14", "2026-05-19", 5, 3000, "reserved", "website", 0, true},
+		{2, "Omar Khalil", "+970599555666", "omar@email.com", 5, "2026-05-20", "2026-05-26", 6, 3600, "pending", "whatsapp", 3600, false},
+		{3, "Nadia Ibrahim", "+970599777888", "nadia@email.com", 3, "2026-05-11", "2026-05-14", 3, 750, "completed", "phone", 0, true},
+		{3, "Khaled Omar", "+970599999000", "khaled@email.com", 2, "2026-05-15", "2026-05-18", 3, 750, "reserved", "walkin", 0, true},
+		{0, "Rania Suleiman", "+970599000111", "rania@email.com", 5, "2026-05-22", "2026-05-28", 6, 2100, "pending", "website", 2100, false},
+		{1, "Youssef Nasser", "+970599222333", "youssef@email.com", 4, "2026-05-25", "2026-05-30", 5, 2250, "reserved", "whatsapp", 500, false},
 	}
 	for _, b := range bookings {
 		villaID := villaIDs[b.villaIdx]
