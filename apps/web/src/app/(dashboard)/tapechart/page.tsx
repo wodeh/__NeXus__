@@ -522,7 +522,7 @@ export default function TapechartPage() {
                           {/* Reservation bar — only on first visible day */}
                           {startingRes && spanDays > 0 && (
                             <div
-                              className={`absolute inset-y-0.5 left-0.5 z-10 rounded overflow-hidden ${startingRes.color || "bg-sky-500"} ${isMoving ? "opacity-60" : ""} hover:brightness-110 transition-opacity`}
+                              className={`absolute inset-y-0.5 left-0.5 z-10 rounded overflow-hidden ${startingRes.color || "bg-sky-500"} ${isMoving ? "opacity-60" : ""} ${draggingRes?.id === startingRes.id ? "pointer-events-none" : ""} hover:brightness-110 transition-opacity`}
                               style={{ width: `${Math.max(spanDays, 1) * 5 - 0.25}rem`, minWidth: "4.5rem" }}
                             >
                               {/* Drag handle — LEFT EDGE, very obvious */}
@@ -540,14 +540,14 @@ export default function TapechartPage() {
                                   // Clear drag flag after click window passes
                                   setTimeout(() => { dragPerformedRef.current = false; }, 200);
                                 }}
-                                className="absolute left-0 top-0 bottom-0 w-8 cursor-grab active:cursor-grabbing flex items-center justify-center bg-black/60 hover:bg-black/80 border-r border-white/20 z-30"
+                                className="absolute left-0 top-0 bottom-0 w-8 cursor-grab active:cursor-grabbing flex items-center justify-center bg-black/60 hover:bg-black/80 border-r border-white/20 z-30 pointer-events-auto"
                                 title="Drag to move reservation"
                               >
                                 <GripVertical className="h-5 w-5 text-white drop-shadow" />
                               </div>
                               {/* Clickable detail area — rest of the bar */}
                               <div
-                                className="absolute inset-0 left-8 flex items-center px-1.5 overflow-hidden cursor-pointer"
+                                className={`absolute inset-0 left-8 flex items-center px-1.5 overflow-hidden cursor-pointer ${draggingRes?.id === startingRes.id ? "pointer-events-none" : ""}`}
                                 onClick={(e) => {
                                   if (dragPerformedRef.current) {
                                     dragPerformedRef.current = false;
