@@ -260,3 +260,20 @@ export async function getRateRecommendations(): Promise<RateRecommendation[]> {
 export async function applyRateRecommendation(id: string): Promise<{ status: string }> {
   return api(`/v1/rate-shop/recommendations/${id}/apply`, { method: 'POST' });
 }
+
+/* ─── Competitor Rates API ─── */
+
+export interface CompetitorRate {
+  id: string;
+  competitor_id: string;
+  competitor_name: string;
+  room_type: string;
+  rate: number;
+  date: string;
+  scraped_at: string;
+}
+
+export async function getCompetitorRates(): Promise<CompetitorRate[]> {
+  const data = await api<{ rates: CompetitorRate[] }>('/v1/competitors/rates');
+  return data.rates || [];
+}

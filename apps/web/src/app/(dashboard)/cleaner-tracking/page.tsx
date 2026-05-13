@@ -497,7 +497,7 @@ function LatestPositionCard({ log, villa }: { log: CleanerSensorLog; villa?: Vil
           </span>
         </div>
         <p className="text-[10px] text-slate-400">
-          {log.latitude.toFixed(4)}, {log.longitude.toFixed(4)}
+          {log.latitude?.toFixed(4)}, {log.longitude?.toFixed(4)}
         </p>
       </div>
 
