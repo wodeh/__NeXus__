@@ -185,7 +185,7 @@ export default function CompetitorsPage() {
                 </td>
                 <td className="px-4 py-2 text-slate-400">{rate.availability}</td>
                 <td className="px-4 py-2 text-slate-400">{rate.min_stay}n</td>
-                <td className="px-4 py-2 text-xs text-slate-500 capitalize">{rate.source.replace("_", " ")}</td>
+                <td className="px-4 py-2 text-xs text-slate-500 capitalize">{rate.source?.replace("_", " ") || "-"}</td>
               </tr>
             ))}
           </tbody>
