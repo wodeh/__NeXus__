@@ -166,6 +166,8 @@ export interface JourneyExecution {
   current_step?: number;
   completed_steps?: number;
   total_steps?: number;
+  started_at?: string;
+  next_trigger_at?: string;
   executed_at?: string;
   completed_at?: string;
 }
