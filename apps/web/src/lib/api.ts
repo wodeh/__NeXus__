@@ -1124,6 +1124,7 @@ export interface CleanerSensorLog {
   floor?: number;
   location_type?: string;
   battery_level?: number;
+  recorded_at?: string;
   timestamp: string;
   location?: string;
 }
