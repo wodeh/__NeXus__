@@ -225,7 +225,7 @@ export default function CompetitorsPage() {
                   </div>
                   <p className="text-xs text-slate-500">{rec.reason}</p>
                   <div className="flex items-center gap-2">
-                    {rec.factors.map((f, i) => (
+                    {rec.factors?.map((f, i) => (
                       <span key={i} className="rounded bg-slate-700 px-2 py-0.5 text-[10px] text-slate-400 capitalize">{f.replace("_", " ")}</span>
                     ))}
                     <span className="rounded bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-400">{(rec.confidence * 100).toFixed(0)}% confidence</span>
