@@ -26,6 +26,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isVillaOwner: boolean;
+  isSuperAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -95,10 +96,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isVillaOwner = tenant?.external_id === 'villa-owners' || capabilities.includes('villa:dashboard');
+  const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'admin';
 
   return (
     <AuthContext.Provider
-      value={{ user, tenant, token, capabilities, isLoading, login, logout, isVillaOwner }}
+      value={{ user, tenant, token, capabilities, isLoading, login, logout, isVillaOwner, isSuperAdmin }}
     >
       {children}
     </AuthContext.Provider>

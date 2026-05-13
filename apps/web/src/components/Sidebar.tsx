@@ -73,9 +73,10 @@ const navItems: NavItem[] = [
 export default function Sidebar({ tenantConfig }: { tenantConfig: TenantConfig | null }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const { isVillaOwner } = useAuth();
+  const { isVillaOwner, isSuperAdmin } = useAuth();
 
   const filteredNav = navItems.filter((item) => {
+    if (isSuperAdmin) return true; // Super admin sees all menus
     if (!tenantConfig) return true;
     if (isVillaOwner) {
       // Villa owners see: villa-specific pages, dashboard, settings, and IPTV

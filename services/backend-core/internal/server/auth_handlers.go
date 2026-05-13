@@ -61,7 +61,9 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	token := uuid.New().String()
 	capabilities := defaultCapabilities()
-	if creds.Role == "manager" && tenantExternalID == "villa-owners" {
+	if creds.Role == "super_admin" || creds.Role == "admin" {
+		capabilities = adminCapabilities()
+	} else if creds.Role == "manager" && tenantExternalID == "villa-owners" {
 		capabilities = villaOwnerCapabilities()
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -91,6 +93,23 @@ func defaultCapabilities() []string {
 		"operations:group_reservations", "operations:maintenance", "operations:front_desk",
 		"revenue:dynamic_pricing", "revenue:ota_integration",
 		"revenue:revenue_forecasting", "revenue:agent_management",
+		"enterprise:multi_property", "enterprise:advanced_crm",
+		"enterprise:api_access", "enterprise:white_label", "enterprise:custom_reports",
+		"villa:dashboard", "villa:properties", "villa:reservations", "villa:revenue", "villa:cleaner_tracking",
+	}
+}
+
+func adminCapabilities() []string {
+	return []string{
+		"core:reservations", "core:guests", "core:properties", "core:rooms",
+		"core:housekeeping", "core:settings", "core:audit_logs",
+		"operations:floor_dashboard", "operations:room_blocks",
+		"operations:group_reservations", "operations:maintenance", "operations:front_desk",
+		"operations:iptv_basic", "operations:smart_locks",
+		"revenue:dynamic_pricing", "revenue:ota_integration",
+		"revenue:revenue_forecasting", "revenue:agent_management",
+		"revenue:channel_manager", "revenue:whatsapp_bot", "revenue:direct_booking",
+		"revenue:guest_reviews", "revenue:communications",
 		"enterprise:multi_property", "enterprise:advanced_crm",
 		"enterprise:api_access", "enterprise:white_label", "enterprise:custom_reports",
 		"villa:dashboard", "villa:properties", "villa:reservations", "villa:revenue", "villa:cleaner_tracking",
