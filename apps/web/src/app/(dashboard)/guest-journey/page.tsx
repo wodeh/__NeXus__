@@ -135,7 +135,7 @@ export default function GuestJourneyPage() {
                   <div>
                     <p className="text-lg font-semibold text-white">{journey.name}</p>
                     <div className="flex items-center gap-2 text-xs text-slate-400">
-                      <span className="rounded bg-slate-800 px-2 py-0.5 capitalize">{journey.trigger.replace("_", " ")}</span>
+                      <span className="rounded bg-slate-800 px-2 py-0.5 capitalize">{journey.trigger?.replace("_", " ") || "-"}</span>
                       <span>{journey.steps.length} steps</span>
                       {journey.is_active && <span className="text-emerald-400">Active</span>}
                     </div>
