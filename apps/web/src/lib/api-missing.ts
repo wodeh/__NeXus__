@@ -237,3 +237,26 @@ export async function getRateShopConfig(): Promise<RateShopConfig> {
 export async function updateRateShopConfig(payload: Partial<RateShopConfig>): Promise<RateShopConfig> {
   return api('/v1/rate-shop/config', { method: 'PATCH', body: JSON.stringify(payload) });
 }
+
+/* ─── Rate Recommendations API ─── */
+
+export interface RateRecommendation {
+  id: string;
+  room_type: string;
+  current_rate: number;
+  recommended_rate: number;
+  competitor_rate: number;
+  confidence: number;
+  reason: string;
+  date: string;
+  applied: boolean;
+}
+
+export async function getRateRecommendations(): Promise<RateRecommendation[]> {
+  const data = await api<{ recommendations: RateRecommendation[] }>('/v1/rate-shop/recommendations');
+  return data.recommendations || [];
+}
+
+export async function applyRateRecommendation(id: string): Promise<{ status: string }> {
+  return api(`/v1/rate-shop/recommendations/${id}/apply`, { method: 'POST' });
+}

@@ -485,7 +485,7 @@ function LatestPositionCard({ log, villa }: { log: CleanerSensorLog; villa?: Vil
           </span>
         </div>
         <p className="text-[10px] text-slate-400">
-          Alt: {Math.round(log.altitude)}m
+          Alt: {Math.round(log.altitude || 0)}m
         </p>
       </div>
 
