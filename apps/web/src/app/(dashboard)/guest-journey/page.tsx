@@ -266,7 +266,7 @@ function JourneyModal({ journey, onSave, onClose }: { journey?: GuestJourney; on
   const addStep = () => {
     setForm({
       ...form,
-      steps: [...form.steps, { id: crypto.randomUUID(), name: "", completed: false, delay_hours: 24, channel: "whatsapp", template_id: "", condition: "always", is_active: true }],
+      steps: [...form.steps, { id: crypto.randomUUID(), name: "New Step", completed: false, delay_hours: 24, channel: "whatsapp", template_id: "", condition: "always", is_active: true }],
     });
   };
 
