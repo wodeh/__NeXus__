@@ -271,6 +271,9 @@ export interface CompetitorRate {
   room_type: string;
   rate: number;
   is_promo?: boolean;
+  availability?: number;
+  min_stay?: number;
+  source?: string;
   date: string;
   scraped_at: string;
 }
