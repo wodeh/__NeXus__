@@ -1,81 +1,32 @@
 
-/* ─── WhatsApp API ─── */
+/* ─── WhatsApp API (messages) ─── */
 
-export interface WhatsAppConfig {
+export interface WhatsAppConversation {
   id: string;
   tenant_id: string;
-  phone_number: string;
-  api_key?: string;
-  webhook_url?: string;
+  guest_phone: string;
+  guest_name?: string;
+  last_message: string;
+  last_message_at: string;
+  unread_count: number;
   is_active: boolean;
-  welcome_message?: string;
-  auto_reply_enabled: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
-export async function getWhatsAppConfig(): Promise<WhatsAppConfig> {
-  return api("/v1/whatsapp/config");
-}
-
-export async function updateWhatsAppConfig(payload: Partial<WhatsAppConfig>): Promise<WhatsAppConfig> {
-  return api("/v1/whatsapp/config", { method: "PATCH", body: JSON.stringify(payload) });
-}
-
-/* ─── Tenant API ─── */
-
-export async function getTenantConfig(): Promise<TenantConfig> {
-  return api("/v1/tenant/config");
-}
-
-/* ─── Agent API ─── */
-
-export interface Agent {
+export interface WhatsAppMessage {
   id: string;
-  tenant_id: string;
-  name: string;
-  email: string;
-  role: string;
-  type?: string;
-  phone?: string;
-  commission_rate?: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export async function getAgents(): Promise<Agent[]> {
-  const data = await api<{ agents: Agent[] }>("/v1/agents");
-  return data.agents || [];
-}
-
-export async function updateAgent(id: string, payload: Partial<Agent>): Promise<Agent> {
-  return api(`/v1/agents/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
-}
-
-export async function deleteAgent(id: string): Promise<void> {
-  return api(`/v1/agents/${id}`, { method: "DELETE" });
-}
-
-/* ─── WhatsApp API (continued) ─── */
-
-export interface WhatsAppTemplate {
-  id: string;
-  tenant_id: string;
-  name: string;
+  conversation_id: string;
+  direction: "inbound" | "outbound";
   body: string;
-  language: string;
-  category: string;
-  is_active: boolean;
+  status: "sent" | "delivered" | "read" | "failed";
   created_at: string;
-  updated_at: string;
 }
 
-export async function getWhatsAppTemplates(): Promise<WhatsAppTemplate[]> {
-  const data = await api<{ templates: WhatsAppTemplate[] }>('/v1/whatsapp/templates');
-  return data.templates || [];
+export async function getWhatsAppConversations(): Promise<WhatsAppConversation[]> {
+  const data = await api<{ conversations: WhatsAppConversation[] }>('/v1/whatsapp/conversations');
+  return data.conversations || [];
 }
 
-export async function sendWhatsAppMessage(payload: { to: string; body: string; template_name?: string }): Promise<{ status: string }> {
-  return api('/v1/whatsapp/send', { method: 'POST', body: JSON.stringify(payload) });
+export async function getWhatsAppMessages(conversationId: string): Promise<WhatsAppMessage[]> {
+  const data = await api<{ messages: WhatsAppMessage[] }>(`/v1/whatsapp/conversations/${conversationId}/messages`);
+  return data.messages || [];
 }

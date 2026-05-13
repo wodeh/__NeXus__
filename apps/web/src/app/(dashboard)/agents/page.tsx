@@ -101,7 +101,7 @@ export default function AgentsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-nexus-500/10 px-2.5 py-0.5 text-xs font-medium text-nexus-400 uppercase">{a.type.replace("_", " ")}</span>
+                  <span className="rounded-full bg-nexus-500/10 px-2.5 py-0.5 text-xs font-medium text-nexus-400 uppercase">{a.type?.replace("_", " ") || "Agent"}</span>
                   <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${a.is_active ? "bg-emerald-500/10 text-emerald-400" : "bg-slate-500/10 text-slate-400"}`}>
                     {a.is_active ? "Active" : "Inactive"}
                   </span>
