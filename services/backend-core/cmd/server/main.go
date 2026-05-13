@@ -43,7 +43,6 @@ func main() {
 			logger.Error("failed to connect to database", slog.String("error", err.Error()))
 			os.Exit(1)
 		}
-		defer pool.Close()
 		migrator, err := db.NewMigrator(cfg.DatabaseURL, "file://sql/migrations")
 		if err != nil {
 			logger.Error("failed to create migrator", slog.String("error", err.Error()))
