@@ -81,6 +81,21 @@ func (s *Server) handleIPTVWelcome(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	today := time.Now().Format("2006-01-02")
 
+	// Handle missing database gracefully
+	if s.repo == nil || s.repo.Villa == nil {
+		writeJSON(w, http.StatusOK, domain.IPTVWelcomeScreen{
+			VillaID:        villaID,
+			VillaName:      "Green Villa",
+			GuestName:      "Guest",
+			WelcomeMessage: "Welcome to your villa",
+			CheckInDate:    today,
+			CheckOutDate:   today,
+			Nights:         0,
+			HasReservation: false,
+		})
+		return
+	}
+
 	// Try to get active reservation for this villa today
 	res, err := s.repo.Villa.GetVillaReservationByDate(ctx, villaID, today)
 	if err != nil || res == nil {

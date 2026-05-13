@@ -219,7 +219,7 @@ func (r *VillaRepository) DeleteVillaReservation(ctx context.Context, id string)
 	return err
 }
 
-func (r *VillaRepository) GetVillaReservationByDate(ctx context.Context, villaID string, date string) (*VillaReservation, error) {
+func (r *VillaRepository) GetVillaReservationByDate(ctx context.Context, villaID string, date string) (*domain.VillaReservation, error) {
 	query := `
 		SELECT id, tenant_id, villa_id, villa_name, guest_name, guest_phone, guest_email,
 		       guest_count, check_in_date, check_out_date, nights, total_amount, currency,
@@ -231,7 +231,7 @@ func (r *VillaRepository) GetVillaReservationByDate(ctx context.Context, villaID
 		ORDER BY check_in_date DESC
 		LIMIT 1
 	`
-	var res VillaReservation
+	var res domain.VillaReservation
 	err := r.pool.QueryRow(ctx, query, villaID, date).Scan(
 		&res.ID, &res.TenantID, &res.VillaID, &res.VillaName, &res.GuestName, &res.GuestPhone,
 		&res.GuestEmail, &res.GuestCount, &res.CheckInDate, &res.CheckOutDate, &res.Nights,
