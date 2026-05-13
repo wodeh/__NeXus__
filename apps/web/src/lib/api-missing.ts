@@ -160,6 +160,7 @@ export interface JourneyExecution {
   journey_id: string;
   reservation_id: string;
   guest_name: string;
+  guest_phone?: string;
   stage: string;
   status: string;
   executed_at?: string;
