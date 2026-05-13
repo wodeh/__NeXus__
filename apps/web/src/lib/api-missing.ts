@@ -291,3 +291,6 @@ export async function getCompetitorRates(): Promise<CompetitorRate[]> {
 /* ─── Type aliases for competitor page ─── */
 export type CompetitorHotel = Competitor;
 
+
+/* ─── GuestJourneyExecution type alias ─── */
+export type GuestJourneyExecution = JourneyExecution;
