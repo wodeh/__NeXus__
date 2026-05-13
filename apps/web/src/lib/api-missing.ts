@@ -137,3 +137,30 @@ export async function getRoomStatusView(): Promise<RoomStatusView[]> {
   const data = await api<{ rooms: RoomStatusView[] }>('/v1/rooms/status-view');
   return data.rooms || [];
 }
+
+/* ─── Guest Journey API ─── */
+
+export interface GuestJourney {
+  id: string;
+  tenant_id: string;
+  reservation_id: string;
+  guest_name: string;
+  stage: string;
+  status: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getJourneys(): Promise<GuestJourney[]> {
+  const data = await api<{ journeys: GuestJourney[] }>('/v1/journeys');
+  return data.journeys || [];
+}
+
+export async function updateJourney(id: string, payload: Partial<GuestJourney>): Promise<GuestJourney> {
+  return api(`/v1/journeys/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+
+export async function deleteJourney(id: string): Promise<void> {
+  return api(`/v1/journeys/${id}`, { method: 'DELETE' });
+}

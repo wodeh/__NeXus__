@@ -1117,6 +1117,13 @@ export interface CleanerSensorLog {
   villa_id: string;
   cleaner_name: string;
   action: "check_in" | "check_out";
+  temperature?: number;
+  latitude?: number;
+  longitude?: number;
+  altitude?: number;
+  floor?: number;
+  location_type?: string;
+  battery_level?: number;
   timestamp: string;
   location?: string;
 }
