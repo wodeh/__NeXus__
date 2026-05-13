@@ -31,13 +31,22 @@ function ToggleSwitch({ checked }: { checked: boolean }) {
 
 export default function IPTVPage() {
   const { config } = useTenant();
-  const [tab, setTab] = useState<"channels" | "content" | "rooms" | "analytics">("channels");
+  const [tab, setTab] = useState<"channels" | "content" | "rooms" | "analytics" | "welcome">("channels");
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [channels, setChannels] = useState<IPTVChannel[]>([]);
   const [content, setContent] = useState<IPTVContent[]>([]);
   const [roomStatus, setRoomStatus] = useState<IPTVRoomStatus[]>([]);
   const [loading, setLoading] = useState(false);
+  const [welcomeConfig, setWelcomeConfig] = useState({
+    headline: "Welcome to Your Villa",
+    subheadline: "Your luxury retreat awaits",
+    wifiName: "VillaGuest",
+    wifiPassword: "Welcome2024",
+    emergencyPhone: "+970-599-123-456",
+    checkInTime: "15:00",
+    checkOutTime: "11:00",
+  });
 
   useEffect(() => {
     loadData();
@@ -107,7 +116,7 @@ export default function IPTVPage() {
       </div>
 
       <div className="flex items-center gap-1 border-b border-slate-700 pb-1">
-        {(["channels", "content", "rooms", "analytics"] as const).map((t) => (
+        {(["channels", "content", "rooms", "welcome", "analytics"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -115,7 +124,7 @@ export default function IPTVPage() {
               tab === t ? "bg-slate-800 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"
             }`}
           >
-            {t.charAt(0).toUpperCase() + t.slice(1)}
+            {t === "welcome" ? "Villa Welcome" : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </div>
@@ -169,6 +178,10 @@ export default function IPTVPage() {
           )}
 
           {tab === "rooms" && <RoomBindingsTab rooms={roomStatus} />}
+
+          {tab === "welcome" && (
+            <VillaWelcomeTab config={welcomeConfig} onChange={setWelcomeConfig} />
+          )}
 
           {tab === "analytics" && <AnalyticsTab />}
         </>
@@ -328,6 +341,115 @@ function AnalyticsTab() {
         </div>
         <div className="mt-2 flex justify-between text-[10px] text-slate-500">
           <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:00</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VillaWelcomeTab({ config, onChange }: { config: typeof welcomeConfig; onChange: (c: typeof welcomeConfig) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-6">
+      <div className="space-y-4">
+        <h3 className="text-lg font-bold text-white">Villa Welcome Screen</h3>
+        <p className="text-sm text-slate-400">Customize what guests see when they turn on the TV.</p>
+
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Headline</label>
+            <input
+              className="input w-full"
+              value={config.headline}
+              onChange={(e) => onChange({ ...config, headline: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Subheadline</label>
+            <input
+              className="input w-full"
+              value={config.subheadline}
+              onChange={(e) => onChange({ ...config, subheadline: e.target.value })}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">WiFi Name</label>
+              <input
+                className="input w-full"
+                value={config.wifiName}
+                onChange={(e) => onChange({ ...config, wifiName: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">WiFi Password</label>
+              <input
+                className="input w-full"
+                value={config.wifiPassword}
+                onChange={(e) => onChange({ ...config, wifiPassword: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Check-in Time</label>
+              <input
+                className="input w-full"
+                value={config.checkInTime}
+                onChange={(e) => onChange({ ...config, checkInTime: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Check-out Time</label>
+              <input
+                className="input w-full"
+                value={config.checkOutTime}
+                onChange={(e) => onChange({ ...config, checkOutTime: e.target.value })}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Emergency Phone</label>
+            <input
+              className="input w-full"
+              value={config.emergencyPhone}
+              onChange={(e) => onChange({ ...config, emergencyPhone: e.target.value })}
+            />
+          </div>
+          <button className="btn-primary w-full">Save Welcome Screen</button>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-700 bg-slate-900 p-6 space-y-4">
+        <p className="text-xs font-medium text-slate-500 uppercase">Preview</p>
+        <div className="rounded-lg bg-slate-800 p-6 text-center space-y-4">
+          <h2 className="text-2xl font-bold text-white">{config.headline}</h2>
+          <p className="text-sm text-slate-400">{config.subheadline}</p>
+          <div className="rounded-lg bg-slate-700/50 p-4 space-y-2">
+            <p className="text-xs font-medium text-slate-400">WiFi Access</p>
+            <div className="flex items-center justify-center gap-4">
+              <div>
+                <p className="text-[10px] text-slate-500">Network</p>
+                <p className="text-sm font-medium text-white">{config.wifiName}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-500">Password</p>
+                <p className="text-sm font-medium text-white">{config.wifiPassword}</p>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded bg-slate-700/50 p-2">
+              <p className="text-[10px] text-slate-500">Check-in</p>
+              <p className="text-sm font-medium text-white">{config.checkInTime}</p>
+            </div>
+            <div className="rounded bg-slate-700/50 p-2">
+              <p className="text-[10px] text-slate-500">Check-out</p>
+              <p className="text-sm font-medium text-white">{config.checkOutTime}</p>
+            </div>
+          </div>
+          <div className="rounded bg-emerald-500/10 p-2">
+            <p className="text-[10px] text-emerald-400">Emergency: {config.emergencyPhone}</p>
+          </div>
         </div>
       </div>
     </div>

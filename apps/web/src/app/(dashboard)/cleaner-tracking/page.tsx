@@ -4,11 +4,23 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Smartphone, MapPin, Thermometer, ArrowUp, Battery, RefreshCw,
   CheckCircle2, AlertTriangle, Clock, Home, Wifi, WifiOff,
+  CalendarDays, Plus, X, User, ListTodo, History, Radio,
 } from "lucide-react";
 import {
-  getVillas, getSensorLogs, recordSensorLog, getLatestSensorLog,
+  getVillas, getSensorLogs, recordSensorLog,
   VillaProperty, CleanerSensorLog,
 } from "@/lib/api";
+
+interface CleaningSchedule {
+  id: string;
+  villa_id: string;
+  villa_name: string;
+  cleaner_name: string;
+  scheduled_date: string;
+  status: "scheduled" | "in_progress" | "completed" | "skipped";
+  notes: string;
+  completed_at?: string;
+}
 
 export default function CleanerTrackingPage() {
   const [villas, setVillas] = useState<VillaProperty[]>([]);
@@ -19,6 +31,9 @@ export default function CleanerTrackingPage() {
   const [tracking, setTracking] = useState(false);
   const [cleanerName, setCleanerName] = useState("");
   const [cleanerId, setCleanerId] = useState("");
+  const [tab, setTab] = useState<"tracking" | "schedule" | "history">("tracking");
+  const [schedules, setSchedules] = useState<CleaningSchedule[]>([]);
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -36,6 +51,13 @@ export default function CleanerTrackingPage() {
 
   useEffect(() => {
     fetchData();
+    // Load demo schedules
+    setSchedules([
+      { id: "sch-1", villa_id: "villa-001", villa_name: "Villa Al-Mashta", cleaner_name: "Muhammad", scheduled_date: "2024-06-14", status: "completed", notes: "Deep clean after checkout", completed_at: "2024-06-14T11:30:00Z" },
+      { id: "sch-2", villa_id: "villa-002", villa_name: "Chalet Al-Balad", cleaner_name: "Ahmad", scheduled_date: "2024-06-15", status: "scheduled", notes: "Regular maintenance" },
+      { id: "sch-3", villa_id: "villa-001", villa_name: "Villa Al-Mashta", cleaner_name: "Muhammad", scheduled_date: "2024-06-20", status: "scheduled", notes: "Post-guest cleaning" },
+      { id: "sch-4", villa_id: "villa-003", villa_name: "Villa Al-Reef", cleaner_name: "Layla", scheduled_date: "2024-06-16", status: "in_progress", notes: "Pool area focus" },
+    ]);
   }, [fetchData]);
 
   useEffect(() => {
@@ -53,7 +75,6 @@ export default function CleanerTrackingPage() {
     setCleanerId(id);
     setTracking(true);
 
-    // Start geolocation + sensor simulation
     if (!navigator.geolocation) {
       alert("Geolocation not supported");
       return;
@@ -65,9 +86,7 @@ export default function CleanerTrackingPage() {
     const watchId = navigator.geolocation.watchPosition(
       async (position) => {
         const { latitude, longitude, altitude } = position.coords;
-        // Derive floor from altitude difference
         const floor = altitude ? Math.round((altitude - villa.elevation) / 3.5) : 0;
-        // Mock temperature based on altitude (simpler for demo)
         const temp = altitude && altitude > villa.elevation + 2 ? 31.5 : 23.0;
         const locationType = temp > 25 ? "outside" : floor === 0 ? "inside" : floor > 0 ? "inside" : "outside";
 
@@ -100,13 +119,31 @@ export default function CleanerTrackingPage() {
       { enableHighAccuracy: true, maximumAge: 30000, timeout: 27000 }
     );
 
-    // Stop after 8 hours (work shift)
     setTimeout(() => {
       navigator.geolocation.clearWatch(watchId);
       setTracking(false);
     }, 8 * 60 * 60 * 1000);
 
     return () => navigator.geolocation.clearWatch(watchId);
+  };
+
+  const addSchedule = (schedule: Omit<CleaningSchedule, "id">) => {
+    const newSchedule: CleaningSchedule = {
+      ...schedule,
+      id: `sch-${Date.now()}`,
+    };
+    setSchedules((prev) => [...prev, newSchedule]);
+    setShowScheduleForm(false);
+  };
+
+  const updateScheduleStatus = (id: string, status: CleaningSchedule["status"]) => {
+    setSchedules((prev) =>
+      prev.map((s) =>
+        s.id === id
+          ? { ...s, status, completed_at: status === "completed" ? new Date().toISOString() : s.completed_at }
+          : s
+      )
+    );
   };
 
   if (loading) {
@@ -119,11 +156,11 @@ export default function CleanerTrackingPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 p-4 space-y-6">
-      {/* Mobile Header */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-white flex items-center gap-2">
           <Smartphone className="h-6 w-6 text-nexus-400" />
-          Cleaner Tracker
+          Cleaner Tracking
         </h1>
         <div className="flex items-center gap-2 text-xs text-slate-400">
           {tracking ? (
@@ -154,52 +191,272 @@ export default function CleanerTrackingPage() {
         </select>
       </div>
 
-      {/* Cleaner Info */}
-      {!tracking && (
-        <div className="space-y-3 rounded-lg bg-slate-900 p-4">
-          <input
-            className="input w-full"
-            placeholder="Your Name"
-            value={cleanerName}
-            onChange={(e) => setCleanerName(e.target.value)}
-          />
-          <button onClick={startTracking} className="btn-primary w-full gap-2">
-            <CheckCircle2 className="h-4 w-4" />
-            Start Shift
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b border-slate-700 pb-1">
+        {(["tracking", "schedule", "history"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              tab === t ? "bg-slate-800 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"
+            }`}
+          >
+            {t === "tracking" && <Radio className="h-4 w-4 inline mr-1" />}
+            {t === "schedule" && <ListTodo className="h-4 w-4 inline mr-1" />}
+            {t === "history" && <History className="h-4 w-4 inline mr-1" />}
+            {t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
+        ))}
+      </div>
+
+      {/* Tracking Tab */}
+      {tab === "tracking" && (
+        <div className="space-y-6">
+          {!tracking && (
+            <div className="space-y-3 rounded-lg bg-slate-900 p-4">
+              <input
+                className="input w-full"
+                placeholder="Your Name"
+                value={cleanerName}
+                onChange={(e) => setCleanerName(e.target.value)}
+              />
+              <button onClick={startTracking} className="btn-primary w-full gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                Start Shift
+              </button>
+            </div>
+          )}
+
+          {tracking && (
+            <div className="space-y-4 rounded-lg bg-slate-900 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-white">{cleanerName}</p>
+                  <p className="text-xs text-emerald-400">Tracking active</p>
+                </div>
+                <div className="h-3 w-3 animate-pulse rounded-full bg-emerald-400" />
+              </div>
+
+              {logs.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-400">Latest Position</p>
+                  <LatestPositionCard log={logs[0]} villa={villas.find((v) => v.id === selectedVilla)} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Live Logs */}
+          <div className="space-y-3">
+            <p className="text-xs font-medium text-slate-400 uppercase">Live Session</p>
+            {logs.slice(0, 5).map((log) => (
+              <LogCard key={log.id} log={log} />
+            ))}
+            {logs.length === 0 && (
+              <p className="text-center text-sm text-slate-500 py-8">No tracking data yet. Start a shift.</p>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Active Tracking */}
-      {tracking && (
-        <div className="space-y-4 rounded-lg bg-slate-900 p-4">
+      {/* Schedule Tab */}
+      {tab === "schedule" && (
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-white">{cleanerName}</p>
-              <p className="text-xs text-emerald-400">Tracking active</p>
-            </div>
-            <div className="h-3 w-3 animate-pulse rounded-full bg-emerald-400" />
+            <h2 className="text-sm font-medium text-white">Cleaning Schedules</h2>
+            <button onClick={() => setShowScheduleForm(true)} className="btn-primary gap-2 text-xs">
+              <Plus className="h-3 w-3" /> Add Schedule
+            </button>
           </div>
 
-          {logs.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs text-slate-400">Latest Position</p>
-              <LatestPositionCard log={logs[0]} villa={villas.find((v) => v.id === selectedVilla)} />
-            </div>
+          {showScheduleForm && (
+            <ScheduleForm
+              villas={villas}
+              onSave={addSchedule}
+              onClose={() => setShowScheduleForm(false)}
+            />
+          )}
+
+          <div className="space-y-2">
+            {schedules
+              .filter((s) => selectedVilla === "" || s.villa_id === selectedVilla)
+              .map((schedule) => (
+                <div
+                  key={schedule.id}
+                  className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/50 p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                        schedule.status === "completed"
+                          ? "bg-emerald-500/10"
+                          : schedule.status === "in_progress"
+                          ? "bg-amber-500/10"
+                          : schedule.status === "scheduled"
+                          ? "bg-sky-500/10"
+                          : "bg-rose-500/10"
+                      }`}
+                    >
+                      <CheckCircle2
+                        className={`h-5 w-5 ${
+                          schedule.status === "completed"
+                            ? "text-emerald-400"
+                            : schedule.status === "in_progress"
+                            ? "text-amber-400"
+                            : schedule.status === "scheduled"
+                            ? "text-sky-400"
+                            : "text-rose-400"
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">{schedule.villa_name}</p>
+                      <p className="text-xs text-slate-400">
+                        {schedule.cleaner_name} · {schedule.scheduled_date}
+                      </p>
+                      <p className="text-xs text-slate-500">{schedule.notes}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${
+                        schedule.status === "completed"
+                          ? "bg-emerald-500/10 text-emerald-400"
+                          : schedule.status === "in_progress"
+                          ? "bg-amber-500/10 text-amber-400"
+                          : schedule.status === "scheduled"
+                          ? "bg-sky-500/10 text-sky-400"
+                          : "bg-rose-500/10 text-rose-400"
+                      }`}
+                    >
+                      {schedule.status.replace("_", " ")}
+                    </span>
+                    {schedule.status === "scheduled" && (
+                      <>
+                        <button
+                          onClick={() => updateScheduleStatus(schedule.id, "in_progress")}
+                          className="rounded bg-amber-500/10 px-2 py-1 text-[10px] text-amber-400 hover:bg-amber-500/20"
+                        >
+                          Start
+                        </button>
+                        <button
+                          onClick={() => updateScheduleStatus(schedule.id, "skipped")}
+                          className="rounded bg-rose-500/10 px-2 py-1 text-[10px] text-rose-400 hover:bg-rose-500/20"
+                        >
+                          Skip
+                        </button>
+                      </>
+                    )}
+                    {schedule.status === "in_progress" && (
+                      <button
+                        onClick={() => updateScheduleStatus(schedule.id, "completed")}
+                        className="rounded bg-emerald-500/10 px-2 py-1 text-[10px] text-emerald-400 hover:bg-emerald-500/20"
+                      >
+                        Complete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            {schedules.length === 0 && (
+              <p className="text-center text-sm text-slate-500 py-8">No schedules yet</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* History Tab */}
+      {tab === "history" && (
+        <div className="space-y-3">
+          <p className="text-xs font-medium text-slate-400 uppercase">All Session History</p>
+          {logs.map((log) => (
+            <LogCard key={log.id} log={log} />
+          ))}
+          {logs.length === 0 && (
+            <p className="text-center text-sm text-slate-500 py-8">No tracking data yet</p>
           )}
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Logs History */}
-      <div className="space-y-3">
-        <p className="text-xs font-medium text-slate-400 uppercase">Session History</p>
-        {logs.map((log) => (
-          <LogCard key={log.id} log={log} />
-        ))}
-        {logs.length === 0 && (
-          <p className="text-center text-sm text-slate-500 py-8">No tracking data yet</p>
-        )}
+function ScheduleForm({
+  villas,
+  onSave,
+  onClose,
+}: {
+  villas: VillaProperty[];
+  onSave: (schedule: Omit<CleaningSchedule, "id">) => void;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState({
+    villa_id: villas[0]?.id || "",
+    cleaner_name: "",
+    scheduled_date: new Date().toISOString().split("T")[0],
+    notes: "",
+  });
+
+  const selectedVilla = villas.find((v) => v.id === form.villa_id);
+
+  return (
+    <div className="rounded-lg border border-slate-700 bg-slate-900 p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-white">Add Cleaning Schedule</h3>
+        <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <X className="h-4 w-4" />
+        </button>
       </div>
+
+      <select
+        className="input w-full"
+        value={form.villa_id}
+        onChange={(e) => setForm({ ...form, villa_id: e.target.value })}
+      >
+        {villas.map((v) => (
+          <option key={v.id} value={v.id}>
+            {v.name}
+          </option>
+        ))}
+      </select>
+
+      <input
+        className="input w-full"
+        placeholder="Cleaner Name"
+        value={form.cleaner_name}
+        onChange={(e) => setForm({ ...form, cleaner_name: e.target.value })}
+      />
+
+      <input
+        type="date"
+        className="input w-full"
+        value={form.scheduled_date}
+        onChange={(e) => setForm({ ...form, scheduled_date: e.target.value })}
+      />
+
+      <textarea
+        className="input w-full"
+        rows={2}
+        placeholder="Notes (e.g., Deep clean, pool focus...)"
+        value={form.notes}
+        onChange={(e) => setForm({ ...form, notes: e.target.value })}
+      />
+
+      <button
+        onClick={() =>
+          onSave({
+            villa_id: form.villa_id,
+            villa_name: selectedVilla?.name || "",
+            cleaner_name: form.cleaner_name,
+            scheduled_date: form.scheduled_date,
+            status: "scheduled",
+            notes: form.notes,
+          })
+        }
+        className="btn-primary w-full gap-2"
+      >
+        <Plus className="h-4 w-4" /> Add Schedule
+      </button>
     </div>
   );
 }
