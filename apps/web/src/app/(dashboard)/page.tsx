@@ -1,8 +1,8 @@
 "use client";
 
 import { useAuth } from "@/lib/auth";
-import VillaDashboardPage from "./villa-dashboard/page";
-import HotelDashboardPage from "./hotel-dashboard/page";
+import VillaDashboardPage from "./villa-dashboard/villa-dashboard-content";
+import HotelDashboardPage from "./hotel-dashboard/hotel-dashboard-content";
 
 export default function DashboardPage() {
   const { isVillaOwner, isSuperAdmin } = useAuth();

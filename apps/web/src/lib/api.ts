@@ -836,23 +836,6 @@ export interface VillaReservation {
   updated_at: string;
 }
 
-export async function getVillas(): Promise<VillaProperty[]> {
-  const data = await api<{ villas: VillaProperty[] }>("/v1/villas");
-  return data.villas || [];
-}
-
-export async function getVillaReservations(): Promise<VillaReservation[]> {
-  const data = await api<{ reservations: VillaReservation[] }>("/v1/villa-reservations");
-  return data.reservations || [];
-}
-
-export async function getVillaRevenue(from: string, to: string): Promise<{ total_revenue: number; villa_breakdown: Array<{ villa_id: string; villa_name: string; revenue: number; nights_booked: number; occupancy_pct: number }> }> {
-  const params = new URLSearchParams();
-  params.append("from", from);
-  params.append("to", to);
-  return api(`/v1/villa-revenue?${params.toString()}`);
-}
-
 export interface SystemConfig {
   tenant_id: string;
   default_check_in_time: string;
