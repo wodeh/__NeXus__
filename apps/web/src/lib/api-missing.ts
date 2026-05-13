@@ -141,9 +141,12 @@ export interface RoomDailyStatus {
   revenue: number;
 }
 
-export async function getRoomStatusView(): Promise<RoomStatusView[]> {
-  const data = await api<{ rooms: RoomStatusView[] }>('/v1/rooms/status-view');
-  return data.rooms || [];
+export async function getRoomStatusView(date?: string, view?: string): Promise<{ dates: RoomDailyStatus[]; rooms: RoomStatusView[] }> {
+  const params = new URLSearchParams();
+  if (date) params.append('date', date);
+  if (view) params.append('view', view);
+  const query = params.toString();
+  return api(`/v1/rooms/status-view${query ? '?' + query : ''}`);
 }
 
 /* ─── Guest Journey API ─── */
