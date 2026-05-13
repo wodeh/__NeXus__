@@ -535,7 +535,7 @@ function LogCard({ log }: { log: CleanerSensorLog }) {
         </div>
         <p className="text-xs text-slate-400 truncate">
           {(log.temperature ?? 0) > 25 ? "Outside" : "Inside"} · {log.location_type} ·{" "}
-          {new Date(log.recorded_at).toLocaleTimeString()}
+          {new Date(log.recorded_at || log.timestamp).toLocaleTimeString()}
         </p>
       </div>
       <div className="text-xs text-slate-500">
