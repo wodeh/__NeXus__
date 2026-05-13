@@ -507,7 +507,7 @@ function LatestPositionCard({ log, villa }: { log: CleanerSensorLog; villa?: Vil
           <span className="text-xs text-white">{log.battery_level}%</span>
         </div>
         <p className="text-[10px] text-slate-400">
-          {new Date(log.recorded_at).toLocaleTimeString()}
+          {new Date(log.recorded_at || log.timestamp).toLocaleTimeString()}
         </p>
       </div>
     </div>
