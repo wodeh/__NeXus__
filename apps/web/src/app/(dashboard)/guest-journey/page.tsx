@@ -221,7 +221,7 @@ export default function GuestJourneyPage() {
                       {e.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-xs text-slate-400">{new Date(e.started_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 text-xs text-slate-400">{e.started_at ? new Date(e.started_at).toLocaleDateString() : "—"}</td>
                   <td className="px-4 py-3 text-xs text-slate-400">{e.next_trigger_at ? new Date(e.next_trigger_at).toLocaleString() : "—"}</td>
                 </tr>
               ))}
