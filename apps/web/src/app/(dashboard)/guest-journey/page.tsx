@@ -154,7 +154,7 @@ export default function GuestJourneyPage() {
               {/* Steps */}
               <div className="space-y-2">
                 {journey.steps?.map((step, i) => (
-                  <div key={step.id} className="flex items-center gap-3 rounded bg-slate-800/50 p-3">
+                  <div key={i} className="flex items-center gap-3 rounded bg-slate-800/50 p-3">
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-white">
                       {i + 1}
                     </div>
