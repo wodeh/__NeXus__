@@ -183,3 +183,57 @@ export async function getJourneyExecutions(): Promise<JourneyExecution[]> {
 export async function createJourney(payload: Omit<GuestJourney, "id" | "tenant_id" | "created_at" | "updated_at">): Promise<GuestJourney> {
   return api('/v1/journeys', { method: 'POST', body: JSON.stringify(payload) });
 }
+
+/* ─── Competitor & Rate Shop API ─── */
+
+export interface Competitor {
+  id: string;
+  tenant_id: string;
+  name: string;
+  website?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  star_rating?: number;
+  room_count?: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RateShopConfig {
+  id: string;
+  tenant_id: string;
+  enabled: boolean;
+  frequency: string;
+  competitors: string[];
+  room_types: string[];
+  alert_threshold_pct: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getCompetitors(): Promise<Competitor[]> {
+  const data = await api<{ competitors: Competitor[] }>('/v1/competitors');
+  return data.competitors || [];
+}
+
+export async function createCompetitor(payload: Omit<Competitor, "id" | "tenant_id" | "created_at" | "updated_at">): Promise<Competitor> {
+  return api('/v1/competitors', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function updateCompetitor(id: string, payload: Partial<Competitor>): Promise<Competitor> {
+  return api(`/v1/competitors/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+
+export async function deleteCompetitor(id: string): Promise<void> {
+  return api(`/v1/competitors/${id}`, { method: 'DELETE' });
+}
+
+export async function getRateShopConfig(): Promise<RateShopConfig> {
+  return api('/v1/rate-shop/config');
+}
+
+export async function updateRateShopConfig(payload: Partial<RateShopConfig>): Promise<RateShopConfig> {
+  return api('/v1/rate-shop/config', { method: 'PATCH', body: JSON.stringify(payload) });
+}

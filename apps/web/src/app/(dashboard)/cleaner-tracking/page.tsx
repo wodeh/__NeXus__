@@ -473,7 +473,7 @@ function LatestPositionCard({ log, villa }: { log: CleanerSensorLog; villa?: Vil
           </span>
         </div>
         <p className="text-[10px] text-slate-400">
-          {log.temperature > 25 ? "Outside cleaning" : "Inside cleaning"}
+          {log.temperature && log.temperature > 25 ? "Outside cleaning" : "Inside cleaning"}
         </p>
       </div>
 
