@@ -21,6 +21,10 @@ func (s *Server) registerVillaHandlers(mux *http.ServeMux) {
 
 // Villa Properties
 func (s *Server) handleVillas(w http.ResponseWriter, r *http.Request) {
+	if s.repo == nil || s.repo.Villa == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "database not configured"})
+		return
+	}
 	ctx := r.Context()
 	switch r.Method {
 	case http.MethodGet:
@@ -46,6 +50,10 @@ func (s *Server) handleVillas(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleVillaDetail(w http.ResponseWriter, r *http.Request) {
+	if s.repo == nil || s.repo.Villa == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "database not configured"})
+		return
+	}
 	ctx := r.Context()
 	id := extractID(r.URL.Path, "/v1/villas/")
 	if id == "" {
@@ -84,6 +92,10 @@ func (s *Server) handleVillaDetail(w http.ResponseWriter, r *http.Request) {
 
 // Villa Reservations
 func (s *Server) handleVillaReservations(w http.ResponseWriter, r *http.Request) {
+	if s.repo == nil || s.repo.Villa == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "database not configured"})
+		return
+	}
 	ctx := r.Context()
 	switch r.Method {
 	case http.MethodGet:
@@ -109,6 +121,10 @@ func (s *Server) handleVillaReservations(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *Server) handleVillaReservationDetail(w http.ResponseWriter, r *http.Request) {
+	if s.repo == nil || s.repo.Villa == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "database not configured"})
+		return
+	}
 	ctx := r.Context()
 	id := extractID(r.URL.Path, "/v1/villa-reservations/")
 	if id == "" {
@@ -147,6 +163,10 @@ func (s *Server) handleVillaReservationDetail(w http.ResponseWriter, r *http.Req
 
 // Villa Availability
 func (s *Server) handleVillaAvailability(w http.ResponseWriter, r *http.Request) {
+	if s.repo == nil || s.repo.Villa == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "database not configured"})
+		return
+	}
 	if r.Method != http.MethodGet {
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		return
@@ -172,6 +192,10 @@ func (s *Server) handleVillaAvailability(w http.ResponseWriter, r *http.Request)
 
 // Villa Revenue
 func (s *Server) handleVillaRevenue(w http.ResponseWriter, r *http.Request) {
+	if s.repo == nil || s.repo.Villa == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "database not configured"})
+		return
+	}
 	if r.Method != http.MethodGet {
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		return
@@ -195,6 +219,10 @@ func (s *Server) handleVillaRevenue(w http.ResponseWriter, r *http.Request) {
 
 // Sensor Logs
 func (s *Server) handleSensorLogs(w http.ResponseWriter, r *http.Request) {
+	if s.repo == nil || s.repo.Villa == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "database not configured"})
+		return
+	}
 	ctx := r.Context()
 	switch r.Method {
 	case http.MethodGet:
@@ -225,6 +253,10 @@ func (s *Server) handleSensorLogs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleLatestSensorLog(w http.ResponseWriter, r *http.Request) {
+	if s.repo == nil || s.repo.Villa == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "database not configured"})
+		return
+	}
 	if r.Method != http.MethodGet {
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		return

@@ -219,6 +219,80 @@ func main() {
 	}
 	logger.Info("demo users seeded", slog.Int("count", len(users)))
 
+	// ─── Seed Villa Properties ───
+	villas := []struct {
+		name, description, address, city, country string
+		bedrooms, bathrooms, maxGuests            int
+		pricePerNight, cleaningFee, securityDep   float64
+		amenities                                 []string
+	}{
+		{"Villa Al-Mashta", "Luxury mountain villa with panoramic views", "Jabal Al-Mashta, Ramallah", "Ramallah", "Palestine", 3, 2, 6, 350, 50, 500, []string{"wifi", "parking", "pool", "garden", "bbq"}},
+		{"Chalet Al-Balad", "Cozy chalet in the heart of Bethlehem", "Manger Street", "Bethlehem", "Palestine", 4, 3, 8, 450, 75, 750, []string{"wifi", "parking", "fireplace", "kitchen"}},
+		{"Villa Al-Reef", "Modern villa with sea view terrace", "Gaza Beach Road", "Gaza", "Palestine", 5, 4, 10, 600, 100, 1000, []string{"wifi", "parking", "pool", "gym", "ac"}},
+		{"Chalet Al-Jabal", "Rustic chalet surrounded by olive trees", "Nablus Mountain Road", "Nablus", "Palestine", 2, 1, 4, 250, 40, 300, []string{"wifi", "parking", "garden", "fireplace"}},
+	}
+	villaIDs := make([]string, len(villas))
+	for i, v := range villas {
+		var id string
+		err := pool.QueryRow(ctx, `
+			INSERT INTO villa_properties (tenant_id, name, description, address, city, country, bedrooms, bathrooms, max_guests, amenities, price_per_night, currency, cleaning_fee, security_deposit, is_active, status)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'USD', $12, $13, true, 'available')
+			ON CONFLICT DO NOTHING
+			RETURNING id
+		`, tenantID, v.name, v.description, v.address, v.city, v.country, v.bedrooms, v.bathrooms, v.maxGuests, v.amenities, v.pricePerNight, v.cleaningFee, v.securityDep).Scan(&id)
+		if err != nil {
+			logger.Warn("villa insert failed", slog.String("name", v.name), slog.String("error", err.Error()))
+			continue
+		}
+		villaIDs[i] = id
+		logger.Info("villa seeded", slog.String("name", v.name), slog.String("id", id))
+	}
+
+	// ─── Seed Villa Bookings (10 bookings) ───
+	bookings := []struct {
+		villaIdx    int
+		guest       string
+		phone       string
+		email       string
+		guestCount  int
+		checkIn     string
+		checkOut    string
+		nights      int
+		totalAmount float64
+		status      string
+		source      string
+		balanceDue  float64
+		balancePaid bool
+	}{
+		{0, "Ahmad Khalil", "+970599123456", "ahmad@email.com", 4, "2024-06-15", "2024-06-20", 5, 1750, "reserved", "phone", 0, true},
+		{0, "Sarah Nassar", "+970599987654", "sarah@email.com", 3, "2024-07-01", "2024-07-05", 4, 1400, "pending", "whatsapp", 1400, false},
+		{1, "Layla Farhat", "+970599456789", "layla@email.com", 6, "2024-06-22", "2024-06-27", 5, 2250, "reserved", "phone", 750, false},
+		{1, "Mohammed Ali", "+970599111222", "mohammed@email.com", 4, "2024-08-10", "2024-08-15", 5, 2250, "pending", "walkin", 2250, false},
+		{2, "Fatima Hassan", "+970599333444", "fatima@email.com", 8, "2024-07-20", "2024-07-25", 5, 3000, "reserved", "website", 0, true},
+		{2, "Omar Khalil", "+970599555666", "omar@email.com", 5, "2024-09-01", "2024-09-07", 6, 3600, "pending", "whatsapp", 3600, false},
+		{3, "Nadia Ibrahim", "+970599777888", "nadia@email.com", 3, "2024-06-18", "2024-06-21", 3, 750, "completed", "phone", 0, true},
+		{3, "Khaled Omar", "+970599999000", "khaled@email.com", 2, "2024-08-05", "2024-08-08", 3, 750, "reserved", "walkin", 0, true},
+		{0, "Rania Suleiman", "+970599000111", "rania@email.com", 5, "2024-10-01", "2024-10-07", 6, 2100, "pending", "website", 2100, false},
+		{1, "Youssef Nasser", "+970599222333", "youssef@email.com", 4, "2024-11-15", "2024-11-20", 5, 2250, "reserved", "whatsapp", 500, false},
+	}
+	for _, b := range bookings {
+		villaID := villaIDs[b.villaIdx]
+		if villaID == "" {
+			continue
+		}
+		villaName := villas[b.villaIdx].name
+		_, err := pool.Exec(ctx, `
+			INSERT INTO villa_reservations (tenant_id, villa_id, villa_name, guest_name, guest_phone, guest_email, guest_count, check_in_date, check_out_date, nights, total_amount, currency, status, source, balance_due, balance_paid)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'USD', $12, $13, $14, $15)
+			ON CONFLICT DO NOTHING
+		`, tenantID, villaID, villaName, b.guest, b.phone, b.email, b.guestCount, b.checkIn, b.checkOut, b.nights, b.totalAmount, b.status, b.source, b.balanceDue, b.balancePaid)
+		if err != nil {
+			logger.Warn("booking insert failed", slog.String("guest", b.guest), slog.String("error", err.Error()))
+		} else {
+			logger.Info("booking seeded", slog.String("guest", b.guest), slog.String("villa", villaName))
+		}
+	}
+
 	logger.Info("demo data seed complete", slog.String("tenant_id", tenantID))
 	fmt.Println("✅ Demo data seeded successfully")
 }
