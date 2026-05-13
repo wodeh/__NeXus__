@@ -465,10 +465,10 @@ function ScheduleForm({
 function LatestPositionCard({ log, villa }: { log: CleanerSensorLog; villa?: VillaProperty }) {
   return (
     <div className="grid grid-cols-2 gap-3">
-      <div className={`rounded-lg p-3 ${log.temperature > 25 ? "bg-amber-500/10" : "bg-sky-500/10"}`}>
+      <div className={`rounded-lg p-3 ${(log.temperature ?? 0) > 25 ? "bg-amber-500/10" : "bg-sky-500/10"}`}>
         <div className="flex items-center gap-2">
-          <Thermometer className={`h-4 w-4 ${log.temperature > 25 ? "text-amber-400" : "text-sky-400"}`} />
-          <span className={`text-lg font-bold ${log.temperature > 25 ? "text-amber-400" : "text-sky-400"}`}>
+          <Thermometer className={`h-4 w-4 ${(log.temperature ?? 0) > 25 ? "text-amber-400" : "text-sky-400"}`} />
+          <span className={`text-lg font-bold ${(log.temperature ?? 0) > 25 ? "text-amber-400" : "text-sky-400"}`}>
             {log.temperature}°C
           </span>
         </div>
