@@ -270,6 +270,7 @@ export interface CompetitorRate {
   competitor_name: string;
   room_type: string;
   rate: number;
+  is_promo?: boolean;
   date: string;
   scraped_at: string;
 }
@@ -281,3 +282,15 @@ export async function getCompetitorRates(): Promise<CompetitorRate[]> {
 
 /* ─── Type aliases for competitor page ─── */
 export type CompetitorHotel = Competitor;
+
+/* ─── Extended CompetitorRate fields ─── */
+export interface CompetitorRate {
+  id: string;
+  competitor_id: string;
+  competitor_name: string;
+  room_type: string;
+  rate: number;
+  is_promo?: boolean;
+  date: string;
+  scraped_at: string;
+}
