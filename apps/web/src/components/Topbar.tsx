@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { Bell, Search, User, LogOut } from "lucide-react";
 import { TenantConfig, tierName } from "@/lib/tenant";
+import { useAuth } from "@/lib/auth";
 
 export default function Topbar({ tenantConfig }: { tenantConfig: TenantConfig | null }) {
   const [search, setSearch] = useState("");
+  const { user, logout } = useAuth();
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-slate-800 bg-slate-900 px-6">
@@ -31,19 +33,25 @@ export default function Topbar({ tenantConfig }: { tenantConfig: TenantConfig | 
           </div>
         )}
 
+        {user && (
+          <div className="flex items-center gap-2 text-sm text-slate-300">
+            <User className="h-4 w-4" />
+            <span className="hidden sm:inline">{user.name}</span>
+            <span className="rounded-full bg-slate-700 px-2 py-0.5 text-[10px] uppercase text-slate-400">
+              {user.role}
+            </span>
+          </div>
+        )}
+
         <button className="relative rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white">
           <Bell className="h-5 w-5" />
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
         </button>
 
-        <button className="flex items-center gap-2 rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white">
-          <User className="h-5 w-5" />
-        </button>
-
         <button
           onClick={() => {
-            localStorage.removeItem("nexus-tenant");
-            window.location.href = "/";
+            logout();
+            window.location.href = "/login";
           }}
           className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-red-400"
           title="Sign Out"

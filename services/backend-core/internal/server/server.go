@@ -71,7 +71,7 @@ func (s *Server) Start(ctx context.Context) error {
 	s.registerIPTVHandlers(mux)
 	s.registerCommHandlers(mux)
 	s.registerGuestJourneyHandlers(mux)
-	s.registerVillaHandlers(mux)
+	s.registerAuthHandlers(mux)
 
 	s.registerHousekeepingHandlers(mux)
 	// Wrap all routes with CORS, then metrics

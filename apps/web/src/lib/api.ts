@@ -3,12 +3,39 @@ import { TenantConfig } from "@/lib/tenant";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || "demo";
 
+function getAuthHeaders(): Record<string, string> {
+  const auth = typeof window !== "undefined" ? localStorage.getItem("nexus-auth") : null;
+  if (auth) {
+    try {
+      const parsed = JSON.parse(auth);
+      if (parsed.token) {
+        return { Authorization: `Bearer ${parsed.token}` };
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return {};
+}
+
+function getTenantId(): string {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("nexus-tenant");
+    if (saved) return saved;
+  }
+  return TENANT_ID;
+}
+
 async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   const isGet = !opts || !opts.method || opts.method === "GET";
+  const authHeaders = getAuthHeaders();
+  const tenantId = getTenantId();
+
   const res = await fetch(`${API_BASE}${path}`, {
     headers: {
       "Content-Type": "application/json",
-      "X-Tenant-ID": TENANT_ID,
+      "X-Tenant-ID": tenantId,
+      ...authHeaders,
       ...(opts?.headers || {}),
     },
     cache: isGet ? "no-store" : undefined,

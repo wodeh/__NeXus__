@@ -28,6 +28,7 @@ import {
   Smartphone,
 } from "lucide-react";
 import { TenantConfig, hasCapability, CAPABILITIES } from "@/lib/tenant";
+import { useAuth } from "@/lib/auth";
 
 interface NavItem {
   label: string;
@@ -37,7 +38,6 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  // Hotel PMS nav items
   { label: "Dashboard", href: "/", icon: LayoutDashboard, cap: CAPABILITIES.CORE.RESERVATIONS },
   { label: "Command Center", href: "/command", icon: LayoutGrid, cap: CAPABILITIES.OPERATIONS.FRONT_DESK },
   { label: "Floor Plan", href: "/floor", icon: LayoutGrid, cap: CAPABILITIES.OPERATIONS.FLOOR_DASHBOARD },
@@ -63,7 +63,6 @@ const navItems: NavItem[] = [
   { label: "Competitors", href: "/competitors", icon: Globe, cap: CAPABILITIES.REVENUE.DYNAMIC_PRICING },
   { label: "Audit", href: "/audit", icon: ShieldCheck, cap: CAPABILITIES.CORE.AUDIT_LOGS },
   { label: "Settings", href: "/settings", icon: Settings, cap: CAPABILITIES.CORE.SETTINGS },
-  // Villa Rental nav items
   { label: "My Villas", href: "/villas", icon: Home, cap: CAPABILITIES.VILLA.PROPERTIES },
   { label: "Bookings", href: "/villa-reservations", icon: CalendarDays, cap: CAPABILITIES.VILLA.RESERVATIONS },
   { label: "Villa Revenue", href: "/villa-revenue", icon: TrendingUp, cap: CAPABILITIES.VILLA.REVENUE },
@@ -73,27 +72,13 @@ const navItems: NavItem[] = [
 export default function Sidebar({ tenantConfig }: { tenantConfig: TenantConfig | null }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-
-  const isVillaTenant = tenantConfig?.capabilities?.some((c) => c.startsWith("villa:"));
+  const { isVillaOwner } = useAuth();
 
   const filteredNav = navItems.filter((item) => {
     if (!tenantConfig) return true;
-    // Role-based filtering
-    const role = localStorage.getItem("nexus-role") || "admin";
-    if (role === "front_desk") {
-      // Only operational items
-      const allowed = ["/", "/reservations", "/floor", "/guests", "/housekeeping", "/room-blocks", "/settings"];
-      return allowed.includes(item.href);
-    }
-    if (role === "villa_owner") {
-      // Villa-focused: villa items + core dashboard
+    if (isVillaOwner) {
       return item.cap.startsWith("villa:") || item.href === "/" || item.href === "/settings";
     }
-    if (role === "hotel_owner") {
-      // Hotel-focused: hide villa items unless explicitly enabled
-      return !item.cap.startsWith("villa:");
-    }
-    // Admin: show all matching capabilities
     return hasCapability(tenantConfig, item.cap);
   });
 
@@ -149,11 +134,10 @@ export default function Sidebar({ tenantConfig }: { tenantConfig: TenantConfig |
         <div className="border-t border-slate-800 p-3">
           <p className="text-[10px] uppercase tracking-wider text-slate-500">License</p>
           <p className="mt-0.5 text-xs font-semibold text-nexus-400 capitalize">
-            {isVillaTenant ? "Villa Rental" : tenantConfig.license_tier}
+            {isVillaOwner ? "Villa Rental" : tenantConfig.license_tier}
           </p>
           <p className="mt-0.5 text-[10px] text-slate-500 leading-tight">
-            {tenantConfig.property_type.replace("-", " ")} &middot;{" "}
-            {isVillaTenant ? "unlimited villas" : `${tenantConfig.max_rooms} rooms max`}
+            {isVillaOwner ? "unlimited villas" : `${tenantConfig.max_rooms} rooms max`}
           </p>
         </div>
       )}

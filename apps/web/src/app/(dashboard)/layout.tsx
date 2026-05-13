@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import { apiClient } from "@/lib/api";
 import { TenantConfig } from "@/lib/tenant";
+import { useAuth } from "@/lib/auth";
 
 const fallbackConfig: TenantConfig = {
   id: "demo",
@@ -20,7 +22,6 @@ const fallbackConfig: TenantConfig = {
     "core:housekeeping", "core:settings", "core:audit_logs",
     "operations:floor_dashboard", "operations:room_blocks",
     "operations:group_reservations", "operations:maintenance", "operations:front_desk",
-    "operations:iptv_basic", "operations:smart_locks", "operations:remote_unlock",
     "revenue:dynamic_pricing", "revenue:ota_integration",
     "revenue:revenue_forecasting", "revenue:agent_management",
     "revenue:iptv_premium", "revenue:iptv_welcome", "revenue:iptv_content", "revenue:access_codes",
@@ -33,34 +34,70 @@ const fallbackConfig: TenantConfig = {
   updated_at: "",
 };
 
+const villaOwnerCapabilities = [
+  "villa:dashboard", "villa:properties", "villa:reservations", "villa:revenue", "villa:cleaner_tracking",
+  "core:reservations", "core:guests", "core:settings",
+];
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { user, token, isLoading, isVillaOwner } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   const [tenantConfig, setTenantConfig] = useState<TenantConfig | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Auth guard: redirect to login if not authenticated
   useEffect(() => {
-    const tenant = localStorage.getItem("nexus-tenant") || "demo";
+    if (!isLoading && !user && pathname !== "/login") {
+      router.push("/login");
+    }
+  }, [isLoading, user, pathname, router]);
+
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    const tenant = isVillaOwner ? "villa-owners" : (localStorage.getItem("nexus-tenant") || "demo");
     apiClient
       .get(`/v1/tenant/${tenant}`)
       .then((data) => {
-        setTenantConfig(data as TenantConfig);
+        const cfg = data as TenantConfig;
+        // Override capabilities for villa owners
+        if (isVillaOwner) {
+          cfg.capabilities = villaOwnerCapabilities;
+          cfg.property_type = "villa";
+          cfg.name = user.name + " — Villa Owner";
+        }
+        setTenantConfig(cfg);
         setLoading(false);
       })
       .catch(() => {
-        setTenantConfig(fallbackConfig);
+        const cfg = { ...fallbackConfig };
+        if (isVillaOwner) {
+          cfg.capabilities = villaOwnerCapabilities;
+          cfg.property_type = "villa";
+          cfg.name = user?.name + " — Villa Owner" || "Villa Owner";
+        }
+        setTenantConfig(cfg);
         setLoading(false);
       });
-  }, []);
+  }, [user, isVillaOwner]);
 
-  if (loading) {
+  if (isLoading || loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-950">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-nexus-500 border-t-transparent" />
       </div>
     );
+  }
+
+  if (!user) {
+    return null; // Will redirect
   }
 
   return (
