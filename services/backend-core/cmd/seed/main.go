@@ -191,6 +191,34 @@ func main() {
 	}
 	logger.Info("channels seeded", slog.Int("count", len(channels)))
 
+	// Seed demo users for login
+	hash := "$2a$10$wKvRKo1uJX0fC4p8K0OdHujT5jaMFeS9OqkZ/vEvX.s.yNXkgXGvK"
+	users := []struct {
+		email string
+		name  string
+		role  string
+	}{
+		{"ramiz@villa.test", "Ramiz Haddad", "manager"},
+		{"owner1@villa.test", "Ahmad Khalil", "manager"},
+		{"owner2@villa.test", "Sarah Nassar", "manager"},
+		{"owner4@villa.test", "Layla Farhat", "manager"},
+	}
+	for _, u := range users {
+		_, err := pool.Exec(ctx, `
+			INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
+			VALUES ($1, $2, $3, $4, $5, true)
+			ON CONFLICT (email) DO UPDATE SET
+				password_hash = EXCLUDED.password_hash,
+				name = EXCLUDED.name,
+				role = EXCLUDED.role,
+				is_active = true
+		`, tenantID, u.email, hash, u.name, u.role)
+		if err != nil {
+			logger.Warn("user insert failed", slog.String("email", u.email), slog.String("error", err.Error()))
+		}
+	}
+	logger.Info("demo users seeded", slog.Int("count", len(users)))
+
 	logger.Info("demo data seed complete", slog.String("tenant_id", tenantID))
 	fmt.Println("✅ Demo data seeded successfully")
 }
