@@ -107,7 +107,7 @@ export default function CleanerTrackingPage() {
         };
 
         try {
-          await recordSensorLog(payload);
+          await recordSensorLog(selectedVilla, payload);
           const updated = await getSensorLogs(selectedVilla);
           setLogs(updated);
         } catch (e) {
