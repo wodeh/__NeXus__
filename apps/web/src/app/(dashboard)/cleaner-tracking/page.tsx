@@ -539,7 +539,7 @@ function LogCard({ log }: { log: CleanerSensorLog }) {
         </p>
       </div>
       <div className="text-xs text-slate-500">
-        {Math.round(log.altitude)}m
+        {Math.round(log.altitude || 0)}m
       </div>
     </div>
   );
