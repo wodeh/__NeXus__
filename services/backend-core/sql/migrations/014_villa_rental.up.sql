@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS villa_properties (
     country VARCHAR(100),
     latitude NUMERIC(10, 8),
     longitude NUMERIC(11, 8),
-    elevation NUMERIC(8, 2), -- meters above sea level (baseline for floor detection)
+    elevation NUMERIC(8, 2),
     bedrooms INTEGER NOT NULL DEFAULT 1,
     bathrooms INTEGER NOT NULL DEFAULT 1,
     max_guests INTEGER NOT NULL DEFAULT 2,
@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS villa_properties (
     is_active BOOLEAN NOT NULL DEFAULT true,
     status VARCHAR(20) NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'maintenance', 'blocked')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(tenant_id, name)
 );
 
 -- Villa Reservations (day-based bookings)
