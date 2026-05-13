@@ -1,0 +1,106 @@
+package server
+
+import (
+	"encoding/json"
+	"net/http"
+
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
+)
+
+func (s *Server) registerAuthHandlers(mux *http.ServeMux) {
+	mux.HandleFunc("/v1/auth/login", s.handleLogin)
+	mux.HandleFunc("/v1/auth/me", s.withTenant(s.handleMe))
+}
+
+func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+	if req.Email == "" || req.Password == "" {
+		writeJSONError(w, http.StatusBadRequest, "email and password required")
+		return
+	}
+	if s.repo == nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "database not connected — check postgres and DATABASE_URL")
+		return
+	}
+	if s.repo.Auth == nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "auth repository not configured")
+		return
+	}
+	creds, err := s.repo.Auth.GetUserByEmail(r.Context(), req.Email)
+	if err != nil {
+		writeJSONError(w, http.StatusUnauthorized, "invalid credentials")
+		return
+	}
+	if !creds.IsActive {
+		writeJSONError(w, http.StatusUnauthorized, "account disabled")
+		return
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(creds.PasswordHash), []byte(req.Password)); err != nil {
+		writeJSONError(w, http.StatusUnauthorized, "invalid credentials")
+		return
+	}
+	_ = s.repo.Auth.UpdateLastLogin(r.Context(), creds.ID)
+	tenant, _ := s.repo.Auth.GetTenantByID(r.Context(), creds.TenantID)
+	tenantName := ""
+	tenantExternalID := ""
+	if tenant != nil {
+		tenantName = tenant.Name
+		tenantExternalID = tenant.ExternalID
+	}
+	token := uuid.New().String()
+	capabilities := defaultCapabilities()
+	if creds.Role == "manager" && tenantExternalID == "villa-owners" {
+		capabilities = villaOwnerCapabilities()
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"token": token,
+		"user": map[string]interface{}{
+			"id": creds.ID, "email": creds.Email, "name": creds.Name,
+			"role": creds.Role, "tenant_id": creds.TenantID, "is_active": creds.IsActive,
+		},
+		"tenant": map[string]interface{}{
+			"id": tenantExternalID, "name": tenantName, "external_id": tenantExternalID,
+		},
+		"capabilities": capabilities,
+	})
+}
+
+func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tenantID, _ := ctx.Value("tenant_id").(string)
+	writeJSON(w, http.StatusOK, map[string]interface{}{"tenant_id": tenantID})
+}
+
+func defaultCapabilities() []string {
+	return []string{
+		"core:reservations", "core:guests", "core:properties", "core:rooms",
+		"core:housekeeping", "core:settings", "core:audit_logs",
+		"operations:floor_dashboard", "operations:room_blocks",
+		"operations:group_reservations", "operations:maintenance", "operations:front_desk",
+		"revenue:dynamic_pricing", "revenue:ota_integration",
+		"revenue:revenue_forecasting", "revenue:agent_management",
+		"enterprise:multi_property", "enterprise:advanced_crm",
+		"enterprise:api_access", "enterprise:white_label", "enterprise:custom_reports",
+		"villa:dashboard", "villa:properties", "villa:reservations", "villa:revenue", "villa:cleaner_tracking",
+	}
+}
+
+func villaOwnerCapabilities() []string {
+	return []string{
+		"villa:dashboard", "villa:properties", "villa:reservations",
+		"villa:revenue", "villa:cleaner_tracking",
+		"core:reservations", "core:guests", "core:settings",
+	}
+}
