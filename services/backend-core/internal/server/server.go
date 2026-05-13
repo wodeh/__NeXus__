@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -355,6 +356,4 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 
 func writeJSONError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
-}
- message})
 }

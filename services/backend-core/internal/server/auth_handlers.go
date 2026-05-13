@@ -27,6 +27,12 @@ func (s *Server) registerAuthHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/v1/auth/me", s.withTenant(s.handleMe))
 }
 
+// loginRequest is the request body for the login endpoint.
+type loginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
