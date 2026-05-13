@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS properties (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at  TIMESTAMPTZ,
+    version     INTEGER NOT NULL DEFAULT 1,
     UNIQUE(tenant_id, name)
 );
 
