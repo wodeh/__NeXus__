@@ -814,6 +814,7 @@ export interface VillaProperty {
   address?: string;
   city?: string;
   country?: string;
+  elevation?: number;
   status: "available" | "reserved" | "occupied" | "maintenance";
   is_active: boolean;
   created_at: string;
@@ -1051,6 +1052,7 @@ export interface VillaProperty {
   address?: string;
   city?: string;
   country?: string;
+  elevation?: number;
   status: "available" | "reserved" | "occupied" | "maintenance";
   is_active: boolean;
   created_at: string;
@@ -1089,3 +1091,39 @@ export async function getVillaRevenue(from: string, to: string): Promise<{ total
   params.append("to", to);
   return api(`/v1/villa-revenue?${params.toString()}`);
 }
+
+export async function createVilla(payload: Omit<VillaProperty, "id" | "tenant_id" | "created_at" | "updated_at">): Promise<VillaProperty> {
+  return api("/v1/villas", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function updateVilla(id: string, payload: Partial<VillaProperty>): Promise<VillaProperty> {
+  return api(`/v1/villas/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+}
+
+export async function deleteVilla(id: string): Promise<void> {
+  return api(`/v1/villas/${id}`, { method: "DELETE" });
+}
+
+export async function updateVillaReservation(id: string, payload: Partial<VillaReservation>): Promise<VillaReservation> {
+  return api(`/v1/villa-reservations/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+}
+
+export interface CleanerSensorLog {
+  id: string;
+  villa_id: string;
+  cleaner_name: string;
+  action: "check_in" | "check_out";
+  timestamp: string;
+  location?: string;
+}
+
+export async function getSensorLogs(villaId: string): Promise<CleanerSensorLog[]> {
+  const data = await api<{ logs: CleanerSensorLog[] }>(`/v1/villas/${villaId}/sensor-logs`);
+  return data.logs || [];
+}
+
+export async function recordSensorLog(villaId: string, payload: { cleaner_name: string; action: string; location?: string }): Promise<CleanerSensorLog> {
+  return api(`/v1/villas/${villaId}/sensor-logs`, { method: "POST", body: JSON.stringify(payload) });
+}
+
+
