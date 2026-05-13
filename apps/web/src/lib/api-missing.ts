@@ -146,6 +146,8 @@ export interface GuestJourney {
   guest_name: string;
   stage: string;
   status: string;
+  is_active?: boolean;
+  steps?: Array<{ name: string; completed: boolean }>;
   notes?: string;
   created_at: string;
   updated_at: string;
