@@ -293,6 +293,147 @@ func main() {
 		}
 	}
 
+	// ─── Seed Super Admin ───
+	superAdminEmail := "admin@nexus.com"
+	_, err = pool.Exec(ctx, `
+		INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
+		VALUES ($1, $2, $3, 'System Administrator', 'super_admin', true)
+		ON CONFLICT (email) DO UPDATE SET
+			password_hash = EXCLUDED.password_hash,
+			name = EXCLUDED.name,
+			role = EXCLUDED.role,
+			is_active = true
+	`, tenantID, superAdminEmail, hash)
+	if err != nil {
+		logger.Warn("super admin insert failed", slog.String("error", err.Error()))
+	} else {
+		logger.Info("super admin seeded", slog.String("email", superAdminEmail))
+	}
+
+	// ─── Seed 5 Hotels with Owners, Rooms, Reservations ───
+	hotels := []struct {
+		externalID, name, city, country string
+		floors, roomsPerFloor           int
+		ownerEmail, ownerName           string
+	}{
+		{"hotel-grand-plaza", "Grand Plaza Hotel", "New York", "USA", 5, 20, "owner.grand@nexus.com", "John Grand"},
+		{"hotel-marina-bay", "Marina Bay Resort", "Dubai", "UAE", 6, 18, "owner.marina@nexus.com", "Fatima Al-Rashid"},
+		{"hotel-alpine-lodge", "Alpine Lodge", "Zermatt", "Switzerland", 4, 15, "owner.alpine@nexus.com", "Hans Mueller"},
+		{"hotel-ocean-view", "Ocean View Resort", "Maldives", "Maldives", 3, 25, "owner.ocean@nexus.com", "Aisha Hassan"},
+		{"hotel-city-center", "City Center Inn", "London", "UK", 4, 22, "owner.city@nexus.com", "James Sterling"},
+	}
+
+	roomTypesHotel := []string{"Standard", "Deluxe", "Suite", "Premium", "Family"}
+	bedTypesHotel := []string{"Queen", "King", "Twin", "Double Queen", "King Sofa"}
+	statusesHotel := []string{"vacant_clean", "occupied", "vacant_dirty", "blocked", "maintenance"}
+	sourcesHotel := []string{"direct", "ota", "walk_in", "agent"}
+
+	for hi, h := range hotels {
+		// Create hotel tenant
+		var hotelTenantID string
+		err := pool.QueryRow(ctx, `
+			INSERT INTO tenants (external_id, name, region, tier, config)
+			VALUES ($1, $2, 'us-east-1', 'enterprise', '{}')
+			ON CONFLICT (external_id) DO UPDATE SET name = EXCLUDED.name
+			RETURNING id
+		`, h.externalID, h.name).Scan(&hotelTenantID)
+		if err != nil {
+			logger.Warn("hotel tenant insert failed", slog.String("name", h.name), slog.String("error", err.Error()))
+			continue
+		}
+		logger.Info("hotel tenant created", slog.String("name", h.name), slog.String("id", hotelTenantID))
+
+		// Create hotel owner user
+		_, err = pool.Exec(ctx, `
+			INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
+			VALUES ($1, $2, $3, $4, 'manager', true)
+			ON CONFLICT (email) DO UPDATE SET
+				password_hash = EXCLUDED.password_hash,
+				name = EXCLUDED.name,
+				role = EXCLUDED.role,
+				is_active = true
+		`, hotelTenantID, h.ownerEmail, hash, h.ownerName)
+		if err != nil {
+			logger.Warn("hotel owner insert failed", slog.String("hotel", h.name), slog.String("error", err.Error()))
+		}
+
+		// Seed rooms for this hotel
+		roomRepoHotel := repository.NewRoomRepository(pool)
+		roomCountHotel := 0
+		for floor := 1; floor <= h.floors; floor++ {
+			for roomIdx := 1; roomIdx <= h.roomsPerFloor; roomIdx++ {
+				roomNum := fmt.Sprintf("%d%02d", floor, roomIdx)
+				roomType := roomTypesHotel[(roomIdx-1)%len(roomTypesHotel)]
+				bedType := bedTypesHotel[(roomIdx-1)%len(bedTypesHotel)]
+				status := statusesHotel[(floor+roomIdx+hi)%len(statusesHotel)]
+				rate := 89
+				switch roomType {
+				case "Deluxe":
+					rate = 129
+				case "Suite":
+					rate = 229
+				case "Premium":
+					rate = 189
+				case "Family":
+					rate = 159
+				}
+
+				if err := roomRepoHotel.Create(ctx, hotelTenantID, &domain.Room{
+					PropertyID: "main",
+					Number:     roomNum,
+					Floor:      fmt.Sprintf("%d", floor),
+					Type:       roomType,
+					BedType:    strPtr(bedType),
+					Status:     status,
+					RateNight:  rate,
+				}); err != nil {
+					logger.Warn("hotel room insert failed", slog.String("hotel", h.name), slog.String("room", roomNum), slog.String("error", err.Error()))
+				} else {
+					roomCountHotel++
+				}
+			}
+		}
+		logger.Info("hotel rooms seeded", slog.String("hotel", h.name), slog.Int("count", roomCountHotel))
+
+		// Seed reservations for this hotel
+		resRepoHotel := repository.NewReservationRepository(pool)
+		resCountHotel := 0
+		baseDateHotel := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
+		for i := 0; i < 15; i++ {
+			floor := (i % h.floors) + 1
+			roomIdx := (i % h.roomsPerFloor) + 1
+			roomNum := fmt.Sprintf("%d%02d", floor, roomIdx)
+			roomType := roomTypesHotel[i%len(roomTypesHotel)]
+			checkIn := baseDateHotel.AddDate(0, 0, (i % 14) - 3).Format("2006-01-02")
+			checkOut := baseDateHotel.AddDate(0, 0, (i % 14) + 2 + (i % 5)).Format("2006-01-02")
+			adults := 1 + (i % 3)
+			children := i % 2
+			source := sourcesHotel[i%len(sourcesHotel)]
+			vip := i%7 == 0
+
+			req := domain.ReservationCreateRequest{
+				GuestName:       fmt.Sprintf("%s %s", firstNames[i%len(firstNames)], lastNames[i%len(lastNames)]),
+				Email:           fmt.Sprintf("%s.guest%d@email.com", h.externalID, i+1),
+				Phone:           fmt.Sprintf("+%d-555-%04d", hi+1, 100+i),
+				RoomType:        roomType,
+				RoomNumber:      roomNum,
+				CheckIn:         checkIn,
+				CheckOut:        checkOut,
+				Adults:          adults,
+				Children:        children,
+				Source:          source,
+				SpecialRequests: "",
+				VIP:             vip,
+			}
+			if _, err := resRepoHotel.Create(ctx, nil, hotelTenantID, &req); err != nil {
+				logger.Warn("hotel reservation insert failed", slog.String("hotel", h.name), slog.String("guest", req.GuestName), slog.String("error", err.Error()))
+			} else {
+				resCountHotel++
+			}
+		}
+		logger.Info("hotel reservations seeded", slog.String("hotel", h.name), slog.Int("count", resCountHotel))
+	}
+
 	logger.Info("demo data seed complete", slog.String("tenant_id", tenantID))
 	fmt.Println("✅ Demo data seeded successfully")
 }
