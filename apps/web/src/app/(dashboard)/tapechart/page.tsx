@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -122,6 +122,7 @@ export default function TapechartPage() {
   const [error, setError] = useState<string | null>(null);
   const [reservations, setReservations] = useState<TapechartReservation[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
+  const dragPerformedRef = useRef(false);
   const scrollRef = useDragScroll();
 
   const fetchData = useCallback(async () => {
@@ -501,6 +502,8 @@ export default function TapechartPage() {
                       return (
                         <div
                           key={`${room.number}-${date}`}
+                          data-room={room.number}
+                          data-date={date}
                           className={`relative w-20 shrink-0 border-r border-slate-700/30 min-h-[48px] ${isToday ? "bg-nexus-500/5" : ""} ${isDropTarget ? "bg-emerald-500/10 ring-1 ring-emerald-500/30" : ""} ${!activeResList.length && !draggingRes ? "cursor-pointer hover:bg-slate-800/40" : ""}`}
                           onMouseEnter={() => setHoveredCell({ room: room.number, date })}
                           onMouseLeave={() => setHoveredCell(null)}
@@ -508,14 +511,22 @@ export default function TapechartPage() {
                           onDragOver={(e) => { e.preventDefault(); setHoveredCell({ room: room.number, date }); }}
                           onDrop={(e) => {
                             e.preventDefault();
-                            console.log("[TAPECHART] onDrop fired", { room: room.number, date });
-                            handleDrop(room.number, date);
+                            // Find actual cell under cursor (bar may cover original cell)
+                            const el = document.elementFromPoint(e.clientX, e.clientY);
+                            let cell = el;
+                            while (cell && !cell.hasAttribute('data-room')) {
+                              cell = cell.parentElement;
+                            }
+                            const targetRoom = cell?.getAttribute('data-room') || room.number;
+                            const targetDate = cell?.getAttribute('data-date') || date;
+                            console.log("[TAPECHART] onDrop fired", { rawRoom: room.number, rawDate: date, targetRoom, targetDate, el: el?.className });
+                            handleDrop(targetRoom, targetDate);
                           }}
                         >
                           {/* Reservation bar — only on first visible day */}
                           {startingRes && spanDays > 0 && (
                             <div
-                              className={`absolute inset-y-0.5 left-0.5 z-10 rounded overflow-hidden ${startingRes.color || "bg-sky-500"} ${isMoving ? "opacity-60" : ""} ${draggingRes?.id === startingRes.id ? "pointer-events-none" : ""} hover:brightness-110 transition-opacity`}
+                              className={`absolute inset-y-0.5 left-0.5 z-10 rounded overflow-hidden ${startingRes.color || "bg-sky-500"} ${isMoving ? "opacity-60" : ""} hover:brightness-110 transition-opacity`}
                               style={{ width: `${Math.max(spanDays, 1) * 5 - 0.25}rem`, minWidth: "4.5rem" }}
                             >
                               {/* Drag handle — LEFT EDGE, very obvious */}
@@ -525,10 +536,13 @@ export default function TapechartPage() {
                                   console.log("[TAPECHART DRAG] onDragStart: startingRes.id=" + startingRes.id.slice(0,8) + " guest=" + startingRes.guest_name + " room=" + startingRes.room_number + " check_in=" + startingRes.check_in);
                                   e.dataTransfer.effectAllowed = "move";
                                   setDraggingRes(startingRes);
+                                  dragPerformedRef.current = true;
                                 }}
                                 onDragEnd={() => {
                                   console.log("[TAPECHART DRAG] onDragEnd: clearing draggingRes");
                                   setDraggingRes(null);
+                                  // Clear drag flag after click window passes
+                                  setTimeout(() => { dragPerformedRef.current = false; }, 200);
                                 }}
                                 className="absolute left-0 top-0 bottom-0 w-8 cursor-grab active:cursor-grabbing flex items-center justify-center bg-black/60 hover:bg-black/80 border-r border-white/20 z-30"
                                 title="Drag to move reservation"
@@ -538,7 +552,15 @@ export default function TapechartPage() {
                               {/* Clickable detail area — rest of the bar */}
                               <div
                                 className="absolute inset-0 left-8 flex items-center px-1.5 overflow-hidden cursor-pointer"
-                                onClick={(e) => { e.stopPropagation(); setSelectedRes(startingRes); }}
+                                onClick={(e) => {
+                                  if (dragPerformedRef.current) {
+                                    dragPerformedRef.current = false;
+                                    e.stopPropagation();
+                                    return;
+                                  }
+                                  e.stopPropagation();
+                                  setSelectedRes(startingRes);
+                                }}
                               >
                                 <span className="text-[9px] font-medium text-white truncate">{startingRes.guest_name}</span>
                                 {startingRes.vip && <span className="ml-1 text-[7px] text-amber-300 flex-shrink-0">★</span>}
