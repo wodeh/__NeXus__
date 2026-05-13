@@ -1126,7 +1126,7 @@ export async function getSensorLogs(villaId: string): Promise<CleanerSensorLog[]
   return data.logs || [];
 }
 
-export async function recordSensorLog(villaId: string, payload: { cleaner_name: string; action: string; location?: string }): Promise<CleanerSensorLog> {
+export async function recordSensorLog(villaId: string, payload: { villa_id?: string; villa_name?: string; cleaner_id?: string; cleaner_name: string; action?: string; temperature?: number; latitude?: number; longitude?: number; altitude?: number; floor?: number; location_type?: string; battery_level?: number; recorded_at?: string; location?: string }): Promise<CleanerSensorLog> {
   return api(`/v1/villas/${villaId}/sensor-logs`, { method: "POST", body: JSON.stringify(payload) });
 }
 

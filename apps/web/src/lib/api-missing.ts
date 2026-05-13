@@ -62,3 +62,78 @@ export async function deleteUpsellOffer(id: string): Promise<void> {
 export async function getTenantConfig(): Promise<TenantConfig> {
   return api("/v1/tenant/config");
 }
+
+/* ─── Missing Exports (continued) ─── */
+
+export interface ReservationDetail {
+  id: string;
+  tenant_id: string;
+  guest: {
+    name: string;
+    email: string;
+    phone: string;
+    address?: string;
+    city?: string;
+    country?: string;
+    id_type?: string;
+    id_number?: string;
+    birth_date?: string;
+    nationality?: string;
+    vip: boolean;
+  };
+  room: {
+    room_number: string;
+    room_type: string;
+    floor?: string;
+    bed_type?: string;
+    rate_night: number;
+  };
+  stay: {
+    check_in: string;
+    check_out: string;
+    nights: number;
+    adults: number;
+    children: number;
+    status: string;
+    source: string;
+  };
+  charges: {
+    subtotal: number;
+    tax: number;
+    total: number;
+    paid: number;
+    balance: number;
+  };
+  extras: Array<{
+    description: string;
+    amount: number;
+    quantity: number;
+  }>;
+  audit_trail: Array<{
+    action: string;
+    user: string;
+    timestamp: string;
+  }>;
+}
+
+export async function getReservationDetail(id: string): Promise<ReservationDetail> {
+  return api(`/v1/reservations/${id}/detail`);
+}
+
+export interface RoomStatusView {
+  room_number: string;
+  room_type: string;
+  floor?: string;
+  status: string;
+  guest_name?: string;
+  check_in?: string;
+  check_out?: string;
+  housekeeping_status?: string;
+  is_vip: boolean;
+  notes?: string;
+}
+
+export async function getRoomStatusView(): Promise<RoomStatusView[]> {
+  const data = await api<{ rooms: RoomStatusView[] }>('/v1/rooms/status-view');
+  return data.rooms || [];
+}
