@@ -1,32 +1,51 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useAuth } from '@/lib/auth';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/lib/auth";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const { login, user } = useAuth();
+  const { login, user, isLoading } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Redirect if already logged in
+  // Redirect if already logged in — must be in useEffect, not during render
+  useEffect(() => {
+    if (user) {
+      router.push("/");
+    }
+  }, [user, router]);
+
+  // Don't render form while checking auth state
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-nexus-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  // If already logged in, show nothing while redirecting
   if (user) {
-    router.push('/');
-    return null;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-nexus-500 border-t-transparent" />
+      </div>
+    );
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
     try {
       await login(email, password);
-      router.push('/');
+      router.push("/");
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      setError(err.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -74,7 +93,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full rounded-lg bg-nexus-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-nexus-500 disabled:opacity-50"
           >
-            {loading ? 'Signing in…' : 'Sign In'}
+            {loading ? "Signing in…" : "Sign In"}
           </button>
         </form>
 
@@ -82,25 +101,25 @@ export default function LoginPage() {
           <p className="mb-2 text-xs font-medium text-slate-500">Demo Villa Owners</p>
           <div className="space-y-1 text-xs text-slate-400">
             <button
-              onClick={() => { setEmail('ramiz@villa.test'); setPassword('villa123'); }}
+              onClick={() => { setEmail("ramiz@villa.test"); setPassword("villa123"); }}
               className="block w-full rounded bg-slate-800/50 px-2 py-1 text-left hover:bg-slate-800"
             >
               Ramiz Haddad — ramiz@villa.test / villa123
             </button>
             <button
-              onClick={() => { setEmail('owner1@villa.test'); setPassword('villa123'); }}
+              onClick={() => { setEmail("owner1@villa.test"); setPassword("villa123"); }}
               className="block w-full rounded bg-slate-800/50 px-2 py-1 text-left hover:bg-slate-800"
             >
               Ahmad Khalil — owner1@villa.test / villa123
             </button>
             <button
-              onClick={() => { setEmail('owner2@villa.test'); setPassword('villa123'); }}
+              onClick={() => { setEmail("owner2@villa.test"); setPassword("villa123"); }}
               className="block w-full rounded bg-slate-800/50 px-2 py-1 text-left hover:bg-slate-800"
             >
               Sarah Nassar — owner2@villa.test / villa123
             </button>
             <button
-              onClick={() => { setEmail('owner4@villa.test'); setPassword('villa123'); }}
+              onClick={() => { setEmail("owner4@villa.test"); setPassword("villa123"); }}
               className="block w-full rounded bg-slate-800/50 px-2 py-1 text-left hover:bg-slate-800"
             >
               Layla Farhat — owner4@villa.test / villa123
