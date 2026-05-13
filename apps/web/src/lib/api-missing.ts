@@ -132,13 +132,20 @@ export interface RoomStatusView {
 /* ─── Room Status ─── */
 export interface RoomDailyStatus {
   date: string;
-  total_rooms: number;
-  occupied: number;
-  vacant_clean: number;
-  vacant_dirty: number;
-  out_of_order: number;
-  occupancy_pct: number;
+  occupancy: number;
+  arrivals: number;
+  departures: number;
+  stayovers: number;
   revenue: number;
+  rooms: Array<{
+    room_number: string;
+    room_type: string;
+    status: string;
+    guest_name?: string;
+    check_in?: string;
+    check_out?: string;
+    rate?: number;
+  }>;
 }
 
 export async function getRoomStatusView(date?: string, view?: string): Promise<{ dates: RoomDailyStatus[]; rooms: RoomStatusView[] }> {
