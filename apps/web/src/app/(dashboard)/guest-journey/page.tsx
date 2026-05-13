@@ -108,7 +108,7 @@ export default function GuestJourneyPage() {
         <StatCard label="Active Journeys" value={journeys.filter(j => j.is_active).length} icon={Route} color="nexus" />
         <StatCard label="Running Executions" value={executions.filter(e => e.status === "running").length} icon={Play} color="emerald" />
         <StatCard label="Completed" value={executions.filter(e => e.status === "completed").length} icon={CheckCircle2} color="amber" />
-        <StatCard label="Total Touchpoints" value={journeys.reduce((s, j) => s + j.steps.length, 0)} icon={Zap} color="violet" />
+        <StatCard label="Total Touchpoints" value={journeys.reduce((s, j) => s + (j.steps?.length || 0), 0)} icon={Zap} color="violet" />
       </div>
 
       {/* Tabs */}
