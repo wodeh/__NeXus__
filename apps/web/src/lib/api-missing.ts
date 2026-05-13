@@ -1,4 +1,3 @@
-
 /* ─── Missing Exports ─── */
 
 export async function deleteVillaReservation(id: string): Promise<void> {
@@ -63,7 +62,7 @@ export async function getTenantConfig(): Promise<TenantConfig> {
   return api("/v1/tenant/config");
 }
 
-/* ─── Missing Exports (continued) ─── */
+/* ─── Reservation Detail API ─── */
 
 export interface ReservationDetail {
   id: string;
@@ -152,48 +151,6 @@ export interface GuestJourney {
   updated_at: string;
 }
 
-export async function getJourneys(): Promise<GuestJourney[]> {
-  const data = await api<{ journeys: GuestJourney[] }>('/v1/journeys');
-  return data.journeys || [];
-}
-
-export async function updateJourney(id: string, payload: Partial<GuestJourney>): Promise<GuestJourney> {
-  return api(`/v1/journeys/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
-}
-
-export async function deleteJourney(id: string): Promise<void> {
-  return api(`/v1/journeys/${id}`, { method: 'DELETE' });
-}
-
-/* ─── Guest Journey API ─── */
-
-export interface GuestJourney {
-  id: string;
-  tenant_id: string;
-  reservation_id: string;
-  guest_name: string;
-  stage: string;
-  status: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export async function getJourneys(): Promise<GuestJourney[]> {
-  const data = await api<{ journeys: GuestJourney[] }>('/v1/journeys');
-  return data.journeys || [];
-}
-
-export async function updateJourney(id: string, payload: Partial<GuestJourney>): Promise<GuestJourney> {
-  return api(`/v1/journeys/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
-}
-
-export async function deleteJourney(id: string): Promise<void> {
-  return api(`/v1/journeys/${id}`, { method: 'DELETE' });
-}
-
-/* ─── Guest Journey API (continued) ─── */
-
 export interface JourneyExecution {
   id: string;
   journey_id: string;
@@ -203,6 +160,19 @@ export interface JourneyExecution {
   status: string;
   executed_at?: string;
   completed_at?: string;
+}
+
+export async function getJourneys(): Promise<GuestJourney[]> {
+  const data = await api<{ journeys: GuestJourney[] }>('/v1/journeys');
+  return data.journeys || [];
+}
+
+export async function updateJourney(id: string, payload: Partial<GuestJourney>): Promise<GuestJourney> {
+  return api(`/v1/journeys/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+
+export async function deleteJourney(id: string): Promise<void> {
+  return api(`/v1/journeys/${id}`, { method: 'DELETE' });
 }
 
 export async function getJourneyExecutions(): Promise<JourneyExecution[]> {
