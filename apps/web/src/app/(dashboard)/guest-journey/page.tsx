@@ -165,7 +165,7 @@ export default function GuestJourneyPage() {
                         {step.channel === "sms" && <Smartphone className="h-4 w-4 text-violet-400" />}
                         <span className="text-sm text-white capitalize">{step.channel}</span>
                         <ChevronRight className="h-3 w-3 text-slate-500" />
-                        <span className="text-sm text-slate-300">{step.template_id.replace("_", " ")}</span>
+                        <span className="text-sm text-slate-300">{step.template_id?.replace("_", " ") || "-"}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-slate-400">
