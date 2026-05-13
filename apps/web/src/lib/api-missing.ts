@@ -277,3 +277,6 @@ export async function getCompetitorRates(): Promise<CompetitorRate[]> {
   const data = await api<{ rates: CompetitorRate[] }>('/v1/competitors/rates');
   return data.rates || [];
 }
+
+/* ─── Type aliases for competitor page ─── */
+export type CompetitorHotel = Competitor;
