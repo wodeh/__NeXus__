@@ -149,7 +149,7 @@ export interface GuestJourney {
   status: string;
   trigger?: string;
   is_active?: boolean;
-  steps?: Array<{ name: string; completed: boolean; channel?: string; id?: string; template_id?: string; delay_hours?: number; condition?: string; upsell_offer_id?: string }>;
+  steps?: Array<{ name: string; completed: boolean; channel?: string; id?: string; template_id?: string; delay_hours?: number; condition?: string; upsell_offer_id?: string; is_active?: boolean }>;
   notes?: string;
   created_at: string;
   updated_at: string;
