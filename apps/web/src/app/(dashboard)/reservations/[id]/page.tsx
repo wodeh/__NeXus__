@@ -241,6 +241,15 @@ export default function ReservationDetailPage(props: { params: Promise<{ id: str
     }
   };
 
+  const handleRestore = async () => {
+    try {
+      await restoreReservation(res.id);
+      setRes({ ...res, status: "confirmed" });
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}

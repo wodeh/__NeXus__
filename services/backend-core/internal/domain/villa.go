@@ -6,29 +6,29 @@ import (
 
 // VillaProperty represents a bookable villa/chalet unit.
 type VillaProperty struct {
-	ID              string    `json:"id"`
-	TenantID        string    `json:"tenant_id"`
-	Name            string    `json:"name"`
-	Description     string    `json:"description"`
-	Address         string    `json:"address"`
-	City            string    `json:"city"`
-	Country         string    `json:"country"`
-	Latitude        float64   `json:"latitude"`
-	Longitude       float64   `json:"longitude"`
-	Elevation       float64   `json:"elevation"` // meters above sea level (baseline for floor detection)
-	Bedrooms        int       `json:"bedrooms"`
-	Bathrooms       int       `json:"bathrooms"`
-	MaxGuests       int       `json:"max_guests"`
-	Amenities       []string  `json:"amenities"`
-	Images          []string  `json:"images"`
-	PricePerNight   float64   `json:"price_per_night"`
-	Currency        string    `json:"currency"`
-	CleaningFee     float64   `json:"cleaning_fee"`
-	SecurityDeposit float64   `json:"security_deposit"`
-	IsActive        bool      `json:"is_active"`
-	Status          string    `json:"status"` // available, maintenance, blocked
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID              string     `json:"id"`
+	TenantID        string     `json:"tenant_id"`
+	Name            string     `json:"name"`
+	Description     string     `json:"description"`
+	Address         string     `json:"address"`
+	City            string     `json:"city"`
+	Country         string     `json:"country"`
+	Latitude        *float64   `json:"latitude,omitempty"`
+	Longitude       *float64   `json:"longitude,omitempty"`
+	Elevation       *float64   `json:"elevation,omitempty"` // meters above sea level (baseline for floor detection)
+	Bedrooms        int        `json:"bedrooms"`
+	Bathrooms       int        `json:"bathrooms"`
+	MaxGuests       int        `json:"max_guests"`
+	Amenities       []string   `json:"amenities"`
+	Images          []string   `json:"images"`
+	PricePerNight   float64    `json:"price_per_night"`
+	Currency        string     `json:"currency"`
+	CleaningFee     float64    `json:"cleaning_fee"`
+	SecurityDeposit float64    `json:"security_deposit"`
+	IsActive        bool       `json:"is_active"`
+	Status          string     `json:"status"` // available, maintenance, blocked
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
 // VillaReservation is a day-based booking for a single villa.

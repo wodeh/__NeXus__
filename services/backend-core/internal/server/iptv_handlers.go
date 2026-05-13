@@ -101,20 +101,27 @@ func (s *Server) handleIPTVWelcome(w http.ResponseWriter, r *http.Request) {
 	if err != nil || res == nil {
 		// No active reservation — return villa-only welcome
 		villa, vErr := s.repo.Villa.GetVillaByID(ctx, villaID)
+		resErrStr := ""
+		if err != nil {
+			resErrStr = err.Error()
+		}
 		if vErr != nil {
-			writeJSON(w, http.StatusOK, domain.IPTVWelcomeScreen{
-				VillaID:        villaID,
-				VillaName:      "Villa",
-				WelcomeMessage: "Welcome to your villa",
-				HasReservation: false,
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"villa_id":        villaID,
+				"villa_name":      "Villa",
+				"welcome_message": "Welcome to your villa",
+				"has_reservation": false,
+				"debug_villa_err": vErr.Error(),
+				"debug_res_err":   resErrStr,
 			})
 			return
 		}
-		writeJSON(w, http.StatusOK, domain.IPTVWelcomeScreen{
-			VillaID:        villaID,
-			VillaName:      villa.Name,
-			WelcomeMessage: "Welcome to " + villa.Name,
-			HasReservation: false,
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"villa_id":        villaID,
+			"villa_name":      villa.Name,
+			"welcome_message": "Welcome to " + villa.Name,
+			"has_reservation": false,
+			"debug_res_err":   resErrStr,
 		})
 		return
 	}

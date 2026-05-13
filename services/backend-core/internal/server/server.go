@@ -146,6 +146,13 @@ func (s *Server) withTenant(next http.HandlerFunc) http.HandlerFunc {
 			tenantID = tenant.ID.String()
 		}
 
+	// Bind tenant to DB session for RLS
+		if s.repo != nil {
+			if err := s.repo.SetTenant(r.Context(), tenantID); err != nil {
+				slog.Warn("failed to set db tenant", slog.String("error", err.Error()))
+			}
+		}
+
 		ctx := context.WithValue(r.Context(), "tenant_id", tenantID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}

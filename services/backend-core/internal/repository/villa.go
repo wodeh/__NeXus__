@@ -222,9 +222,9 @@ func (r *VillaRepository) DeleteVillaReservation(ctx context.Context, id string)
 func (r *VillaRepository) GetVillaReservationByDate(ctx context.Context, villaID string, date string) (*domain.VillaReservation, error) {
 	query := `
 		SELECT id, tenant_id, villa_id, villa_name, guest_name, guest_phone, guest_email,
-		       guest_count, check_in_date, check_out_date, nights, total_amount, currency,
-		       status, source, internal_notes, down_payment, balance_due, balance_paid,
-		       created_at, updated_at, completed_at
+		       guest_count, check_in_date::text, check_out_date::text, nights, total_amount, currency,
+		       status, source, internal_notes, balance_due, balance_paid,
+		       created_at, updated_at
 		FROM villa_reservations
 		WHERE villa_id = $1 AND check_in_date <= $2::date AND check_out_date > $2::date
 		  AND status IN ('reserved', 'completed')
@@ -236,8 +236,8 @@ func (r *VillaRepository) GetVillaReservationByDate(ctx context.Context, villaID
 		&res.ID, &res.TenantID, &res.VillaID, &res.VillaName, &res.GuestName, &res.GuestPhone,
 		&res.GuestEmail, &res.GuestCount, &res.CheckInDate, &res.CheckOutDate, &res.Nights,
 		&res.TotalAmount, &res.Currency, &res.Status, &res.Source, &res.InternalNotes,
-		&res.DownPayment, &res.BalanceDue, &res.BalancePaid,
-		&res.CreatedAt, &res.UpdatedAt, &res.CompletedAt,
+		&res.BalanceDue, &res.BalancePaid,
+		&res.CreatedAt, &res.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
