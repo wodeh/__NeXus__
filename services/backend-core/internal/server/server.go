@@ -72,7 +72,7 @@ func (s *Server) Start(ctx context.Context) error {
 	s.registerCommHandlers(mux)
 	s.registerGuestJourneyHandlers(mux)
 	s.registerAuthHandlers(mux)
-
+	s.registerVillaHandlers(mux)
 	s.registerHousekeepingHandlers(mux)
 	// Wrap all routes with CORS, then metrics
 	corsHandler := withCORS(mux.ServeHTTP)

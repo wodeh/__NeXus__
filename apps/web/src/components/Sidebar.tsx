@@ -77,7 +77,11 @@ export default function Sidebar({ tenantConfig }: { tenantConfig: TenantConfig |
   const filteredNav = navItems.filter((item) => {
     if (!tenantConfig) return true;
     if (isVillaOwner) {
-      return item.cap.startsWith("villa:") || item.href === "/" || item.href === "/settings";
+      // Villa owners see: villa-specific pages, dashboard, settings, and IPTV
+      return item.cap.startsWith("villa:") || 
+             item.href === "/" || 
+             item.href === "/settings" ||
+             item.cap === CAPABILITIES.OPERATIONS.IPTV_BASIC;
     }
     return hasCapability(tenantConfig, item.cap);
   });

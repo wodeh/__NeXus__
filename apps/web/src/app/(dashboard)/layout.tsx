@@ -37,6 +37,7 @@ const fallbackConfig: TenantConfig = {
 const villaOwnerCapabilities = [
   "villa:dashboard", "villa:properties", "villa:reservations", "villa:revenue", "villa:cleaner_tracking",
   "core:reservations", "core:guests", "core:settings",
+  "revenue:iptv_premium", "revenue:iptv_welcome", "revenue:iptv_content", "revenue:access_codes",
 ];
 
 export default function DashboardLayout({

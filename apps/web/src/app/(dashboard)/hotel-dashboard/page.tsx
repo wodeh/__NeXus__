@@ -1,13 +1,18 @@
 "use client";
 
-import { useAuth } from "@/lib/auth";
-import VillaDashboardPage from "./villa-dashboard/page";
-import HotelDashboardPage from "./hotel-dashboard/page";
-
-export default function DashboardPage() {
-  const { isVillaOwner } = useAuth();
-  return isVillaOwner ? <VillaDashboardPage /> : <HotelDashboardPage />;
-}
+import { useState, useEffect, useMemo, useCallback } from "react";
+import Link from "next/link";
+import {
+  BedDouble,
+  Users,
+  User,
+  ArrowRightLeft,
+  DoorOpen,
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  Clock,
   CheckCircle2,
   CalendarDays,
   ChevronRight,
@@ -43,7 +48,7 @@ const mockRecentActivity = [
   { time: "08:15", event: "Low battery alert", detail: "Room 103 — 12% remaining", icon: BatteryWarning, color: "amber" },
 ];
 
-export default function DashboardPage() {
+export default function HotelDashboardPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
