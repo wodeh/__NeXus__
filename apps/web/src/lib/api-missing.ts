@@ -163,6 +163,9 @@ export interface JourneyExecution {
   guest_phone?: string;
   stage: string;
   status: string;
+  current_step?: number;
+  completed_steps?: number;
+  total_steps?: number;
   executed_at?: string;
   completed_at?: string;
 }
