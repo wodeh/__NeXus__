@@ -170,7 +170,7 @@ export default function GuestJourneyPage() {
                     </div>
                     <div className="flex items-center gap-3 text-xs text-slate-400">
                       <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> +{step.delay_hours}h</span>
-                      <span className="rounded bg-slate-700 px-2 py-0.5 capitalize">{step.condition.replace("_", " ")}</span>
+                      <span className="rounded bg-slate-700 px-2 py-0.5 capitalize">{step.condition?.replace("_", " ") || "-"}</span>
                       {step.upsell_offer_id && <span className="rounded bg-nexus-500/10 px-2 py-0.5 text-nexus-400">Upsell</span>}
                     </div>
                   </div>
