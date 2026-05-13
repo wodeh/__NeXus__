@@ -86,30 +86,33 @@ export interface ReservationDetail {
     floor?: string;
     bed_type?: string;
     rate_night: number;
-    total_nights?: number;
   };
-  dates: {
+  stay: {
     check_in: string;
     check_out: string;
     nights: number;
-  };
-  party: {
     adults: number;
     children: number;
+    status: string;
+    source: string;
   };
-  status: string;
-  source: string;
-  financials: {
+  charges: {
     subtotal: number;
     tax: number;
     total: number;
     paid: number;
     balance: number;
-    deposit_paid?: number;
   };
-  special_requests?: string;
-  created_at: string;
-  updated_at: string;
+  extras: Array<{
+    description: string;
+    amount: number;
+    quantity: number;
+  }>;
+  audit_trail: Array<{
+    action: string;
+    user: string;
+    timestamp: string;
+  }>;
 }
 
 export async function getReservationDetail(id: string): Promise<ReservationDetail> {
@@ -129,31 +132,9 @@ export interface RoomStatusView {
   notes?: string;
 }
 
-/* ─── Room Status ─── */
-export interface RoomDailyStatus {
-  date: string;
-  occupancy: number;
-  arrivals: number;
-  departures: number;
-  stayovers: number;
-  revenue: number;
-  rooms: Array<{
-    room_number: string;
-    room_type: string;
-    status: string;
-    guest_name?: string;
-    check_in?: string;
-    check_out?: string;
-    rate?: number;
-  }>;
-}
-
-export async function getRoomStatusView(date?: string, view?: string): Promise<{ dates: RoomDailyStatus[]; rooms: RoomStatusView[] }> {
-  const params = new URLSearchParams();
-  if (date) params.append('date', date);
-  if (view) params.append('view', view);
-  const query = params.toString();
-  return api(`/v1/rooms/status-view${query ? '?' + query : ''}`);
+export async function getRoomStatusView(): Promise<RoomStatusView[]> {
+  const data = await api<{ rooms: RoomStatusView[] }>('/v1/rooms/status-view');
+  return data.rooms || [];
 }
 
 /* ─── Guest Journey API ─── */
@@ -320,9 +301,6 @@ export async function getCompetitorRates(): Promise<CompetitorRate[]> {
 /* ─── Type aliases for competitor page ─── */
 export type CompetitorHotel = Competitor;
 
-
-/* ─── GuestJourneyExecution type alias ─── */
-export type GuestJourneyExecution = JourneyExecution;
 
 /* ─── GuestJourneyExecution type alias ─── */
 export type GuestJourneyExecution = JourneyExecution;
