@@ -21,16 +21,17 @@ func NewVillaRepository(pool *db.Pool) *VillaRepository {
 
 // --- Villa Properties ---
 
-func (r *VillaRepository) ListVillas(ctx context.Context) ([]domain.VillaProperty, error) {
+func (r *VillaRepository) ListVillas(ctx context.Context, tenantID string) ([]domain.VillaProperty, error) {
 	query := `
 		SELECT id, tenant_id, name, description, address, city, country, 
 		       latitude, longitude, elevation, bedrooms, bathrooms, max_guests,
 		       amenities, images, price_per_night, currency, cleaning_fee, 
 		       security_deposit, is_active, status, created_at, updated_at
 		FROM villa_properties
+		WHERE tenant_id = $1
 		ORDER BY name
 	`
-	rows, err := r.pool.Query(ctx, query)
+	rows, err := r.pool.Query(ctx, query, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("list villas: %w", err)
 	}
@@ -120,16 +121,17 @@ func (r *VillaRepository) DeleteVilla(ctx context.Context, id string) error {
 
 // --- Villa Reservations ---
 
-func (r *VillaRepository) ListVillaReservations(ctx context.Context) ([]domain.VillaReservation, error) {
+func (r *VillaRepository) ListVillaReservations(ctx context.Context, tenantID string) ([]domain.VillaReservation, error) {
 	query := `
 		SELECT id, tenant_id, villa_id, villa_name, guest_name, guest_phone, guest_email,
 		       guest_count, check_in_date, check_out_date, nights, total_amount, currency,
 		       status, source, internal_notes, down_payment, balance_due, balance_paid,
 		       created_at, updated_at, completed_at
 		FROM villa_reservations
+		WHERE tenant_id = $1
 		ORDER BY check_in_date DESC
 	`
-	rows, err := r.pool.Query(ctx, query)
+	rows, err := r.pool.Query(ctx, query, tenantID)
 	if err != nil {
 		return nil, err
 	}

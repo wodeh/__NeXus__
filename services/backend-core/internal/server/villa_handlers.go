@@ -26,9 +26,10 @@ func (s *Server) handleVillas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
+	tenantID := ctx.Value("tenant_id").(string)
 	switch r.Method {
 	case http.MethodGet:
-		villas, err := s.repo.Villa.ListVillas(ctx)
+		villas, err := s.repo.Villa.ListVillas(ctx, tenantID)
 		if err != nil {
 			writeJSON(w, http.StatusOK, map[string]interface{}{"villas": demoVillas()})
 			return
@@ -97,9 +98,10 @@ func (s *Server) handleVillaReservations(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	ctx := r.Context()
+	tenantID := ctx.Value("tenant_id").(string)
 	switch r.Method {
 	case http.MethodGet:
-		reservations, err := s.repo.Villa.ListVillaReservations(ctx)
+		reservations, err := s.repo.Villa.ListVillaReservations(ctx, tenantID)
 		if err != nil {
 			writeJSON(w, http.StatusOK, map[string]interface{}{"reservations": demoVillaReservations()})
 			return
