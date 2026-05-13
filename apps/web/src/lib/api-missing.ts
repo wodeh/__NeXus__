@@ -196,6 +196,7 @@ export interface Competitor {
   country?: string;
   star_rating?: number;
   room_count?: number;
+  last_scraped?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
