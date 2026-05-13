@@ -805,7 +805,53 @@ export async function getCommScheduled(): Promise<CommScheduled[]> {
 }
 
 
-/* ─── Admin Config API ─── */
+/* ─── Villa API ─── */
+
+export interface VillaProperty {
+  id: string;
+  tenant_id: string;
+  name: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  status: "available" | "reserved" | "occupied" | "maintenance";
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VillaReservation {
+  id: string;
+  tenant_id: string;
+  villa_id: string;
+  villa_name: string;
+  guest_name: string;
+  check_in_date: string;
+  check_out_date: string;
+  nights: number;
+  status: "pending" | "confirmed" | "reserved" | "checked_in" | "checked_out" | "cancelled";
+  total_amount: number;
+  source: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getVillas(): Promise<VillaProperty[]> {
+  const data = await api<{ villas: VillaProperty[] }>("/v1/villas");
+  return data.villas || [];
+}
+
+export async function getVillaReservations(): Promise<VillaReservation[]> {
+  const data = await api<{ reservations: VillaReservation[] }>("/v1/villa-reservations");
+  return data.reservations || [];
+}
+
+export async function getVillaRevenue(from: string, to: string): Promise<{ total_revenue: number; villa_breakdown: Array<{ villa_id: string; villa_name: string; revenue: number; nights_booked: number; occupancy_pct: number }> }> {
+  const params = new URLSearchParams();
+  params.append("from", from);
+  params.append("to", to);
+  return api(`/v1/villa-revenue?${params.toString()}`);
+}
 
 export interface SystemConfig {
   tenant_id: string;
@@ -1011,4 +1057,52 @@ export interface ReservationDetail {
     user: string;
     timestamp: string;
   }>;
+}
+
+/* ─── Villa API ─── */
+
+export interface VillaProperty {
+  id: string;
+  tenant_id: string;
+  name: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  status: "available" | "reserved" | "occupied" | "maintenance";
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VillaReservation {
+  id: string;
+  tenant_id: string;
+  villa_id: string;
+  villa_name: string;
+  guest_name: string;
+  check_in_date: string;
+  check_out_date: string;
+  nights: number;
+  status: "pending" | "confirmed" | "reserved" | "checked_in" | "checked_out" | "cancelled";
+  total_amount: number;
+  source: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getVillas(): Promise<VillaProperty[]> {
+  const data = await api<{ villas: VillaProperty[] }>("/v1/villas");
+  return data.villas || [];
+}
+
+export async function getVillaReservations(): Promise<VillaReservation[]> {
+  const data = await api<{ reservations: VillaReservation[] }>("/v1/villa-reservations");
+  return data.reservations || [];
+}
+
+export async function getVillaRevenue(from: string, to: string): Promise<{ total_revenue: number; villa_breakdown: Array<{ villa_id: string; villa_name: string; revenue: number; nights_booked: number; occupancy_pct: number }> }> {
+  const params = new URLSearchParams();
+  params.append("from", from);
+  params.append("to", to);
+  return api(`/v1/villa-revenue?${params.toString()}`);
 }
