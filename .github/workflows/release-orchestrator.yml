@@ -1,0 +1,72 @@
+﻿name: Release Orchestrator
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+  build-all:
+    runs-on: ubuntu-latest
+    needs: prepare
+    strategy:
+      matrix:
+        service:
+          - pms-integration
+          - backend-core
+          - ai-platform
+          - iot-gateway
+          - iptv-middleware
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ${{ matrix.service }}
+        uses: docker/build-push-action@v5
+        with:
+          context: services/${{ matrix.service }}
+          push: true
+          tags: |
+            ghcr.io/nexus-platform/${{ matrix.service }}:${{ needs.prepare.outputs.version }}
+            ghcr.io/nexus-platform/${{ matrix.service }}:latest
+
+  helm-release:
+    runs-on: ubuntu-latest
+    needs: [prepare, build-all]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package Helm charts
+        run: |
+          for chart in infrastructure/helm-charts/*/; do
+            helm package "$chart" --version ${{ needs.prepare.outputs.version }}
+          done
+      - name: Push to OCI registry
+        run: |
+          for pkg in *.tgz; do
+            helm push "$pkg" oci://ghcr.io/nexus-platform/charts
+          done
+
+  changelog:
+    runs-on: ubuntu-latest
+    needs: prepare
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Generate changelog
+        uses: github-changelog-generator/github-changelog-generator@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          since-tag: ${{ needs.prepare.outputs.version }}
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: ${{ contains(needs.prepare.outputs.version, 'rc') }}
