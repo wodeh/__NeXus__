@@ -511,15 +511,11 @@ export default function TapechartPage() {
                           onDragOver={(e) => { e.preventDefault(); setHoveredCell({ room: room.number, date }); }}
                           onDrop={(e) => {
                             e.preventDefault();
-                            // Find actual cell under cursor (bar may cover original cell)
-                            const el = document.elementFromPoint(e.clientX, e.clientY);
-                            let cell = el;
-                            while (cell && !cell.hasAttribute('data-room')) {
-                              cell = cell.parentElement;
-                            }
-                            const targetRoom = cell?.getAttribute('data-room') || room.number;
-                            const targetDate = cell?.getAttribute('data-date') || date;
-                            console.log("[TAPECHART] onDrop fired", { rawRoom: room.number, rawDate: date, targetRoom, targetDate, el: el?.className });
+                            // e.currentTarget is the cell div (drop event bubbles from child elements)
+                            const cell = e.currentTarget as HTMLElement;
+                            const targetRoom = cell.getAttribute('data-room') || room.number;
+                            const targetDate = cell.getAttribute('data-date') || date;
+                            console.log("[TAPECHART] onDrop fired", { rawRoom: room.number, rawDate: date, targetRoom, targetDate, currentTarget: cell.className });
                             handleDrop(targetRoom, targetDate);
                           }}
                         >
