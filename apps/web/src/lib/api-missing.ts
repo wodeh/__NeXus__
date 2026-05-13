@@ -144,8 +144,10 @@ export interface GuestJourney {
   tenant_id: string;
   reservation_id: string;
   guest_name: string;
+  name?: string;
   stage: string;
   status: string;
+  trigger?: string;
   is_active?: boolean;
   steps?: Array<{ name: string; completed: boolean }>;
   notes?: string;
