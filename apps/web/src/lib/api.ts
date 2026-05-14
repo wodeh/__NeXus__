@@ -11,7 +11,7 @@ function getTenantId(): string {
   return TENANT_ID;
 }
 
-export export export async function api<T>(path: string, opts?: RequestInit): Promise<T> {
+export async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   const isGet = !opts || !opts.method || opts.method === "GET";
   const tenantId = getTenantId();
 
