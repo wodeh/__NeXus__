@@ -744,16 +744,16 @@ function SettingsScreen({
 function YouTubeScreen({ onBack }: { onBack: () => void }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [videos, setVideos] = useState<Array<{id: string; title: string; description: string; thumbnail: string; channel: string; duration: string; video_id: string}>>([
-    { id: '1', title: 'Welcome to Grand Plaza Hotel', description: 'Experience luxury at Grand Plaza Hotel', thumbnail: 'https://i.ytimg.com/vi/demo1/hqdefault.jpg', channel: 'Grand Plaza Official', duration: '2:30', video_id: 'demo1' },
-    { id: '2', title: 'Local Attractions Guide', description: 'Discover the best places near our hotel', thumbnail: 'https://i.ytimg.com/vi/demo2/hqdefault.jpg', channel: 'Travel Guide', duration: '5:45', video_id: 'demo2' },
-    { id: '3', title: 'Spa & Wellness Introduction', description: 'Relax and rejuvenate at our spa', thumbnail: 'https://i.ytimg.com/vi/demo3/hqdefault.jpg', channel: 'Grand Plaza Spa', duration: '3:15', video_id: 'demo3' },
+    { id: '1', title: 'Welcome to Grand Plaza Hotel', description: 'Experience luxury at Grand Plaza Hotel', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', channel: 'Grand Plaza Official', duration: '2:30', video_id: 'dQw4w9WgXcQ' },
+    { id: '2', title: 'Local Attractions Guide', description: 'Discover the best places near our hotel', thumbnail: 'https://i.ytimg.com/vi/9bZkp7q19f0/hqdefault.jpg', channel: 'Travel Guide', duration: '5:45', video_id: '9bZkp7q19f0' },
+    { id: '3', title: 'Spa & Wellness Introduction', description: 'Relax and rejuvenate at our spa', thumbnail: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/hqdefault.jpg', channel: 'Grand Plaza Spa', duration: '3:15', video_id: 'kJQP7kiw5Fk' },
   ]);
-  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
 
   const trendingVideos = [
-    { id: 't1', title: 'Top 10 Luxury Hotels 2026', thumbnail: 'https://i.ytimg.com/vi/trend1/hqdefault.jpg', channel: 'Travel + Leisure', views: '1.2M', video_id: 'trend1' },
-    { id: 't2', title: 'Best Room Service Experiences', thumbnail: 'https://i.ytimg.com/vi/trend2/hqdefault.jpg', channel: 'Hotel Management', views: '856K', video_id: 'trend2' },
-    { id: 't3', title: 'Hotel Technology Trends', thumbnail: 'https://i.ytimg.com/vi/trend3/hqdefault.jpg', channel: 'Hospitality Tech', views: '430K', video_id: 'trend3' },
+    { id: 't1', title: 'Top 10 Luxury Hotels 2026', thumbnail: 'https://i.ytimg.com/vi/M7lc1UVf-VE/hqdefault.jpg', channel: 'Travel + Leisure', views: '1.2M', video_id: 'M7lc1UVf-VE' },
+    { id: 't2', title: 'Best Room Service Experiences', thumbnail: 'https://i.ytimg.com/vi/9bZkp7q19f0/hqdefault.jpg', channel: 'Hotel Management', views: '856K', video_id: '9bZkp7q19f0' },
+    { id: 't3', title: 'Hotel Technology Trends', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', channel: 'Hospitality Tech', views: '430K', video_id: 'dQw4w9WgXcQ' },
   ];
 
   return (
@@ -777,17 +777,18 @@ function YouTubeScreen({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* Selected Video Player */}
-      {selectedVideo && (
+      {selectedVideoId && (
         <div className="mb-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
-          <div className="aspect-video rounded-lg bg-slate-900 flex items-center justify-center">
-            <div className="text-center">
-              <Play className="h-12 w-12 text-rose-400 mx-auto mb-2" />
-              <p className="text-sm text-slate-400">Playing: {selectedVideo}</p>
-              <p className="text-xs text-slate-600">YouTube integration - video would play here</p>
-            </div>
+          <div className="aspect-video rounded-lg bg-slate-900 overflow-hidden">
+            <iframe
+              src={`https://www.youtube.com/embed/${selectedVideoId}?autoplay=1&rel=0&modestbranding=1`}
+              className="w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
           </div>
           <button 
-            onClick={() => setSelectedVideo(null)}
+            onClick={() => setSelectedVideoId(null)}
             className="mt-3 text-sm text-slate-400 hover:text-white"
           >
             Close Player
@@ -801,7 +802,7 @@ function YouTubeScreen({ onBack }: { onBack: () => void }) {
         {videos.map(video => (
           <button
             key={video.id}
-            onClick={() => setSelectedVideo(video.title)}
+            onClick={() => setSelectedVideoId(video.video_id)}
             className="group rounded-xl border border-slate-700 overflow-hidden text-left hover:border-rose-500/50 transition-all"
           >
             <div className="h-32 bg-slate-700/50 flex items-center justify-center relative">
@@ -828,7 +829,7 @@ function YouTubeScreen({ onBack }: { onBack: () => void }) {
         {trendingVideos.map(video => (
           <button
             key={video.id}
-            onClick={() => setSelectedVideo(video.title)}
+            onClick={() => setSelectedVideoId(video.video_id)}
             className="group rounded-xl border border-slate-700 overflow-hidden text-left hover:border-rose-500/50 transition-all"
           >
             <div className="h-32 bg-slate-700/50 flex items-center justify-center relative">

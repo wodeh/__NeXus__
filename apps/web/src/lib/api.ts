@@ -894,6 +894,9 @@ export async function getSystemConfig(): Promise<SystemConfig> {
   return api<SystemConfig>("/v1/admin/config");
 }
 
+// Alias for admin dashboard compatibility
+export const getAdminConfig = getSystemConfig;
+
 export async function updateSystemConfig(payload: Partial<SystemConfig>): Promise<SystemConfig> {
   return api<SystemConfig>("/v1/admin/config", {
     method: "PATCH",
