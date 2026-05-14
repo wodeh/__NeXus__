@@ -6,7 +6,7 @@ import {
   BedDouble, DoorOpen, DoorClosed, Wrench, Ban, Sparkles,
   ArrowRight, Users,
 } from "lucide-react";
-import { getRoomStatusView, RoomStatusView, RoomDailyStatus } from "@/lib/api";
+import { getRoomStatusView, RoomStatusView, RoomDailyStatus, RoomStatusDay } from "@/lib/api";
 
 export default function RoomStatusPage() {
   const [view, setView] = useState<"day" | "week" | "month">("day");
