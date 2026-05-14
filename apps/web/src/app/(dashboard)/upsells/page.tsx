@@ -36,8 +36,8 @@ export default function UpsellsPage() {
     fetchData();
   }, [fetchData]);
 
-  const totalRevenue = offers.reduce((s, o) => s + o.revenue_generated, 0);
-  const totalSold = offers.reduce((s, o) => s + o.total_sold, 0);
+  const totalRevenue = offers.reduce((s, o) => s + (o.revenue_generated || 0), 0);
+  const totalSold = offers.reduce((s, o) => s + (o.total_sold || 0), 0);
   const avgConversion = totalSold > 0 ? Math.round((totalSold / Math.max(offers.length, 1)) * 10) : 0;
 
   const handleCreate = async (offer: Partial<UpsellOffer>) => {
