@@ -832,6 +832,7 @@ export interface VillaReservation {
   nights: number;
   status: "pending" | "confirmed" | "reserved" | "checked_in" | "checked_out" | "cancelled";
   total_amount: number;
+  balance_due?: number;
   source: string;
   created_at: string;
   updated_at: string;
@@ -1070,6 +1071,7 @@ export interface VillaReservation {
   nights: number;
   status: "pending" | "confirmed" | "reserved" | "checked_in" | "checked_out" | "cancelled";
   total_amount: number;
+  balance_due?: number;
   source: string;
   created_at: string;
   updated_at: string;
