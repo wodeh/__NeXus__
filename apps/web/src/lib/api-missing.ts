@@ -132,11 +132,6 @@ export interface RoomStatusView {
   notes?: string;
 }
 
-export async function getRoomStatusView(): Promise<RoomStatusView[]> {
-  const data = await api<{ rooms: RoomStatusView[] }>('/v1/rooms/status-view');
-  return data.rooms || [];
-}
-
 /* ─── Guest Journey API ─── */
 
 export interface GuestJourney {
@@ -304,3 +299,147 @@ export type CompetitorHotel = Competitor;
 
 /* ─── GuestJourneyExecution type alias ─── */
 export type GuestJourneyExecution = JourneyExecution;
+
+/* ─── IPTV Types ─── */
+export interface IPTVChannel {
+  id: string;
+  number: number;
+  name: string;
+  category: string;
+  language: string;
+  is_premium: boolean;
+  is_active: boolean;
+}
+
+export interface IPTVContent {
+  id: string;
+  title: string;
+  category: string;
+  type: "movie" | "series" | "live";
+  duration?: number;
+  is_active: boolean;
+}
+
+export interface IPTVRoomStatus {
+  id: string;
+  room_number: string;
+  is_online: boolean;
+  current_channel?: string;
+  last_activity_at?: string;
+}
+
+export async function getIPTVChannels(): Promise<IPTVChannel[]> {
+  const data = await api<{ channels: IPTVChannel[] }>("/v1/iptv/channels");
+  return data.channels || [];
+}
+
+export async function getIPTVContent(): Promise<IPTVContent[]> {
+  const data = await api<{ content: IPTVContent[] }>("/v1/iptv/content");
+  return data.content || [];
+}
+
+export async function getIPTVRooms(): Promise<IPTVRoomStatus[]> {
+  const data = await api<{ rooms: IPTVRoomStatus[] }>("/v1/iptv/rooms");
+  return data.rooms || [];
+}
+
+/* ─── Room Daily Status (for room status view) ─── */
+export interface RoomDailyStatus {
+  room_number: string;
+  room_type: string;
+  status: string;
+  guest_name?: string;
+  check_in?: string;
+  check_out?: string;
+  rate?: number;
+}
+
+export interface RoomStatusDay {
+  date: string;
+  occupancy: number;
+  arrivals: number;
+  departures: number;
+  stayovers: number;
+  revenue: number;
+  rooms: RoomDailyStatus[];
+}
+
+export async function getRoomStatusView(date?: string, view?: string): Promise<{ dates: RoomStatusDay[] }> {
+  const params = new URLSearchParams();
+  if (date) params.append("date", date);
+  if (view) params.append("view", view);
+  const query = params.toString() ? `?${params.toString()}` : "";
+  return api(`/v1/rooms/status-view${query}`);
+}
+
+/* ─── IPTV Types ─── */
+export interface IPTVChannel {
+  id: string;
+  number: number;
+  name: string;
+  category: string;
+  language: string;
+  is_premium: boolean;
+  is_active: boolean;
+}
+
+export interface IPTVContent {
+  id: string;
+  title: string;
+  category: string;
+  type: "movie" | "series" | "live";
+  duration?: number;
+  is_active: boolean;
+}
+
+export interface IPTVRoomStatus {
+  id: string;
+  room_number: string;
+  is_online: boolean;
+  current_channel?: string;
+  last_activity_at?: string;
+}
+
+export async function getIPTVChannels(): Promise<IPTVChannel[]> {
+  const data = await api<{ channels: IPTVChannel[] }>("/v1/iptv/channels");
+  return data.channels || [];
+}
+
+export async function getIPTVContent(): Promise<IPTVContent[]> {
+  const data = await api<{ content: IPTVContent[] }>("/v1/iptv/content");
+  return data.content || [];
+}
+
+export async function getIPTVRooms(): Promise<IPTVRoomStatus[]> {
+  const data = await api<{ rooms: IPTVRoomStatus[] }>("/v1/iptv/rooms");
+  return data.rooms || [];
+}
+
+/* ─── Room Daily Status (for room status view) ─── */
+export interface RoomDailyStatus {
+  room_number: string;
+  room_type: string;
+  status: string;
+  guest_name?: string;
+  check_in?: string;
+  check_out?: string;
+  rate?: number;
+}
+
+export interface RoomStatusDay {
+  date: string;
+  occupancy: number;
+  arrivals: number;
+  departures: number;
+  stayovers: number;
+  revenue: number;
+  rooms: RoomDailyStatus[];
+}
+
+export async function getRoomStatusView(date?: string, view?: string): Promise<{ dates: RoomStatusDay[] }> {
+  const params = new URLSearchParams();
+  if (date) params.append("date", date);
+  if (view) params.append("view", view);
+  const query = params.toString() ? `?${params.toString()}` : "";
+  return api(`/v1/rooms/status-view${query}`);
+}
