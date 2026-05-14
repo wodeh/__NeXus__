@@ -49,8 +49,13 @@ export default function Topbar({ tenantConfig }: { tenantConfig: TenantConfig | 
         </button>
 
         <button
+<<<<<<< HEAD
           onClick={() => {
             logout();
+=======
+          onClick={async () => {
+            await logout();
+>>>>>>> phase1/security-stability
             window.location.href = "/login";
           }}
           className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-red-400"

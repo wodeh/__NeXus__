@@ -15,6 +15,34 @@ func TestTenantContext(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD
+=======
+func TestRequireTenantID_Success(t *testing.T) {
+	ctx := context.Background()
+	ctx = WithTenantID(ctx, "tenant-abc")
+
+	tenantID, err := RequireTenantID(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if tenantID != "tenant-abc" {
+		t.Fatalf("expected tenant-abc, got %s", tenantID)
+	}
+}
+
+func TestRequireTenantID_Missing(t *testing.T) {
+	ctx := context.Background()
+
+	tenantID, err := RequireTenantID(ctx)
+	if err == nil {
+		t.Fatal("expected error for missing tenant_id, got nil")
+	}
+	if tenantID != "" {
+		t.Fatalf("expected empty tenantID on error, got %s", tenantID)
+	}
+}
+
+>>>>>>> phase1/security-stability
 func TestUserContext(t *testing.T) {
 	ctx := context.Background()
 	ctx = WithUserID(ctx, "user-123")

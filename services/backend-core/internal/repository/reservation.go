@@ -355,6 +355,7 @@ func (r *ReservationRepository) Move(ctx context.Context, tenantID string, id uu
 	return updated, nil
 }
 
+<<<<<<< HEAD
 func joinUpdates(updates []string) string {
 	result := ""
 	for i, u := range updates {
@@ -366,5 +367,7 @@ func joinUpdates(updates []string) string {
 	return result
 }
 
+=======
+>>>>>>> phase1/security-stability
 // ErrNotFound is returned when a record is not found.
 var ErrNotFound = fmt.Errorf("not found")

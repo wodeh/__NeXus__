@@ -3,6 +3,7 @@ import { TenantConfig } from "@/lib/tenant";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || "demo";
 
+<<<<<<< HEAD
 function getAuthHeaders(): Record<string, string> {
   const auth = typeof window !== "undefined" ? localStorage.getItem("nexus-auth") : null;
   if (auth) {
@@ -18,6 +19,8 @@ function getAuthHeaders(): Record<string, string> {
   return {};
 }
 
+=======
+>>>>>>> phase1/security-stability
 function getTenantId(): string {
   if (typeof window !== "undefined") {
     const saved = localStorage.getItem("nexus-tenant");
@@ -28,6 +31,7 @@ function getTenantId(): string {
 
 async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   const isGet = !opts || !opts.method || opts.method === "GET";
+<<<<<<< HEAD
   const authHeaders = getAuthHeaders();
   const tenantId = getTenantId();
 
@@ -36,6 +40,15 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
       "Content-Type": "application/json",
       "X-Tenant-ID": tenantId,
       ...authHeaders,
+=======
+  const tenantId = getTenantId();
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Tenant-ID": tenantId,
+>>>>>>> phase1/security-stability
       ...(opts?.headers || {}),
     },
     cache: isGet ? "no-store" : undefined,
@@ -1000,6 +1013,7 @@ export interface ReservationDetail {
     floor?: string;
     bed_type?: string;
     rate_night: number;
+<<<<<<< HEAD
     total_nights: number;
   };
   dates: {
@@ -1471,3 +1485,33 @@ export async function recordSensorLog(payload: Omit<CleanerSensorLog, "id" | "te
 export async function getLatestSensorLog(villaId: string, cleanerId: string): Promise<CleanerSensorLog> {
   return api<CleanerSensorLog>(`/v1/sensor-logs/latest?villa_id=${villaId}&cleaner_id=${cleanerId}`);
 }
+=======
+  };
+  stay: {
+    check_in: string;
+    check_out: string;
+    nights: number;
+    adults: number;
+    children: number;
+    status: string;
+    source: string;
+  };
+  charges: {
+    subtotal: number;
+    tax: number;
+    total: number;
+    paid: number;
+    balance: number;
+  };
+  extras: Array<{
+    description: string;
+    amount: number;
+    quantity: number;
+  }>;
+  audit_trail: Array<{
+    action: string;
+    user: string;
+    timestamp: string;
+  }>;
+}
+>>>>>>> phase1/security-stability

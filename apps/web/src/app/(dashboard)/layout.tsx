@@ -4,6 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
+<<<<<<< HEAD
+=======
+import ErrorBoundary from "@/components/ErrorBoundary";
+>>>>>>> phase1/security-stability
 import { apiClient } from "@/lib/api";
 import { TenantConfig } from "@/lib/tenant";
 import { useAuth } from "@/lib/auth";
@@ -45,7 +49,11 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+<<<<<<< HEAD
   const { user, token, isLoading, isVillaOwner } = useAuth();
+=======
+  const { user, isLoading, isVillaOwner } = useAuth();
+>>>>>>> phase1/security-stability
   const router = useRouter();
   const pathname = usePathname();
   const [tenantConfig, setTenantConfig] = useState<TenantConfig | null>(null);
@@ -63,16 +71,27 @@ export default function DashboardLayout({
       setLoading(false);
       return;
     }
+<<<<<<< HEAD
     const tenant = isVillaOwner ? "villa-owners" : (localStorage.getItem("nexus-tenant") || "demo");
     apiClient
       .get(`/v1/tenant/${tenant}`)
+=======
+    // Use the tenant's external_id from auth context, or fall back to "demo"
+    const tenantExternalId = isVillaOwner ? "villa-owners" : (user?.tenant_id || "demo");
+    apiClient
+      .get(`/v1/tenant/${tenantExternalId}`)
+>>>>>>> phase1/security-stability
       .then((data) => {
         const cfg = data as TenantConfig;
         // Override capabilities for villa owners
         if (isVillaOwner) {
           cfg.capabilities = villaOwnerCapabilities;
           cfg.property_type = "villa";
+<<<<<<< HEAD
           cfg.name = user.name + " — Villa Owner";
+=======
+          cfg.name = user.name + " \u2014 Villa Owner";
+>>>>>>> phase1/security-stability
         }
         setTenantConfig(cfg);
         setLoading(false);
@@ -82,7 +101,11 @@ export default function DashboardLayout({
         if (isVillaOwner) {
           cfg.capabilities = villaOwnerCapabilities;
           cfg.property_type = "villa";
+<<<<<<< HEAD
           cfg.name = user?.name + " — Villa Owner" || "Villa Owner";
+=======
+          cfg.name = user?.name + " \u2014 Villa Owner" || "Villa Owner";
+>>>>>>> phase1/security-stability
         }
         setTenantConfig(cfg);
         setLoading(false);
@@ -102,6 +125,7 @@ export default function DashboardLayout({
   }
 
   return (
+<<<<<<< HEAD
     <div className="flex min-h-screen">
       <Sidebar tenantConfig={tenantConfig || fallbackConfig} />
       <div className="ml-60 flex flex-1 flex-col">
@@ -109,5 +133,18 @@ export default function DashboardLayout({
         <main className="flex-1 p-6">{children}</main>
       </div>
     </div>
+=======
+    <ErrorBoundary>
+      <div className="flex min-h-screen">
+        <Sidebar tenantConfig={tenantConfig || fallbackConfig} />
+        <div className="ml-60 flex flex-1 flex-col">
+          <Topbar tenantConfig={tenantConfig || fallbackConfig} />
+          <main className="flex-1 p-6">
+            <ErrorBoundary>{children}</ErrorBoundary>
+          </main>
+        </div>
+      </div>
+    </ErrorBoundary>
+>>>>>>> phase1/security-stability
   );
 }
