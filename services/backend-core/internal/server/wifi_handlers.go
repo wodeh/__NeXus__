@@ -67,8 +67,8 @@ func (s *Server) handleWiFiFloors(w http.ResponseWriter, r *http.Request) {
 
 	summaries, err := s.repo.WiFi.ListFloorSummaries(r.Context(), tid)
 	if err != nil {
-		slog.Error("failed to list floor summaries", "error", err)
-		writeJSONError(w, http.StatusInternalServerError, "database error")
+		slog.Error("failed to list floor summaries", slog.String("error", err.Error()), slog.String("tenant_id", tenantID))
+		writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("database error: %v", err))
 		return
 	}
 
@@ -146,8 +146,8 @@ func (s *Server) handleWiFiAPs(w http.ResponseWriter, r *http.Request) {
 
 	aps, err := s.repo.WiFi.ListAccessPoints(r.Context(), tid)
 	if err != nil {
-		slog.Error("failed to list APs", "error", err)
-		writeJSONError(w, http.StatusInternalServerError, "database error")
+		slog.Error("failed to list APs", slog.String("error", err.Error()))
+		writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("database error: %v", err))
 		return
 	}
 
@@ -208,8 +208,8 @@ func (s *Server) handleWiFiAPDetail(w http.ResponseWriter, r *http.Request) {
 		req.ID = apID
 		req.TenantID = tid
 		if err := s.repo.WiFi.UpdateAccessPoint(r.Context(), &req); err != nil {
-			slog.Error("failed to update AP", "error", err)
-			writeJSONError(w, http.StatusInternalServerError, "update failed")
+			slog.Error("failed to update AP", slog.String("error", err.Error()))
+			writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("update failed: %v", err))
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "updated"})
@@ -220,8 +220,8 @@ func (s *Server) handleWiFiAPDetail(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := s.repo.WiFi.DeleteAccessPoint(r.Context(), tid, apID); err != nil {
-			slog.Error("failed to delete AP", "error", err)
-			writeJSONError(w, http.StatusInternalServerError, "delete failed")
+			slog.Error("failed to delete AP", slog.String("error", err.Error()))
+			writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("delete failed: %v", err))
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
@@ -274,8 +274,8 @@ func (s *Server) handleWiFiMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		slog.Error("failed to get metrics", "error", err)
-		writeJSONError(w, http.StatusInternalServerError, "database error")
+		slog.Error("failed to get metrics", slog.String("error", err.Error()))
+		writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("database error: %v", err))
 		return
 	}
 
@@ -308,8 +308,8 @@ func (s *Server) handleWiFiAlerts(w http.ResponseWriter, r *http.Request) {
 
 		alerts, err := s.repo.WiFi.ListAlerts(r.Context(), tid, floor, unresolvedOnly)
 		if err != nil {
-			slog.Error("failed to list alerts", "error", err)
-			writeJSONError(w, http.StatusInternalServerError, "database error")
+			slog.Error("failed to list alerts", slog.String("error", err.Error()))
+			writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("database error: %v", err))
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]interface{}{"alerts": alerts})
@@ -326,8 +326,8 @@ func (s *Server) handleWiFiAlerts(w http.ResponseWriter, r *http.Request) {
 		}
 		alert.TenantID = tid
 		if err := s.repo.WiFi.CreateAlert(r.Context(), &alert); err != nil {
-			slog.Error("failed to create alert", "error", err)
-			writeJSONError(w, http.StatusInternalServerError, "create failed")
+			slog.Error("failed to create alert", slog.String("error", err.Error()))
+			writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("create failed: %v", err))
 			return
 		}
 		writeJSON(w, http.StatusCreated, alert)
@@ -378,8 +378,8 @@ func (s *Server) handleWiFiAlertDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.repo.WiFi.ResolveAlert(r.Context(), tid, alertID, req.ResolvedBy); err != nil {
-		slog.Error("failed to resolve alert", "error", err)
-		writeJSONError(w, http.StatusInternalServerError, "resolve failed")
+		slog.Error("failed to resolve alert", slog.String("error", err.Error()))
+		writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("resolve failed: %v", err))
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "resolved"})
@@ -510,7 +510,7 @@ func (s *Server) handleWiFiDashboard(w http.ResponseWriter, r *http.Request) {
 				{"id": "4", "floor": "Floor 5", "type": "overloaded", "severity": "warning", "message": "F5-AP-03 utilization at 58%", "suggested_fix": "Enable band steering"},
 			},
 			"trends": map[string]interface{}{
-				"24h_signal_avg": []int{-50, -51, -52, -53, -54, -55, -54, -53, -52, -51, -50, -52, -53, -55, -56, -57, -58, -57, -56, -55, -54, -53, -52, -51},
+				"24h_signal_avg":   []int{-50, -51, -52, -53, -54, -55, -54, -53, -52, -51, -50, -52, -53, -55, -56, -57, -58, -57, -56, -55, -54, -53, -52, -51},
 				"24h_client_count": []int{245, 250, 260, 270, 280, 275, 265, 255, 250, 248, 252, 258, 265, 270, 272, 268, 265, 260, 255, 250, 248, 245, 243, 240},
 			},
 		})
@@ -525,14 +525,14 @@ func (s *Server) handleWiFiDashboard(w http.ResponseWriter, r *http.Request) {
 
 	floors, err := s.repo.WiFi.ListFloorSummaries(r.Context(), tid)
 	if err != nil {
-		slog.Error("failed to get floor summaries", "error", err)
-		writeJSONError(w, http.StatusInternalServerError, "database error")
+		slog.Error("failed to get floor summaries", slog.String("error", err.Error()))
+		writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("database error: %v", err))
 		return
 	}
 
 	alerts, err := s.repo.WiFi.ListAlerts(r.Context(), tid, "", true)
 	if err != nil {
-		slog.Error("failed to get alerts", "error", err)
+		slog.Error("failed to get alerts", slog.String("error", err.Error()))
 	}
 
 	// Calculate totals
@@ -612,7 +612,7 @@ func (s *Server) simulateWiFiMetrics() {
 
 	aps, err := s.repo.WiFi.ListAccessPoints(ctx, tid)
 	if err != nil {
-		slog.Error("wifi poller: failed to list APs", "error", err)
+		slog.Error("wifi poller: failed to list APs", slog.String("error", err.Error()))
 		return
 	}
 
@@ -665,19 +665,19 @@ func (s *Server) simulateWiFiMetrics() {
 		}
 
 		m := &repository.WiFiMetric{
-			TenantID:     tid,
-			APID:         ap.ID,
-			Floor:        ap.Floor,
-			RSSIDbm:      &rssi,
-			NoiseDbm:     &noise,
-			SNRDb:        &snr,
-			QualityScore: &quality,
-			ClientCount:  clientCount,
+			TenantID:      tid,
+			APID:          ap.ID,
+			Floor:         ap.Floor,
+			RSSIDbm:       &rssi,
+			NoiseDbm:      &noise,
+			SNRDb:         &snr,
+			QualityScore:  &quality,
+			ClientCount:   clientCount,
 			BandwidthMbps: &bandwidth,
 		}
 
 		if err := s.repo.WiFi.InsertMetric(ctx, m); err != nil {
-			slog.Error("wifi poller: failed to insert metric", "ap", ap.Name, "error", err)
+			slog.Error("wifi poller: failed to insert metric", slog.String("ap", ap.Name), slog.String("error", err.Error()))
 		}
 	}
 
@@ -689,7 +689,7 @@ func (s *Server) simulateWiFiMetrics() {
 func (s *Server) checkWiFiAlerts(ctx context.Context, tenantID uuid.UUID) {
 	floors, err := s.repo.WiFi.ListFloorSummaries(ctx, tenantID)
 	if err != nil {
-		slog.Error("wifi alerts: failed to get floors", "error", err)
+		slog.Error("wifi alerts: failed to get floors", slog.String("error", err.Error()))
 		return
 	}
 

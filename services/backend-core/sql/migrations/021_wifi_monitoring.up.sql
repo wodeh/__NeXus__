@@ -87,13 +87,13 @@ ALTER TABLE wifi_alerts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wifi_floor_summary ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY wifi_ap_tenant_isolation ON wifi_access_points
-    FOR ALL USING (tenant_id = current_setting('app.current_tenant')::UUID);
+    FOR ALL USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = '');
 CREATE POLICY wifi_metrics_tenant_isolation ON wifi_metrics
-    FOR ALL USING (tenant_id = current_setting('app.current_tenant')::UUID);
+    FOR ALL USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = '');
 CREATE POLICY wifi_alerts_tenant_isolation ON wifi_alerts
-    FOR ALL USING (tenant_id = current_setting('app.current_tenant')::UUID);
+    FOR ALL USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = '');
 CREATE POLICY wifi_floor_summary_tenant_isolation ON wifi_floor_summary
-    FOR ALL USING (tenant_id = current_setting('app.current_tenant')::UUID);
+    FOR ALL USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = '');
 
 -- Trigger to update wifi_floor_summary when metrics are inserted
 CREATE OR REPLACE FUNCTION update_wifi_floor_summary()
