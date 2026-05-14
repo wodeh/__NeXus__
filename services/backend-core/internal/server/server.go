@@ -105,6 +105,7 @@ func (s *Server) Start(ctx context.Context) error {
 	s.registerReviewHandlers(mux)
 	s.registerAuditHandlers(mux)
 	s.registerIPTVHandlers(mux)
+	s.registerIPTVGuestHandlers(mux)
 	s.registerCommHandlers(mux)
 	s.registerGuestJourneyHandlers(mux)
 	s.registerAuthHandlers(mux)

@@ -131,3 +131,15 @@ func (r *IPTVRepository) ListRoomStatus(ctx context.Context, tenantID string) ([
 	}
 	return statuses, nil
 }
+
+// ListMenuItems returns all room service menu items for a tenant.
+func (r *IPTVRepository) ListMenuItems(ctx context.Context, tenantID string) ([]map[string]interface{}, error) {
+	// Placeholder until menu_items table is created
+	return nil, fmt.Errorf("menu_items table not implemented")
+}
+
+// GetNotifications returns notifications for a room.
+func (r *IPTVRepository) GetNotifications(ctx context.Context, tenantID, roomID string) ([]domain.GuestNotification, error) {
+	// Placeholder until notifications table is created
+	return nil, fmt.Errorf("notifications table not implemented")
+}
