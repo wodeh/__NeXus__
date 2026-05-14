@@ -37,6 +37,8 @@ export interface UpsellPurchase {
   unit_price: number;
   total_price: number;
   price?: number;
+  payment_method?: string;
+  folio_posted?: boolean;
   status: "pending" | "approved" | "delivered" | "cancelled" | "refunded";
   requested_at: string;
   fulfilled_at?: string;
