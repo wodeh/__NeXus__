@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { Tv, Wifi, WifiOff, ArrowLeft, Home, Film, Tv as TvIcon, Phone, Globe, UtensilsCrossed, Sparkles, MessageSquare, Settings, ChevronRight, Volume2, Moon, Sun } from 'lucide-react';
+import { Tv, Wifi, WifiOff, ArrowLeft, Home, Film, Tv as TvIcon, Phone, Globe, UtensilsCrossed, Sparkles, MessageSquare, Settings, ChevronRight, Volume2, Moon, Sun, Play, Search } from 'lucide-react';
 
 // --- Types ---
 interface GuestInfo {
@@ -54,7 +54,7 @@ interface Notification {
   read: boolean;
 }
 
-type Screen = 'welcome' | 'channels' | 'content' | 'services' | 'info' | 'settings' | 'notifications';
+type Screen = 'welcome' | 'channels' | 'content' | 'services' | 'info' | 'settings' | 'notifications' | 'youtube';
 
 // --- Demo Data ---
 const DEMO_GUEST: GuestInfo = {
@@ -219,16 +219,8 @@ export default function GuestTVPage() {
           />
         )}
         
-        {currentScreen === 'settings' && (
-          <SettingsScreen 
-            language={language}
-            onLanguageChange={setLanguage}
-            largeText={largeText}
-            onLargeTextChange={setLargeText}
-            highContrast={highContrast}
-            onHighContrastChange={setHighContrast}
-            onBack={() => setCurrentScreen('welcome')}
-          />
+        {currentScreen === 'youtube' && (
+          <YouTubeScreen onBack={() => setCurrentScreen('welcome')} />
         )}
       </div>
     </div>
@@ -248,6 +240,7 @@ function WelcomeScreen({ guest, onNavigate, unreadCount }: {
     { id: 'services' as Screen, label: 'Room Service', icon: UtensilsCrossed, color: 'bg-amber-500/20 text-amber-400' },
     { id: 'info' as Screen, label: 'Hotel Info', icon: Sparkles, color: 'bg-emerald-500/20 text-emerald-400' },
     { id: 'notifications' as Screen, label: 'Messages', icon: MessageSquare, color: 'bg-sky-500/20 text-sky-400', badge: unreadCount },
+    { id: 'youtube' as Screen, label: 'YouTube', icon: Play, color: 'bg-rose-500/20 text-rose-400' },
     { id: 'settings' as Screen, label: 'Settings', icon: Settings, color: 'bg-slate-500/20 text-slate-400' },
   ];
 
@@ -743,6 +736,114 @@ function SettingsScreen({
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function YouTubeScreen({ onBack }: { onBack: () => void }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [videos, setVideos] = useState<Array<{id: string; title: string; description: string; thumbnail: string; channel: string; duration: string; video_id: string}>>([
+    { id: '1', title: 'Welcome to Grand Plaza Hotel', description: 'Experience luxury at Grand Plaza Hotel', thumbnail: 'https://i.ytimg.com/vi/demo1/hqdefault.jpg', channel: 'Grand Plaza Official', duration: '2:30', video_id: 'demo1' },
+    { id: '2', title: 'Local Attractions Guide', description: 'Discover the best places near our hotel', thumbnail: 'https://i.ytimg.com/vi/demo2/hqdefault.jpg', channel: 'Travel Guide', duration: '5:45', video_id: 'demo2' },
+    { id: '3', title: 'Spa & Wellness Introduction', description: 'Relax and rejuvenate at our spa', thumbnail: 'https://i.ytimg.com/vi/demo3/hqdefault.jpg', channel: 'Grand Plaza Spa', duration: '3:15', video_id: 'demo3' },
+  ]);
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+
+  const trendingVideos = [
+    { id: 't1', title: 'Top 10 Luxury Hotels 2026', thumbnail: 'https://i.ytimg.com/vi/trend1/hqdefault.jpg', channel: 'Travel + Leisure', views: '1.2M', video_id: 'trend1' },
+    { id: 't2', title: 'Best Room Service Experiences', thumbnail: 'https://i.ytimg.com/vi/trend2/hqdefault.jpg', channel: 'Hotel Management', views: '856K', video_id: 'trend2' },
+    { id: 't3', title: 'Hotel Technology Trends', thumbnail: 'https://i.ytimg.com/vi/trend3/hqdefault.jpg', channel: 'Hospitality Tech', views: '430K', video_id: 'trend3' },
+  ];
+
+  return (
+    <div className="p-8">
+      <div className="flex items-center gap-4 mb-6">
+        <button onClick={onBack} className="rounded-lg p-2 hover:bg-slate-800">
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <h2 className="text-2xl font-bold">YouTube</h2>
+      </div>
+
+      {/* Search */}
+      <div className="relative mb-6">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+        <input
+          placeholder="Search videos..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="input w-full pl-10"
+        />
+      </div>
+
+      {/* Selected Video Player */}
+      {selectedVideo && (
+        <div className="mb-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+          <div className="aspect-video rounded-lg bg-slate-900 flex items-center justify-center">
+            <div className="text-center">
+              <Play className="h-12 w-12 text-rose-400 mx-auto mb-2" />
+              <p className="text-sm text-slate-400">Playing: {selectedVideo}</p>
+              <p className="text-xs text-slate-600">YouTube integration - video would play here</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setSelectedVideo(null)}
+            className="mt-3 text-sm text-slate-400 hover:text-white"
+          >
+            Close Player
+          </button>
+        </div>
+      )}
+
+      {/* Hotel Videos */}
+      <h3 className="text-lg font-bold mb-4">Hotel Content</h3>
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        {videos.map(video => (
+          <button
+            key={video.id}
+            onClick={() => setSelectedVideo(video.title)}
+            className="group rounded-xl border border-slate-700 overflow-hidden text-left hover:border-rose-500/50 transition-all"
+          >
+            <div className="h-32 bg-slate-700/50 flex items-center justify-center relative">
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="rounded-full bg-rose-500/20 p-3">
+                  <Play className="h-6 w-6 text-rose-400" />
+                </div>
+              </div>
+              <span className="absolute bottom-2 right-2 rounded bg-slate-900/80 px-1.5 py-0.5 text-[10px] text-white">
+                {video.duration}
+              </span>
+            </div>
+            <div className="p-3">
+              <p className="font-medium text-sm line-clamp-2">{video.title}</p>
+              <p className="text-xs text-slate-500 mt-1">{video.channel}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Trending */}
+      <h3 className="text-lg font-bold mb-4">Trending</h3>
+      <div className="grid grid-cols-3 gap-4">
+        {trendingVideos.map(video => (
+          <button
+            key={video.id}
+            onClick={() => setSelectedVideo(video.title)}
+            className="group rounded-xl border border-slate-700 overflow-hidden text-left hover:border-rose-500/50 transition-all"
+          >
+            <div className="h-32 bg-slate-700/50 flex items-center justify-center relative">
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="rounded-full bg-rose-500/20 p-3">
+                  <Play className="h-6 w-6 text-rose-400" />
+                </div>
+              </div>
+            </div>
+            <div className="p-3">
+              <p className="font-medium text-sm line-clamp-2">{video.title}</p>
+              <p className="text-xs text-slate-500 mt-1">{video.channel} · {video.views} views</p>
+            </div>
+          </button>
+        ))}
       </div>
     </div>
   );

@@ -1213,6 +1213,29 @@ export async function recordSensorLog(villaId: string, payload: { villa_id?: str
 
 
 
-/* Re-exports from api-missing.ts */
-export * from "./api-missing";
+/* ─── YouTube API ─── */
+
+export interface YouTubeVideo {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail: string;
+  channel: string;
+  duration: string;
+  video_id: string;
+}
+
+export async function searchYouTube(query: string): Promise<{ results: YouTubeVideo[]; query: string }> {
+  const params = new URLSearchParams();
+  params.append("q", query);
+  return api(`/v1/iptv/youtube/search?${params.toString()}`);
+}
+
+export async function getYouTubeVideo(videoId: string): Promise<{ video_id: string; embed_url: string; type: string; quality: string }> {
+  return api(`/v1/iptv/youtube/play/${videoId}`);
+}
+
+export async function getYouTubeTrending(): Promise<{ videos: YouTubeVideo[] }> {
+  return api("/v1/iptv/youtube/trending");
+}
 
