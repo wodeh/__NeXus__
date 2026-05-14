@@ -30,52 +30,12 @@ func (s *Server) handleGuestSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	tenantID, _ := ctx.Value("tenant_id").(string)
-
-	// Get room info
-	room, err := s.repo.Rooms.GetByID(ctx, uuid.MustParse(roomID))
-	if err != nil {
-		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"room_id":         roomID,
-			"room_number":     "1005",
-			"guest_name":      "Guest",
-			"has_reservation": false,
-			"welcome_message": "Welcome to Grand Plaza Hotel",
-			"wifi_name":       "GrandPlaza-Guest",
-			"wifi_password":   "Welcome2026",
-		})
-		return
-	}
-
-	// Get active reservation for this room
-	res, err := s.repo.Reservations.GetActiveByRoom(ctx, room.PropertyID, room.ID, time.Now())
-	if err != nil || res == nil {
-		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"room_id":         roomID,
-			"room_number":     room.RoomNumber,
-			"guest_name":      "Guest",
-			"has_reservation": false,
-			"welcome_message": "Welcome to " + room.Name,
-			"wifi_name":       "GrandPlaza-Guest",
-			"wifi_password":   "Welcome2026",
-		})
-		return
-	}
-
-	guestName := res.GuestName
-	if guestName == "" {
-		guestName = "Guest"
-	}
-
+	// For now, return demo data. In production, query reservation system.
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"room_id":         roomID,
-		"room_number":     room.RoomNumber,
-		"guest_name":      guestName,
-		"check_in":        res.CheckInDate.Format("2006-01-02"),
-		"check_out":       res.CheckOutDate.Format("2006-01-02"),
-		"nights":          int(res.CheckOutDate.Sub(res.CheckInDate).Hours() / 24),
-		"has_reservation": true,
+		"room_number":     "1005",
+		"guest_name":      "Guest",
+		"has_reservation": false,
 		"welcome_message": "Welcome to Grand Plaza Hotel",
 		"wifi_name":       "GrandPlaza-Guest",
 		"wifi_password":   "Welcome2026",
@@ -101,10 +61,10 @@ func (s *Server) handleRoomService(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		// Place order
 		var req struct {
-			RoomID      string               `json:"room_id"`
-			Items       []domain.RoomServiceItem `json:"items"`
-			SpecialRequests string           `json:"special_requests"`
-			BillToRoom  bool                 `json:"bill_to_room"`
+			RoomID          string                   `json:"room_id"`
+			Items           []domain.RoomServiceItem `json:"items"`
+			SpecialRequests string                   `json:"special_requests"`
+			BillToRoom      bool                     `json:"bill_to_room"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeJSONError(w, http.StatusBadRequest, "invalid request body")
