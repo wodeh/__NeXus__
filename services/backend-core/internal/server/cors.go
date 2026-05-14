@@ -1,62 +1,20 @@
 package server
 
-import (
-	"net/http"
-	"os"
-	"strings"
-)
+import "net/http"
 
-// corsAllowedOrigins returns the configured list of allowed origins.
-// Defaults to local development URLs if CORS_ALLOWED_ORIGINS is not set.
-func corsAllowedOrigins() []string {
-	env := os.Getenv("CORS_ALLOWED_ORIGINS")
-	if env == "" {
-		return []string{"http://localhost:3000", "http://localhost:5173"}
-	}
-	var origins []string
-	for _, o := range strings.Split(env, ",") {
-		o = strings.TrimSpace(o)
-		if o != "" {
-			origins = append(origins, o)
-		}
-	}
-	return origins
-}
-
-// isOriginAllowed checks if the given origin is in the allowlist.
-// Allows wildcard * and any localhost origin when NODE_ENV=development.
-func isOriginAllowed(origin string, allowed []string) bool {
-	if origin == "" {
-		return false
-	}
-	for _, a := range allowed {
-		if a == "*" || a == origin {
-			return true
-		}
-	}
-	// Allow any localhost origin for development
-	if os.Getenv("NODE_ENV") == "development" &&
-		(strings.HasPrefix(origin, "http://localhost:") || strings.HasPrefix(origin, "https://localhost:")) {
-		return true
-	}
-	return false
-}
-
-// withCORS wraps a handler with configurable origin allowlist CORS support.
-// Any localhost origin is automatically allowed for development.
 func withCORS(next http.HandlerFunc) http.HandlerFunc {
-	allowed := corsAllowedOrigins()
 	return func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
-
-		// Set CORS headers if origin is allowed (includes wildcard * or localhost)
-		if isOriginAllowed(origin, allowed) {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Tenant-ID, X-Request-ID")
-			w.Header().Set("Access-Control-Max-Age", "86400")
+		if origin == "" {
+			origin = "http://localhost:3000"
 		}
+
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Tenant-ID, X-Request-ID, X-Property-ID")
+		w.Header().Set("Access-Control-Max-Age", "86400")
+		w.Header().Set("Vary", "Origin")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
