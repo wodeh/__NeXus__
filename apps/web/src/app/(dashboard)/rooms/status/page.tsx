@@ -13,7 +13,7 @@ export default function RoomStatusPage() {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<RoomDailyStatus[]>([]);
+  const [data, setData] = useState<RoomStatusDay[]>([]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
