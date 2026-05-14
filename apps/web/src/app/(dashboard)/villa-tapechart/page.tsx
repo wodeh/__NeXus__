@@ -614,7 +614,7 @@ function CreateReservationModal({ villas, defaultVillaId, defaultDate, onSave, o
     nights: 3,
     total_amount: 0,
     currency: "USD",
-    status: "pending",
+    status: "pending" as VillaReservation["status"],
     source: "phone",
     balance_due: 0,
   });

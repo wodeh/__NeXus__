@@ -198,7 +198,7 @@ export default function VillaReservationsPage() {
                     <span className="text-xs text-amber-400">Pending</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-slate-400">${Math.round(res.balance_due).toLocaleString()}</td>
+                <td className="px-4 py-3 text-slate-400">${Math.round(res.balance_due || 0).toLocaleString()}</td>
                 <td className="px-4 py-3">
                   <span className={`rounded px-2 py-0.5 text-xs capitalize ${
                     res.status === "pending" ? "bg-amber-500/10 text-amber-400" :
@@ -354,7 +354,7 @@ function ReservationModal({ villas, reservation, onSave, onClose }: { villas: Vi
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <select className="input w-full" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+            <select className="input w-full" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as VillaReservation["status"] })}>
               <option value="pending">Pending</option>
               <option value="reserved">Reserved</option>
               <option value="completed">Completed</option>
