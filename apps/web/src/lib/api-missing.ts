@@ -11,6 +11,7 @@ export interface UpsellOffer {
   description?: string;
   category: string;
   price: number;
+  currency?: string;
   image_url?: string;
   is_active: boolean;
   inventory_count?: number;
