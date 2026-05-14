@@ -1242,3 +1242,135 @@ export async function getYouTubeTrending(): Promise<{ videos: YouTubeVideo[] }> 
   return api("/v1/iptv/youtube/trending");
 }
 
+/* ─── WiFi Monitoring API ─── */
+
+export interface WiFiAccessPoint {
+  id: string;
+  tenant_id: string;
+  name: string;
+  floor: string;
+  location: string;
+  mac_address: string;
+  ip_address?: string;
+  model: string;
+  firmware: string;
+  channels_2ghz?: number[];
+  channels_5ghz?: number[];
+  max_clients: number;
+  status: "online" | "offline" | "degraded" | "maintenance";
+  snmp_community?: string;
+  snmp_version: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WiFiMetric {
+  id: string;
+  tenant_id: string;
+  ap_id: string;
+  floor: string;
+  timestamp: string;
+  rssi_dbm?: number;
+  noise_dbm?: number;
+  snr_db?: number;
+  quality_score?: number;
+  client_count: number;
+  bandwidth_mbps?: number;
+  packet_loss_pct?: number;
+  channel_util?: number;
+  tx_rate_mbps?: number;
+  rx_rate_mbps?: number;
+  retries_pct?: number;
+}
+
+export interface WiFiAlert {
+  id: string;
+  tenant_id: string;
+  ap_id?: string;
+  floor: string;
+  type: "dead_zone" | "channel_conflict" | "ap_offline" | "overloaded" | "poor_signal" | "interference";
+  severity: "info" | "warning" | "critical";
+  message: string;
+  suggested_fix?: string;
+  is_resolved: boolean;
+  resolved_at?: string;
+  resolved_by?: string;
+  created_at: string;
+}
+
+export interface WiFiFloorSummary {
+  id: string;
+  tenant_id: string;
+  floor: string;
+  ap_count: number;
+  online_aps: number;
+  avg_signal_dbm?: number;
+  total_clients: number;
+  active_alerts: number;
+  overall_health: "excellent" | "good" | "fair" | "poor";
+  updated_at: string;
+}
+
+export interface WiFiDashboard {
+  overview: {
+    total_aps: number;
+    online_aps: number;
+    total_clients: number;
+    active_alerts: number;
+    overall_health: string;
+    avg_signal_dbm: number;
+  };
+  floors: WiFiFloorSummary[];
+  alerts: WiFiAlert[];
+  trends?: {
+    "24h_signal_avg": number[];
+    "24h_client_count": number[];
+  };
+}
+
+export async function getWiFiDashboard(): Promise<WiFiDashboard> {
+  return api("/v1/wifi/dashboard");
+}
+
+export async function getWiFiFloors(): Promise<{ floors: WiFiFloorSummary[] }> {
+  return api("/v1/wifi/floors");
+}
+
+export async function getWiFiFloorDetail(floor: string): Promise<{ floor: string; summary?: WiFiFloorSummary; aps: WiFiAccessPoint[]; metrics: WiFiMetric[]; alerts: WiFiAlert[] }> {
+  return api(`/v1/wifi/floors/${floor}`);
+}
+
+export async function getWiFiAPs(): Promise<{ aps: WiFiAccessPoint[] }> {
+  return api("/v1/wifi/aps");
+}
+
+export async function getWiFiAPDetail(apId: string): Promise<{ ap: WiFiAccessPoint; history: WiFiMetric[] }> {
+  return api(`/v1/wifi/aps/${apId}`);
+}
+
+export async function getWiFiAlerts(floor?: string, unresolved?: boolean): Promise<{ alerts: WiFiAlert[] }> {
+  const params = new URLSearchParams();
+  if (floor) params.append("floor", floor);
+  if (unresolved) params.append("unresolved", "true");
+  return api(`/v1/wifi/alerts?${params.toString()}`);
+}
+
+export async function resolveWiFiAlert(alertId: string, resolvedBy?: string): Promise<{ status: string }> {
+  return api(`/v1/wifi/alerts/${alertId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ resolved_by: resolvedBy || "admin" }),
+  });
+}
+
+export async function getWiFiHeatmap(floor: string): Promise<{ floor: string; grid_width: number; grid_height: number; cell_size_m: number; unit: string; grid: number[][]; legend: Record<string, string> }> {
+  const params = new URLSearchParams();
+  params.append("floor", floor);
+  return api(`/v1/wifi/heatmap?${params.toString()}`);
+}
+
+export async function triggerWiFiScan(floor?: string): Promise<{ status: string; floor?: string; message: string; estimated: string; scan_id: string }> {
+  const params = new URLSearchParams();
+  if (floor) params.append("floor", floor);
+  return api(`/v1/wifi/scan?${params.toString()}`, { method: "POST" });
+}
+

@@ -26,6 +26,7 @@ import {
   Lock,
   Home,
   Smartphone,
+  Wifi,
 } from "lucide-react";
 import { TenantConfig, hasCapability, CAPABILITIES } from "@/lib/tenant";
 import { useAuth } from "@/lib/auth";
@@ -52,6 +53,7 @@ const navItems: NavItem[] = [
   { label: "Housekeeping", href: "/housekeeping", icon: Sparkles, cap: CAPABILITIES.CORE.HOUSEKEEPING },
   { label: "IPTV", href: "/iptv", icon: Tv, cap: CAPABILITIES.OPERATIONS.IPTV_BASIC },
   { label: "Smart Locks", href: "/locks", icon: Lock, cap: CAPABILITIES.OPERATIONS.SMART_LOCKS },
+  { label: "WiFi Monitor", href: "/wifi", icon: Wifi, cap: CAPABILITIES.OPERATIONS.SMART_LOCKS },
   { label: "Channel Manager", href: "/channel-manager", icon: Globe, cap: CAPABILITIES.REVENUE.CHANNEL_MANAGER },
   { label: "WhatsApp Bot", href: "/whatsapp", icon: MessageCircle, cap: CAPABILITIES.REVENUE.WHATSAPP_BOT },
   { label: "Booking Engine", href: "/booking-engine", icon: ExternalLink, cap: CAPABILITIES.REVENUE.DIRECT_BOOKING },

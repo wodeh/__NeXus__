@@ -112,6 +112,7 @@ func (s *Server) Start(ctx context.Context) error {
 	s.registerAuthHandlers(mux)
 	s.registerVillaHandlers(mux)
 	s.registerHousekeepingHandlers(mux)
+	s.registerWiFiHandlers(mux)
 
 	// Build middleware chain: CORS is outermost — every response gets CORS headers
 	// Inside CORS: JWT auth (skips public routes), then the actual handler
@@ -145,6 +146,10 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 
 	slog.Info("backend-core starting", slog.String("port", s.cfg.HTTPPort))
+
+	// Start background workers
+	s.StartWiFiPoller()
+
 	return s.httpServer.ListenAndServe()
 }
 
