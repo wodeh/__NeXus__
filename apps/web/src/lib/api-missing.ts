@@ -87,32 +87,28 @@ export interface ReservationDetail {
     bed_type?: string;
     rate_night: number;
   };
-  stay: {
+  dates: {
     check_in: string;
     check_out: string;
     nights: number;
+  };
+  party: {
     adults: number;
     children: number;
-    status: string;
-    source: string;
   };
-  charges: {
+  status: string;
+  source: string;
+  financials: {
     subtotal: number;
     tax: number;
     total: number;
     paid: number;
     balance: number;
+    deposit_paid?: number;
   };
-  extras: Array<{
-    description: string;
-    amount: number;
-    quantity: number;
-  }>;
-  audit_trail: Array<{
-    action: string;
-    user: string;
-    timestamp: string;
-  }>;
+  special_requests?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export async function getReservationDetail(id: string): Promise<ReservationDetail> {
