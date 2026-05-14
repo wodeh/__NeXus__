@@ -1,25 +1,39 @@
--- Seed admin users and roles for demo
+-- Seed admin users, tenant, properties, and system config for demo
+-- Compatible with schema from migrations 000001 + 009 + 010
 
--- Demo super admin
-INSERT INTO users (tenant_id, email, name, phone, role, status, password_hash, permissions, created_at, updated_at)
-VALUES 
-  ('demo', 'super@nexus.com', 'System Administrator', '+1-555-0000', 'super_admin', 'active', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqQYe7bSb1n3J9Zg5j7z1J0Z5J0Zq', '["*"]', NOW(), NOW()),
-  ('demo', 'admin@grandplaza.com', 'Alex Rivera', '+1-555-0100', 'admin', 'active', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqQYe7bSb1n3J9Zg5j7z1J0Z5J0Zq', '["reservations:read","reservations:write","rooms:read","rooms:write","housekeeping:read","housekeeping:write","reports:read","settings:read","settings:write","users:read","users:write"]', NOW(), NOW()),
-  ('demo', 'manager@grandplaza.com', 'Sarah Chen', '+1-555-0101', 'manager', 'active', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqQYe7bSb1n3J9Zg5j7z1J0Z5J0Zq', '["reservations:read","reservations:write","housekeeping:read","reports:read"]', NOW(), NOW()),
-  ('demo', 'frontdesk@grandplaza.com', 'James Wilson', '+1-555-0102', 'front_desk', 'active', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqQYe7bSb1n3J9Zg5j7z1J0Z5J0Zq', '["reservations:read","reservations:write","guests:read"]', NOW(), NOW()),
-  ('demo', 'housekeeper@grandplaza.com', 'Maria Garcia', '+1-555-0103', 'housekeeper', 'active', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqQYe7bSb1n3J9Zg5j7z1J0Z5J0Zq', '["housekeeping:read","housekeeping:write","rooms:read"]', NOW(), NOW())
+-- 1. Ensure demo tenant exists
+INSERT INTO tenants (external_id, name, region, tier, config)
+VALUES ('demo', 'Demo Tenant', 'us-east-1', 'enterprise', '{}')
+ON CONFLICT (external_id) DO NOTHING;
+
+-- 2. Seed users (no phone, no status, no permissions columns in actual schema)
+INSERT INTO users (tenant_id, email, password_hash, name, role, is_active, created_at, updated_at)
+VALUES
+  ((SELECT id FROM tenants WHERE external_id = 'demo'), 'super@nexus.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqQYe7bSb1n3J9Zg5j7z1J0Z5J0Zq', 'System Administrator', 'super_admin', true, NOW(), NOW()),
+  ((SELECT id FROM tenants WHERE external_id = 'demo'), 'admin@grandplaza.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqQYe7bSb1n3J9Zg5j7z1J0Z5J0Zq', 'Alex Rivera', 'admin', true, NOW(), NOW()),
+  ((SELECT id FROM tenants WHERE external_id = 'demo'), 'manager@grandplaza.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqQYe7bSb1n3J9Zg5j7z1J0Z5J0Zq', 'Sarah Chen', 'manager', true, NOW(), NOW()),
+  ((SELECT id FROM tenants WHERE external_id = 'demo'), 'frontdesk@grandplaza.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqQYe7bSb1n3J9Zg5j7z1J0Z5J0Zq', 'James Wilson', 'front_desk', true, NOW(), NOW()),
+  ((SELECT id FROM tenants WHERE external_id = 'demo'), 'housekeeper@grandplaza.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqQYe7bSb1n3J9Zg5j7z1J0Z5J0Zq', 'Maria Garcia', 'housekeeper', true, NOW(), NOW())
 ON CONFLICT (tenant_id, email) DO NOTHING;
 
--- Demo properties with full details
-INSERT INTO properties (tenant_id, name, code, address, city, country, phone, email, timezone, currency, star_rating, status, created_at, updated_at)
+-- 3. Seed properties (no code column, status -> is_active)
+INSERT INTO properties (tenant_id, name, address, city, country, phone, email, timezone, currency, star_rating, is_active, created_at, updated_at)
 VALUES
-  ('demo', 'Grand Plaza Downtown', 'DOWNTOWN', '123 Main Street', 'New York', 'USA', '+1-212-555-0100', 'downtown@grandplaza.com', 'America/New_York', 'USD', 5, 'active', NOW(), NOW()),
-  ('demo', 'Grand Plaza Beachfront', 'BEACH', '456 Ocean Avenue', 'Miami', 'USA', '+1-305-555-0200', 'beach@grandplaza.com', 'America/New_York', 'USD', 4, 'active', NOW(), NOW()),
-  ('demo', 'Grand Plaza Mountain Lodge', 'MOUNTAIN', '789 Summit Road', 'Denver', 'USA', '+1-720-555-0300', 'mountain@grandplaza.com', 'America/Denver', 'USD', 4, 'active', NOW(), NOW()),
-  ('demo', 'Grand Plaza Dubai Marina', 'DUBAI', '321 Sheikh Zayed Road', 'Dubai', 'UAE', '+971-4-555-0400', 'dubai@grandplaza.com', 'Asia/Dubai', 'AED', 5, 'active', NOW(), NOW())
-ON CONFLICT (tenant_id, code) DO NOTHING;
+  ((SELECT id FROM tenants WHERE external_id = 'demo'), 'Grand Plaza Downtown', '123 Main Street', 'New York', 'USA', '+1-212-555-0100', 'downtown@grandplaza.com', 'America/New_York', 'USD', 5, true, NOW(), NOW()),
+  ((SELECT id FROM tenants WHERE external_id = 'demo'), 'Grand Plaza Beachfront', '456 Ocean Avenue', 'Miami', 'USA', '+1-305-555-0200', 'beach@grandplaza.com', 'America/New_York', 'USD', 4, true, NOW(), NOW()),
+  ((SELECT id FROM tenants WHERE external_id = 'demo'), 'Grand Plaza Mountain Lodge', '789 Summit Road', 'Denver', 'USA', '+1-720-555-0300', 'mountain@grandplaza.com', 'America/Denver', 'USD', 4, true, NOW(), NOW()),
+  ((SELECT id FROM tenants WHERE external_id = 'demo'), 'Grand Plaza Dubai Marina', '321 Sheikh Zayed Road', 'Dubai', 'UAE', '+971-4-555-0400', 'dubai@grandplaza.com', 'Asia/Dubai', 'AED', 5, true, NOW(), NOW())
+ON CONFLICT (tenant_id, name) DO NOTHING;
 
--- System config
+-- 4. Seed system defaults into tenant_properties (tenant_id must be UUID, property_id is TEXT)
 INSERT INTO tenant_properties (tenant_id, property_id, name, timezone, locale, currency, config)
-VALUES ('demo', 'system', 'System Defaults', 'UTC', 'en', 'USD', '{"default_check_in_time":"15:00","default_check_out_time":"11:00","auto_confirm":true,"require_deposit":true,"deposit_percent":20,"allow_walk_in":true,"overbooking_enabled":false}'::jsonb)
+VALUES (
+  (SELECT id FROM tenants WHERE external_id = 'demo'),
+  'system',
+  'System Defaults',
+  'UTC',
+  'en',
+  'USD',
+  '{"default_check_in_time":"15:00","default_check_out_time":"11:00","auto_confirm":true,"require_deposit":true,"deposit_percent":20,"allow_walk_in":true,"overbooking_enabled":false}'::jsonb
+)
 ON CONFLICT (tenant_id, property_id) DO NOTHING;
