@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/nexus-platform/backend-core/internal/auth"
 )
 
 // jwtSecret returns the HMAC secret for signing JWTs.
@@ -126,12 +129,37 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	tenantID, _ := ctx.Value("tenant_id").(string)
-	userID, _ := ctx.Value("user_id").(string)
+	// Read JWT directly from Authorization header
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"authenticated": false,
+		})
+		return
+	}
 
-	// If no auth context, return empty but valid response
-	if tenantID == "" || userID == "" {
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"authenticated": false,
+		})
+		return
+	}
+
+	// Validate the token
+	validator := auth.NewHMACValidator(jwtSecretFromEnv(), "nexus-backend", jwtAudience)
+	_, claims, err := validator.Validate(parts[1])
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"authenticated": false,
+		})
+		return
+	}
+
+	// Extract user_id and tenant_id from claims
+	userID, _ := claims["sub"].(string)
+	tenantID, _ := claims["tenant_id"].(string)
+	if userID == "" {
 		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"authenticated": false,
 		})
@@ -140,19 +168,24 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 
 	// Look up full user record
 	if s.repo == nil || s.repo.Auth == nil {
+		role, _ := claims["role"].(string)
 		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"authenticated": true,
 			"user": map[string]interface{}{
-				"id": userID, "role": "front_desk",
+				"id": userID, "role": role,
 			},
 		})
 		return
 	}
 
-	creds, err := s.repo.Auth.GetUserByID(ctx, uuid.MustParse(userID))
+	creds, err := s.repo.Auth.GetUserByID(r.Context(), uuid.MustParse(userID))
 	if err != nil {
+		role, _ := claims["role"].(string)
 		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"authenticated": false,
+			"authenticated": true,
+			"user": map[string]interface{}{
+				"id": userID, "role": role,
+			},
 		})
 		return
 	}
@@ -162,8 +195,7 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	if creds.Role == "super_admin" || creds.Role == "admin" {
 		capabilities = adminCapabilities()
 	} else if creds.Role == "manager" {
-		// check for villa owner
-		tenant, _ := s.repo.Auth.GetTenantByID(ctx, creds.TenantID)
+		tenant, _ := s.repo.Auth.GetTenantByID(r.Context(), creds.TenantID)
 		if tenant != nil && tenant.ExternalID == "villa-owners" {
 			capabilities = villaOwnerCapabilities()
 		}
