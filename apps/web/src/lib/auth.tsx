@@ -38,16 +38,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [capabilities, setCapabilities] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restore session on mount via httpOnly cookie check
+  // Restore session on mount — check localStorage token and validate it
   useEffect(() => {
     let cancelled = false;
 
     async function restoreSession() {
       try {
+        // Read token from localStorage (set during login)
+        const token = typeof window !== 'undefined' ? localStorage.getItem('nexus-token') : null;
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const res = await fetch(`${API_BASE}/v1/auth/me`, {
           method: 'GET',
           credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
         });
 
         if (res.ok) {
@@ -86,8 +93,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const data = await res.json();
 
+    // Store JWT token in localStorage so api.ts can attach it to requests
+    if (data.token && typeof window !== 'undefined') {
+      localStorage.setItem('nexus-token', data.token);
+    }
+
     // Store only non-sensitive user/tenant data in React state
-    // The JWT token is handled by the backend as an httpOnly cookie
     setUser(data.user ?? null);
     setTenant(data.tenant ?? null);
     setCapabilities(data.capabilities || []);
@@ -95,15 +106,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      // Call server-side logout to clear the httpOnly cookie
+      // Call server-side logout
       await fetch(`${API_BASE}/v1/auth/logout`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       });
     } catch {
-      // Best-effort: even if the network request fails, clear local state
+      // Best-effort
     } finally {
+      // Clear localStorage token and React state
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('nexus-token');
+      }
       setUser(null);
       setTenant(null);
       setCapabilities([]);

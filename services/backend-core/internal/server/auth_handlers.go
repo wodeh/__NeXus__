@@ -24,7 +24,10 @@ func jwtSecret() []byte {
 
 func (s *Server) registerAuthHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/v1/auth/login", s.withRateLimit(s.handleLogin))
-	mux.HandleFunc("/v1/auth/me", s.withTenant(s.handleMe))
+	// /v1/auth/me is a session-check endpoint — it must work without X-Tenant-ID
+	// so the frontend can call restoreSession() before login. handleMe already
+	// returns {authenticated: false} gracefully when no JWT context exists.
+	mux.HandleFunc("/v1/auth/me", s.handleMe)
 }
 
 // loginRequest is the request body for the login endpoint.

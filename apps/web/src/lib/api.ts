@@ -15,11 +15,21 @@ export async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   const isGet = !opts || !opts.method || opts.method === "GET";
   const tenantId = getTenantId();
 
+  // Read auth token from localStorage (set by login handler)
+  let authHeader = {};
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("nexus-token");
+    if (token) {
+      authHeader = { Authorization: `Bearer ${token}` };
+    }
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
       "X-Tenant-ID": tenantId,
+      ...authHeader,
       ...(opts?.headers || {}),
     },
     cache: isGet ? "no-store" : undefined,
