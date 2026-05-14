@@ -71,6 +71,12 @@ func (v *JWTValidator) Validate(tokenString string) (*jwt.Token, jwt.MapClaims, 
 func JWTMiddleware(validator *JWTValidator) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Let CORS preflight through without auth
+			if r.Method == http.MethodOptions {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
 				writeJSONError(w, http.StatusUnauthorized, "missing authorization header")

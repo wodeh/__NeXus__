@@ -114,12 +114,16 @@ func (s *Server) Start(ctx context.Context) error {
 
 	// Apply JWT middleware to the CORS-wrapped handler, but skip for public routes
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if isPublicRoute(r.URL.Path) {
-			// Public route: skip JWT, but still apply CORS and metrics
+		// Always let CORS handle OPTIONS preflight before any auth check
+		if r.Method == http.MethodOptions {
 			corsHandler(w, r)
 			return
 		}
-		// Protected route: validate JWT first, then continue through CORS
+		if isPublicRoute(r.URL.Path) {
+			corsHandler(w, r)
+			return
+		}
+		// Protected non-OPTIONS route: validate JWT first, then continue through CORS
 		jwtMiddleware(http.HandlerFunc(corsHandler)).ServeHTTP(w, r)
 	})
 
