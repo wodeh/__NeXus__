@@ -179,7 +179,7 @@ export default function UpsellsPage() {
                 <td className="px-4 py-2 text-white">${p.price}</td>
                 <td className="px-4 py-2">
                   <span className={`rounded px-2 py-0.5 text-xs ${
-                    p.status === "confirmed" ? "bg-emerald-500/10 text-emerald-400" :
+                    p.status === "approved" ? "bg-emerald-500/10 text-emerald-400" :
                     p.status === "pending" ? "bg-amber-500/10 text-amber-400" :
                     "bg-rose-500/10 text-rose-400"
                   }`}>
