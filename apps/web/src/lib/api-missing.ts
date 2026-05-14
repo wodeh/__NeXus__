@@ -1,3 +1,5 @@
+import { api } from './api';
+
 /* ─── Missing Exports ─── */
 
 export async function deleteVillaReservation(id: string): Promise<void> {
