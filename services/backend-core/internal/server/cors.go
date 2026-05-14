@@ -24,12 +24,17 @@ func corsAllowedOrigins() []string {
 }
 
 // isOriginAllowed checks if the given origin is in the allowlist.
+// Allows wildcard * and any localhost origin for development.
 func isOriginAllowed(origin string, allowed []string) bool {
 	if origin == "" {
 		return false
 	}
 	for _, a := range allowed {
-		if a == origin {
+		if a == "*" || a == origin {
+			return true
+		}
+		// Allow any localhost origin for development
+		if strings.HasPrefix(origin, "http://localhost:") || strings.HasPrefix(origin, "https://localhost:") {
 			return true
 		}
 	}
@@ -37,12 +42,13 @@ func isOriginAllowed(origin string, allowed []string) bool {
 }
 
 // withCORS wraps a handler with configurable origin allowlist CORS support.
+// Any localhost origin is automatically allowed for development.
 func withCORS(next http.HandlerFunc) http.HandlerFunc {
 	allowed := corsAllowedOrigins()
 	return func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 
-		// Only set CORS headers if the origin is in our allowlist
+		// Set CORS headers if origin is allowed (includes wildcard * or localhost)
 		if isOriginAllowed(origin, allowed) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
