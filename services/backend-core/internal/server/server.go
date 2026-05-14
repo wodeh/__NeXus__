@@ -104,30 +104,28 @@ func (s *Server) Start(ctx context.Context) error {
 	s.registerVillaHandlers(mux)
 	s.registerHousekeepingHandlers(mux)
 
-	// Build middleware chain: CORS → JWT → Metrics
-	// CORS is outermost, then JWT auth, then metrics tracking
+	// Build middleware chain: CORS is outermost — every response gets CORS headers
+	// Inside CORS: JWT auth (skips public routes), then the actual handler
 	jwtValidator := auth.NewHMACValidator(jwtSecretFromEnv(), "nexus-backend", jwtAudience)
 	jwtMiddleware := auth.JWTMiddleware(jwtValidator)
 
-	// CORS wraps everything
-	corsHandler := withCORS(mux.ServeHTTP)
-
-	// Apply JWT middleware to the CORS-wrapped handler, but skip for public routes
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Always let CORS handle OPTIONS preflight before any auth check
+	// Inner handler: mux with JWT applied to protected routes
+	innerHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodOptions {
-			corsHandler(w, r)
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		if isPublicRoute(r.URL.Path) {
-			corsHandler(w, r)
+			mux.ServeHTTP(w, r)
 			return
 		}
-		// Protected non-OPTIONS route: validate JWT first, then continue through CORS
-		jwtMiddleware(http.HandlerFunc(corsHandler)).ServeHTTP(w, r)
+		// Protected route: JWT first, then mux
+		jwtMiddleware(mux).ServeHTTP(w, r)
 	})
 
-	wrapped := s.withMetrics(handler)
+	// CORS wraps the entire chain — so even 401s get CORS headers
+	corsWrapped := withCORS(innerHandler)
+	wrapped := s.withMetrics(corsWrapped)
 
 	s.httpServer = &http.Server{
 		Addr:         ":" + s.cfg.HTTPPort,
