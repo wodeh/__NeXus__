@@ -16,6 +16,8 @@ export interface UpsellOffer {
   inventory_count?: number;
   max_per_guest?: number;
   requires_approval: boolean;
+  revenue_generated?: number;
+  total_sold?: number;
   created_at: string;
   updated_at: string;
 }
