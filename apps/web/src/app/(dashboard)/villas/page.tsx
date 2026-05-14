@@ -128,7 +128,7 @@ export default function VillaPropertiesPage() {
               </div>
             </div>
 
-            {villa.amenities?.length > 0 && (
+            {(villa.amenities || []).length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {(villa.amenities || []).map((a) => (
                   <span key={a} className="rounded bg-slate-800 px-2 py-0.5 text-[10px] text-slate-400 capitalize">{a}</span>
