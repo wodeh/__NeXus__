@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -107,7 +108,7 @@ func (r *WiFiRepository) ListAccessPoints(ctx context.Context, tenantID uuid.UUI
 	}
 	defer rows.Close()
 
-	var aps []WiFiAccessPoint
+	aps := make([]WiFiAccessPoint, 0)
 	for rows.Next() {
 		var ap WiFiAccessPoint
 		var ipAddr, snmpComm *string
@@ -240,7 +241,7 @@ func (r *WiFiRepository) GetAPMetricsHistory(ctx context.Context, tenantID, apID
 }
 
 func scanMetrics(rows pgx.Rows) ([]WiFiMetric, error) {
-	var metrics []WiFiMetric
+	metrics := make([]WiFiMetric, 0)
 	for rows.Next() {
 		var m WiFiMetric
 		var rssi, noise, snr, quality *int32
@@ -285,11 +286,10 @@ func (r *WiFiRepository) ListAlerts(ctx context.Context, tenantID uuid.UUID, flo
 
 	if floor != "" {
 		argCount++
-		q += ` AND floor = $` + string(rune('0'+argCount)) // hacky but works for small numbers
+		q += fmt.Sprintf(" AND floor = $%d", argCount)
 		args = append(args, floor)
 	}
 	if unresolvedOnly {
-		argCount++
 		q += ` AND is_resolved = FALSE`
 	}
 	q += ` ORDER BY created_at DESC`
@@ -314,7 +314,7 @@ func (r *WiFiRepository) ResolveAlert(ctx context.Context, tenantID, alertID uui
 }
 
 func scanAlerts(rows pgx.Rows) ([]WiFiAlert, error) {
-	var alerts []WiFiAlert
+	alerts := make([]WiFiAlert, 0)
 	for rows.Next() {
 		var a WiFiAlert
 		var apID *uuid.UUID
@@ -357,7 +357,7 @@ func (r *WiFiRepository) ListFloorSummaries(ctx context.Context, tenantID uuid.U
 	}
 	defer rows.Close()
 
-	var summaries []WiFiFloorSummary
+	summaries := make([]WiFiFloorSummary, 0)
 	for rows.Next() {
 		var s WiFiFloorSummary
 		var avgSig *int32
