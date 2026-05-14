@@ -115,7 +115,7 @@ export default function VillaPropertiesPage() {
               <StatBadge icon={Bed} value={`${villa.bedrooms} BR`} />
               <StatBadge icon={Bath} value={`${villa.bathrooms} BA`} />
               <StatBadge icon={Users} value={`${villa.max_guests} guests`} />
-              <StatBadge icon={DollarSign} value={`$${Math.round(villa.price_per_night)}/night`} />
+              <StatBadge icon={DollarSign} value={`$${Math.round(villa.price_per_night || 0)}/night`} />
             </div>
 
             <div className="flex items-center justify-between text-xs">
@@ -130,7 +130,7 @@ export default function VillaPropertiesPage() {
 
             {villa.amenities?.length > 0 && (
               <div className="flex flex-wrap gap-1">
-                {villa.amenities.map((a) => (
+                {(villa.amenities || []).map((a) => (
                   <span key={a} className="rounded bg-slate-800 px-2 py-0.5 text-[10px] text-slate-400 capitalize">{a}</span>
                 ))}
               </div>

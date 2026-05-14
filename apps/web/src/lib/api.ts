@@ -812,9 +812,14 @@ export async function getCommScheduled(): Promise<CommScheduled[]> {
 
 export interface VillaRevenueStats {
   total_bookings: number;
+  total_reservations: number;
   total_revenue: number;
-  occupancy_rate: number;
+  avg_booking_value: number;
   avg_nightly_rate: number;
+  occupancy_rate: number;
+  down_payment_total: number;
+  pending_balance: number;
+  villa_breakdown: Array<{ villa_id: string; villa_name: string; revenue: number; nights_booked: number; occupancy_pct: number }>;
   period_start: string;
   period_end: string;
 }
@@ -857,7 +862,7 @@ export interface VillaReservation {
   status: "pending" | "confirmed" | "reserved" | "checked_in" | "checked_out" | "cancelled";
   total_amount: number;
   balance_due?: number;
-  down_payment?: { amount: number; method: string; status: string; date?: string };
+  down_payment?: { amount: number; method: string; status: string; date?: string; received_at?: string; reference?: string; notes?: string };
   currency?: string;
   internal_notes?: string;
   source: string;
@@ -1075,9 +1080,14 @@ export interface ReservationDetail {
 
 export interface VillaRevenueStats {
   total_bookings: number;
+  total_reservations: number;
   total_revenue: number;
-  occupancy_rate: number;
+  avg_booking_value: number;
   avg_nightly_rate: number;
+  occupancy_rate: number;
+  down_payment_total: number;
+  pending_balance: number;
+  villa_breakdown: Array<{ villa_id: string; villa_name: string; revenue: number; nights_booked: number; occupancy_pct: number }>;
   period_start: string;
   period_end: string;
 }
@@ -1120,7 +1130,7 @@ export interface VillaReservation {
   status: "pending" | "confirmed" | "reserved" | "checked_in" | "checked_out" | "cancelled";
   total_amount: number;
   balance_due?: number;
-  down_payment?: { amount: number; method: string; status: string; date?: string };
+  down_payment?: { amount: number; method: string; status: string; date?: string; received_at?: string; reference?: string; notes?: string };
   currency?: string;
   internal_notes?: string;
   source: string;
