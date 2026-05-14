@@ -40,6 +40,20 @@ func (r *AuthRepository) GetUserByEmail(ctx context.Context, email string) (*Use
 	return &u, nil
 }
 
+// GetUserByID looks up a user by ID (bypasses RLS).
+func (r *AuthRepository) GetUserByID(ctx context.Context, userID uuid.UUID) (*UserCredentials, error) {
+	var u UserCredentials
+	err := r.pool.QueryRow(ctx, `
+		SELECT id, tenant_id, email, password_hash, name, role, is_active
+		FROM users
+		WHERE id = $1 AND deleted_at IS NULL
+	`, userID).Scan(&u.ID, &u.TenantID, &u.Email, &u.PasswordHash, &u.Name, &u.Role, &u.IsActive)
+	if err != nil {
+		return nil, fmt.Errorf("user lookup by id: %w", err)
+	}
+	return &u, nil
+}
+
 // UpdateLastLogin sets the last_login_at timestamp.
 func (r *AuthRepository) UpdateLastLogin(ctx context.Context, userID uuid.UUID) error {
 	_, err := r.pool.Exec(ctx, `UPDATE users SET last_login_at = NOW() WHERE id = $1`, userID)

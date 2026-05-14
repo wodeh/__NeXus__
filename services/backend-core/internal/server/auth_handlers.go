@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -128,22 +129,62 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	tenantID, _ := ctx.Value("tenant_id").(string)
 	userID, _ := ctx.Value("user_id").(string)
-	
+
 	// If no auth context, return empty but valid response
-	// Frontend uses this to check session status
-	if tenantID == "" && userID == "" {
+	if tenantID == "" || userID == "" {
 		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"tenant_id": nil,
-			"user_id":   nil,
 			"authenticated": false,
 		})
 		return
 	}
-	
+
+	// Look up full user record
+	if s.repo == nil || s.repo.Auth == nil {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"authenticated": true,
+			"user": map[string]interface{}{
+				"id": userID, "role": "front_desk",
+			},
+		})
+		return
+	}
+
+	creds, err := s.repo.Auth.GetUserByID(ctx, uuid.MustParse(userID))
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"authenticated": false,
+		})
+		return
+	}
+
+	// Build capability list based on role
+	capabilities := defaultCapabilities()
+	if creds.Role == "super_admin" || creds.Role == "admin" {
+		capabilities = adminCapabilities()
+	} else if creds.Role == "manager" {
+		// check for villa owner
+		tenant, _ := s.repo.Auth.GetTenantByID(ctx, creds.TenantID)
+		if tenant != nil && tenant.ExternalID == "villa-owners" {
+			capabilities = villaOwnerCapabilities()
+		}
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"tenant_id": tenantID,
-		"user_id":   userID,
 		"authenticated": true,
+		"user": map[string]interface{}{
+			"id":         creds.ID,
+			"email":      creds.Email,
+			"name":       creds.Name,
+			"role":       creds.Role,
+			"tenant_id":  creds.TenantID,
+			"is_active":  creds.IsActive,
+		},
+		"tenant": map[string]interface{}{
+			"id":          tenantID,
+			"name":        creds.Name + "'s Hotel",
+			"external_id": tenantID,
+		},
+		"capabilities": capabilities,
 	})
 }
 
