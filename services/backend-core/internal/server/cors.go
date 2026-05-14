@@ -24,7 +24,7 @@ func corsAllowedOrigins() []string {
 }
 
 // isOriginAllowed checks if the given origin is in the allowlist.
-// Allows wildcard * and any localhost origin for development.
+// Allows wildcard * and any localhost origin when NODE_ENV=development.
 func isOriginAllowed(origin string, allowed []string) bool {
 	if origin == "" {
 		return false
@@ -33,10 +33,11 @@ func isOriginAllowed(origin string, allowed []string) bool {
 		if a == "*" || a == origin {
 			return true
 		}
-		// Allow any localhost origin for development
-		if strings.HasPrefix(origin, "http://localhost:") || strings.HasPrefix(origin, "https://localhost:") {
-			return true
-		}
+	}
+	// Allow any localhost origin for development
+	if os.Getenv("NODE_ENV") == "development" &&
+		(strings.HasPrefix(origin, "http://localhost:") || strings.HasPrefix(origin, "https://localhost:")) {
+		return true
 	}
 	return false
 }
