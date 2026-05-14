@@ -30,18 +30,6 @@ func NewMigrator(dsn, migrationsPath string) (*Migrator, error) {
 func (m *Migrator) Up(ctx context.Context) error {
 	_ = ctx // golang-migrate does not accept context; run synchronously
 	if err := m.m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		// If migration fails due to already-existing objects, mark it as applied
-		// and continue. This handles cases where schema exists but schema_migrations
-		// table was reset or corrupted.
-		slog.Warn("migration failed, attempting to force version", slog.String("error", err.Error()))
-		version, _, _ := m.m.Version()
-		if version > 0 {
-			if forceErr := m.m.Force(int(version)); forceErr != nil {
-				return fmt.Errorf("migrate up: %w, force version %d failed: %v", err, version, forceErr)
-			}
-			slog.Info("forced migration version", slog.Uint64("version", uint64(version)))
-			return nil
-		}
 		return fmt.Errorf("migrate up: %w", err)
 	}
 	version, dirty, _ := m.m.Version()
