@@ -681,10 +681,10 @@ function CreateReservationModal({ villas, defaultVillaId, defaultDate, onSave, o
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <select className="input w-full" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+            <select className="input w-full" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as VillaReservation["status"] })}>
               <option value="pending">Pending (needs approval)</option>
               <option value="reserved">Reserved</option>
-              <option value="completed">Completed</option>
+              <option value="checked_out">Checked Out</option>
               <option value="cancelled">Cancelled</option>
             </select>
             <select className="input w-full" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })}>
