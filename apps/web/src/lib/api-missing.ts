@@ -31,10 +31,12 @@ export interface UpsellPurchase {
   offer_name: string;
   reservation_id: string;
   guest_name: string;
+  guest_phone?: string;
   room_number?: string;
   quantity: number;
   unit_price: number;
   total_price: number;
+  price?: number;
   status: "pending" | "approved" | "delivered" | "cancelled" | "refunded";
   requested_at: string;
   fulfilled_at?: string;
