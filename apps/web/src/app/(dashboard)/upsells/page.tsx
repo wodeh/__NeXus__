@@ -186,7 +186,7 @@ export default function UpsellsPage() {
                     {p.status}
                   </span>
                 </td>
-                <td className="px-4 py-2 text-xs text-slate-400 capitalize">{p.payment_method.replace("_", " ")}</td>
+                <td className="px-4 py-2 text-xs text-slate-400 capitalize">{p.payment_method?.replace("_", " ")}</td>
                 <td className="px-4 py-2">
                   {p.folio_posted ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <span className="text-xs text-slate-500">Pending</span>}
                 </td>
