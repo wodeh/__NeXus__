@@ -194,26 +194,39 @@ func (s *Server) withTenant(next http.HandlerFunc) http.HandlerFunc {
 		// Second: if no JWT tenant, fall back to X-Tenant-ID header for lookup
 		if !hasJWTTenant || tenantID == "" {
 			headerValue := r.Header.Get("X-Tenant-ID")
-			if headerValue == "" {
-				writeJSONError(w, http.StatusBadRequest, "missing X-Tenant-ID header")
-				return
+			if headerValue != "" {
+				// Try parsing as UUID directly
+				tenantID = headerValue
+				if _, err := uuid.Parse(headerValue); err != nil {
+					// Not a UUID — look up by external_id
+					if s.repo == nil {
+						writeJSONError(w, http.StatusServiceUnavailable, "database not configured")
+						return
+					}
+					tenant, err := s.repo.Tenants.GetByExternalID(r.Context(), headerValue)
+					if err != nil {
+						writeJSONError(w, http.StatusNotFound, "tenant not found")
+						return
+					}
+					tenantID = tenant.ID.String()
+				}
 			}
+		}
 
-			// Try parsing as UUID directly
-			tenantID = headerValue
-			if _, err := uuid.Parse(headerValue); err != nil {
-				// Not a UUID — look up by external_id
-				if s.repo == nil {
-					writeJSONError(w, http.StatusServiceUnavailable, "database not configured")
-					return
-				}
-				tenant, err := s.repo.Tenants.GetByExternalID(r.Context(), headerValue)
-				if err != nil {
-					writeJSONError(w, http.StatusNotFound, "tenant not found")
-					return
-				}
-				tenantID = tenant.ID.String()
+		// Third: for public tenant routes (e.g. /v1/tenant/demo), extract from URL path
+		if tenantID == "" && strings.HasPrefix(r.URL.Path, "/v1/tenant/") {
+			pathTenant := strings.TrimPrefix(r.URL.Path, "/v1/tenant/")
+			if idx := strings.Index(pathTenant, "/"); idx != -1 {
+				pathTenant = pathTenant[:idx]
 			}
+			if pathTenant != "" {
+				tenantID = pathTenant
+			}
+		}
+
+		if tenantID == "" {
+			writeJSONError(w, http.StatusBadRequest, "missing X-Tenant-ID header")
+			return
 		}
 
 		// Bind tenant to DB session for RLS
@@ -224,8 +237,6 @@ func (s *Server) withTenant(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		// Ensure tenant_id is in context for downstream handlers.
-		// We always set the raw string key for compatibility with existing
-		// handlers that use ctx.Value("tenant_id").(string).
 		ctx = context.WithValue(ctx, "tenant_id", tenantID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
