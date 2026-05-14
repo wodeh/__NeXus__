@@ -86,6 +86,7 @@ export interface ReservationDetail {
     floor?: string;
     bed_type?: string;
     rate_night: number;
+    total_nights?: number;
   };
   dates: {
     check_in: string;
