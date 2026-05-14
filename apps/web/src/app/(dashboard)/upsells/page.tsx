@@ -144,7 +144,7 @@ export default function UpsellsPage() {
               </div>
               <div className="rounded bg-slate-800/50 p-2">
                 <p className="text-slate-500">Revenue</p>
-                <p className="font-bold text-emerald-400">${Math.round(offer.revenue_generated).toLocaleString()}</p>
+                <p className="font-bold text-emerald-400">${Math.round(offer.revenue_generated || 0).toLocaleString()}</p>
               </div>
             </div>
 
