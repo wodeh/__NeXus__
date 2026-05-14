@@ -27,7 +27,7 @@ export default function VillaRevenuePage() {
         getVillaRevenue(start, end),
         getVillas(),
       ]);
-      setStats(s);
+      setStats(s as VillaRevenueStats);
       setVillas(v);
     } catch (e: any) {
       setError(e.message || "Failed to load");
