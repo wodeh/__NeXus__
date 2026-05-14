@@ -742,6 +742,9 @@ export interface IPTVWelcomeScreen {
   villa_id: string;
   villa_name: string;
   guest_name: string;
+  guest_phone?: string;
+  guest_email?: string;
+  guest_count?: number;
   check_in_date: string;
   check_out_date: string;
   nights: number;
@@ -807,6 +810,15 @@ export async function getCommScheduled(): Promise<CommScheduled[]> {
 
 /* ─── Villa API ─── */
 
+export interface VillaRevenueStats {
+  total_bookings: number;
+  total_revenue: number;
+  occupancy_rate: number;
+  avg_nightly_rate: number;
+  period_start: string;
+  period_end: string;
+}
+
 export interface VillaProperty {
   id: string;
   tenant_id: string;
@@ -815,6 +827,15 @@ export interface VillaProperty {
   city?: string;
   country?: string;
   elevation?: number;
+  description?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  max_guests?: number;
+  price_per_night?: number;
+  currency?: string;
+  cleaning_fee?: number;
+  security_deposit?: number;
+  amenities?: string[];
   status: "available" | "reserved" | "occupied" | "maintenance";
   is_active: boolean;
   created_at: string;
@@ -827,12 +848,18 @@ export interface VillaReservation {
   villa_id: string;
   villa_name: string;
   guest_name: string;
+  guest_phone?: string;
+  guest_email?: string;
+  guest_count?: number;
   check_in_date: string;
   check_out_date: string;
   nights: number;
   status: "pending" | "confirmed" | "reserved" | "checked_in" | "checked_out" | "cancelled";
   total_amount: number;
   balance_due?: number;
+  down_payment?: { amount: number; method: string; status: string; date?: string };
+  currency?: string;
+  internal_notes?: string;
   source: string;
   created_at: string;
   updated_at: string;
@@ -1046,6 +1073,15 @@ export interface ReservationDetail {
 
 /* ─── Villa API ─── */
 
+export interface VillaRevenueStats {
+  total_bookings: number;
+  total_revenue: number;
+  occupancy_rate: number;
+  avg_nightly_rate: number;
+  period_start: string;
+  period_end: string;
+}
+
 export interface VillaProperty {
   id: string;
   tenant_id: string;
@@ -1054,6 +1090,15 @@ export interface VillaProperty {
   city?: string;
   country?: string;
   elevation?: number;
+  description?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  max_guests?: number;
+  price_per_night?: number;
+  currency?: string;
+  cleaning_fee?: number;
+  security_deposit?: number;
+  amenities?: string[];
   status: "available" | "reserved" | "occupied" | "maintenance";
   is_active: boolean;
   created_at: string;
@@ -1066,12 +1111,18 @@ export interface VillaReservation {
   villa_id: string;
   villa_name: string;
   guest_name: string;
+  guest_phone?: string;
+  guest_email?: string;
+  guest_count?: number;
   check_in_date: string;
   check_out_date: string;
   nights: number;
   status: "pending" | "confirmed" | "reserved" | "checked_in" | "checked_out" | "cancelled";
   total_amount: number;
   balance_due?: number;
+  down_payment?: { amount: number; method: string; status: string; date?: string };
+  currency?: string;
+  internal_notes?: string;
   source: string;
   created_at: string;
   updated_at: string;

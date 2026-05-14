@@ -380,7 +380,7 @@ export default function VillaTapechartPage() {
                               {res.source === "phone" && <Phone className="h-3 w-3" />}
                               {res.source === "whatsapp" && <MessageSquare className="h-3 w-3" />}
                               {res.source === "website" && <Globe className="h-3 w-3" />}
-                              {res.source === "walkin" && <Walk className="h-3 w-3" />}
+                              {res.source === "walkin" && <Footprints className="h-3 w-3" />}
                               <span className="truncate font-medium">{res.guest_name}</span>
                             </div>
                             {viewMode === "week" && (
@@ -541,7 +541,7 @@ function ResDetailModal({ res, villas, alternatives, onApprove, onDeny, onClose,
             <span className={`rounded px-2 py-0.5 text-xs capitalize ${
               res.status === "pending" ? "bg-amber-500/10 text-amber-400" :
               res.status === "reserved" ? "bg-emerald-500/10 text-emerald-400" :
-              res.status === "completed" ? "bg-sky-500/10 text-sky-400" :
+              res.status === "checked_out" ? "bg-sky-500/10 text-sky-400" :
               "bg-rose-500/10 text-rose-400"
             }`}>
               {res.status}

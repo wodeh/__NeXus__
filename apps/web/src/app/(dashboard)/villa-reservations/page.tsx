@@ -92,8 +92,8 @@ export default function VillaReservationsPage() {
     total: reservations.length,
     pending: reservations.filter((r) => r.status === "pending").length,
     reserved: reservations.filter((r) => r.status === "reserved").length,
-    completed: reservations.filter((r) => r.status === "completed").length,
-    revenue: reservations.filter((r) => r.status === "reserved" || r.status === "completed").reduce((s, r) => s + r.total_amount, 0),
+    completed: reservations.filter((r) => r.status === "checked_out").length,
+    revenue: reservations.filter((r) => r.status === "reserved" || r.status === "checked_out").reduce((s, r) => s + r.total_amount, 0),
   };
 
   if (loading) {
@@ -203,7 +203,7 @@ export default function VillaReservationsPage() {
                   <span className={`rounded px-2 py-0.5 text-xs capitalize ${
                     res.status === "pending" ? "bg-amber-500/10 text-amber-400" :
                     res.status === "reserved" ? "bg-emerald-500/10 text-emerald-400" :
-                    res.status === "completed" ? "bg-sky-500/10 text-sky-400" :
+                    res.status === "checked_out" ? "bg-sky-500/10 text-sky-400" :
                     "bg-rose-500/10 text-rose-400"
                   }`}>
                     {res.status}
