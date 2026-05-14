@@ -70,7 +70,7 @@ export default function VillaReservationsPage() {
   };
 
   const handleMarkDownPayment = async (res: VillaReservation, method: string) => {
-    const amount = prompt(`Enter down payment amount for ${res.guest_name}:`, res.balance_due.toString());
+    const amount = prompt(`Enter down payment amount for ${res.guest_name}:`, res.balance_due?.toString());
     if (!amount) return;
     const updates: Partial<VillaReservation> = {
       status: "reserved",
