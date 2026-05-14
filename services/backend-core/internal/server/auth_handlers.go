@@ -125,9 +125,22 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	tenantID, _ := ctx.Value("tenant_id").(string)
 	userID, _ := ctx.Value("user_id").(string)
+	
+	// If no auth context, return empty but valid response
+	// Frontend uses this to check session status
+	if tenantID == "" && userID == "" {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"tenant_id": nil,
+			"user_id":   nil,
+			"authenticated": false,
+		})
+		return
+	}
+	
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"tenant_id": tenantID,
 		"user_id":   userID,
+		"authenticated": true,
 	})
 }
 

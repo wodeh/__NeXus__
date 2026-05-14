@@ -28,8 +28,15 @@ func isPublicRoute(path string) bool {
 	if path == "/health" || path == "/ready" || path == "/live" {
 		return true
 	}
-	// Auth endpoints (allow registration too if added later)
+	// Auth endpoints
 	if path == "/v1/auth/login" || strings.HasPrefix(path, "/v1/auth/login") {
+		return true
+	}
+	if path == "/v1/auth/me" || strings.HasPrefix(path, "/v1/auth/me") {
+		return true
+	}
+	// Tenant config — needed before login for UI capabilities
+	if strings.HasPrefix(path, "/v1/tenant/") {
 		return true
 	}
 	return false
