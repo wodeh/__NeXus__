@@ -1,4 +1,5 @@
 "use client";
+import OverbookingWidget from "@/components/OverbookingWidget";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";

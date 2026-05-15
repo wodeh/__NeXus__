@@ -115,6 +115,7 @@ func (s *Server) Start(ctx context.Context) error {
 	s.registerWiFiHandlers(mux)
 	s.registerGuestJourneyHandlers(mux)
 	s.registerRateRuleHandlers(mux)
+	s.registerOverbookingHandlers(mux)
 
 	// Build middleware chain: CORS is outermost — every response gets CORS headers
 	// Inside CORS: JWT auth (skips public routes), then the actual handler
