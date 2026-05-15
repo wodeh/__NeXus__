@@ -61,6 +61,7 @@ const navItems: NavItem[] = [
   { label: "Reviews", href: "/reviews", icon: Star, cap: CAPABILITIES.REVENUE.GUEST_REVIEWS },
   { label: "Communications", href: "/communications", icon: Mail, cap: CAPABILITIES.REVENUE.COMMUNICATIONS },
   { label: "Revenue", href: "/revenue", icon: TrendingUp, cap: CAPABILITIES.REVENUE.DYNAMIC_PRICING },
+  { label: "Rate Rules", href: "/rate-rules", icon: TrendingUp, cap: CAPABILITIES.REVENUE.DYNAMIC_PRICING },
   { label: "Guest Journey", href: "/guest-journey", icon: Globe, cap: CAPABILITIES.REVENUE.REVENUE_FORECAST },
   { label: "Upsells", href: "/upsells", icon: Star, cap: CAPABILITIES.REVENUE.DYNAMIC_PRICING },
   { label: "Competitors", href: "/competitors", icon: Globe, cap: CAPABILITIES.REVENUE.DYNAMIC_PRICING },

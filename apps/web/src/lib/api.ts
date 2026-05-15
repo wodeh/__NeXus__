@@ -1438,3 +1438,76 @@ export async function triggerWiFiScan(floor?: string): Promise<{ status: string;
   return api(`/v1/wifi/scan?${params.toString()}`, { method: "POST" });
 }
 
+
+/* ─── Rate Rules API ─── */
+export interface RateRule {
+  id: string;
+  name: string;
+  room_type?: string;
+  condition_type: string;
+  condition_value: string;
+  rate_adjustment_type: string;
+  rate_adjustment_value: number;
+  min_nights: number;
+  max_nights?: number;
+  start_date?: string;
+  end_date?: string;
+  priority: number;
+  active: boolean;
+}
+
+export interface RateRuleCreateRequest {
+  name: string;
+  room_type?: string;
+  condition_type: string;
+  condition_value: string;
+  rate_adjustment_type: string;
+  rate_adjustment_value: number;
+  min_nights: number;
+  max_nights?: number;
+  start_date?: string;
+  end_date?: string;
+  priority: number;
+}
+
+export interface RateCalculateRequest {
+  room_type: string;
+  check_in: string;
+  check_out: string;
+}
+
+export interface RateAdjustment {
+  rule_name: string;
+  type: string;
+  value: number;
+  amount: number;
+}
+
+export interface RateCalculateResponse {
+  base_rate: number;
+  nights: number;
+  adjustments: RateAdjustment[];
+  final_rate: number;
+}
+
+export async function getRateRules(): Promise<RateRule[]> {
+  return api<RateRule[]>("/v1/rate-rules");
+}
+
+export async function createRateRule(payload: RateRuleCreateRequest): Promise<RateRule> {
+  return api<RateRule>("/v1/rate-rules", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteRateRule(id: string): Promise<void> {
+  await api<void>(`/v1/rate-rules/${id}`, { method: "DELETE" });
+}
+
+export async function calculateRate(payload: RateCalculateRequest): Promise<RateCalculateResponse> {
+  return api<RateCalculateResponse>("/v1/rate-rules/calculate", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}

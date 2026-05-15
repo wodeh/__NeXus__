@@ -21,6 +21,7 @@ type Store struct {
 	Auth                 *AuthRepository
 	Villa                *VillaRepository
 	WiFi                 *WiFiRepository
+	RateRules            *RateRuleRepository
 }
 
 // NewStore creates a repository instance.
@@ -36,6 +37,7 @@ func NewStore(pool *db.Pool) *Store {
 		Auth:              NewAuthRepository(pool),
 		Villa:             NewVillaRepository(pool),
 		WiFi:              NewWiFiRepository(pool),
+		RateRules:         NewRateRuleRepository(pool),
 	}
 }
 

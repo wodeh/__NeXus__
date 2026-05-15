@@ -107,3 +107,64 @@ type ReservationMoveRequest struct {
 	CheckIn    string `json:"check_in,omitempty"`
 	CheckOut   string `json:"check_out,omitempty"`
 }
+
+// RateRule represents a dynamic pricing rule.
+type RateRule struct {
+	ID                 uuid.UUID  `json:"id"`
+	TenantID           uuid.UUID  `json:"tenant_id"`
+	PropertyID         *uuid.UUID `json:"property_id,omitempty"`
+	Name               string     `json:"name"`
+	RoomType           *string    `json:"room_type,omitempty"`
+	ConditionType      string     `json:"condition_type"`
+	ConditionValue     string     `json:"condition_value"`
+	RateAdjustmentType string     `json:"rate_adjustment_type"`
+	RateAdjustmentValue int       `json:"rate_adjustment_value"`
+	MinNights          int        `json:"min_nights"`
+	MaxNights          *int       `json:"max_nights,omitempty"`
+	StartDate          *string    `json:"start_date,omitempty"`
+	EndDate            *string    `json:"end_date,omitempty"`
+	Priority           int        `json:"priority"`
+	Active             bool       `json:"active"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+}
+
+// RateRuleCreateRequest creates a rate rule.
+type RateRuleCreateRequest struct {
+	Name               string `json:"name"`
+	RoomType           string `json:"room_type,omitempty"`
+	ConditionType      string `json:"condition_type"`
+	ConditionValue     string `json:"condition_value"`
+	RateAdjustmentType string `json:"rate_adjustment_type"`
+	RateAdjustmentValue int   `json:"rate_adjustment_value"`
+	MinNights          int    `json:"min_nights"`
+	MaxNights          int    `json:"max_nights,omitempty"`
+	StartDate          string `json:"start_date,omitempty"`
+	EndDate            string `json:"end_date,omitempty"`
+	Priority           int    `json:"priority"`
+}
+
+
+
+// RateCalculateRequest computes a rate for a stay.
+type RateCalculateRequest struct {
+	RoomType string `json:"room_type"`
+	CheckIn  string `json:"check_in"`
+	CheckOut string `json:"check_out"`
+}
+
+// RateAdjustment shows a single rule's impact.
+type RateAdjustment struct {
+	RuleName string `json:"rule_name"`
+	Type     string `json:"type"`
+	Value    int    `json:"value"`
+	Amount   int    `json:"amount"`
+}
+
+// RateCalculateResponse returns the computed rate.
+type RateCalculateResponse struct {
+	BaseRate    int              `json:"base_rate"`
+	Nights      int              `json:"nights"`
+	Adjustments []RateAdjustment `json:"adjustments"`
+	FinalRate   int              `json:"final_rate"`
+}
