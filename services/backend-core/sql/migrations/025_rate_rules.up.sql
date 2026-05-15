@@ -1,3 +1,11 @@
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TABLE rate_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -32,4 +40,4 @@ CREATE POLICY rate_rules_tenant_isolation ON rate_rules
 CREATE TRIGGER trg_rate_rules_updated_at
     BEFORE UPDATE ON rate_rules
     FOR EACH ROW
-    EXECUTE FUNCTION update_reservations_updated_at();
+    EXECUTE FUNCTION update_updated_at();
