@@ -13,6 +13,8 @@ func (s *Server) registerReservationHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/v1/reservations", s.withTenant(s.handleReservations))
 	mux.HandleFunc("/v1/group-reservations", s.withTenant(s.handleGroupReservations))
 	mux.HandleFunc("/v1/group-reservations/", s.withTenant(s.handleGroupReservationDetail))
+	mux.HandleFunc("/v1/waitlist", s.withTenant(s.handleWaitlist))
+	mux.HandleFunc("/v1/waitlist/", s.withTenant(s.handleWaitlistDetail))
 }
 
 func (s *Server) handleReservations(w http.ResponseWriter, r *http.Request) {
@@ -242,4 +244,93 @@ func (s *Server) handleGroupReservationDetail(w http.ResponseWriter, r *http.Req
 		"group_id":     id,
 		"reservations": reservations,
 	})
+}
+
+func (s *Server) handleWaitlist(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tenantID, _ := ctx.Value("tenant_id").(string)
+	repo := repository.NewWaitlistRepository(s.repo.Pool())
+
+	if r.Method == http.MethodGet {
+		entries, err := repo.List(ctx, tenantID)
+		if err != nil {
+			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+			return
+		}
+		entries, _ = repo.SuggestRooms(ctx, tenantID, entries)
+		writeJSON(w, http.StatusOK, map[string]interface{}{"waitlist": entries})
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var req domain.WaitlistCreateRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+			return
+		}
+		entry, err := repo.Create(ctx, tenantID, &req)
+		if err != nil {
+			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, http.StatusCreated, entry)
+		return
+	}
+
+	http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+}
+
+func (s *Server) handleWaitlistDetail(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tenantID, _ := ctx.Value("tenant_id").(string)
+	repo := repository.NewWaitlistRepository(s.repo.Pool())
+
+	path := r.URL.Path[len("/v1/waitlist/"):]
+	parts := splitPath(path)
+	if len(parts) < 2 {
+		http.Error(w, `{"error":"missing waitlist id or action"}`, http.StatusBadRequest)
+		return
+	}
+
+	id, err := uuid.Parse(parts[0])
+	if err != nil {
+		http.Error(w, `{"error":"invalid waitlist id"}`, http.StatusBadRequest)
+		return
+	}
+
+	action := parts[1]
+	switch action {
+	case "assign":
+		if r.Method != http.MethodPatch {
+			http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+			return
+		}
+		var req domain.WaitlistAssignRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+			return
+		}
+		res, err := repo.AssignRoom(ctx, tenantID, id, req.RoomNumber)
+		if err != nil {
+			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	case "cancel":
+		if r.Method != http.MethodPatch {
+			http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+			return
+		}
+		_, err := s.repo.Pool().Exec(ctx, `
+			UPDATE waitlist SET status = 'cancelled', updated_at = NOW()
+			WHERE id = $1 AND tenant_id = $2
+		`, id, tenantID)
+		if err != nil {
+			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]string{"status": "cancelled"})
+	default:
+		http.Error(w, `{"error":"unknown action"}`, http.StatusBadRequest)
+	}
 }

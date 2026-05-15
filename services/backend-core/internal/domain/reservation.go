@@ -57,8 +57,44 @@ type GroupCreateRequest struct {
 	Members   []ReservationCreateRequest `json:"members"`
 }
 
-// ReservationAssignRequest assigns a room to a reservation.
-type ReservationAssignRequest struct {
+// WaitlistEntry represents a guest waiting for a room assignment.
+type WaitlistEntry struct {
+	ID                uuid.UUID  `json:"id"`
+	TenantID          uuid.UUID  `json:"tenant_id"`
+	PropertyID        *uuid.UUID `json:"property_id,omitempty"`
+	GuestName         string     `json:"guest_name"`
+	Email             *string    `json:"email,omitempty"`
+	Phone             *string    `json:"phone,omitempty"`
+	Adults            int        `json:"adults"`
+	Children          int        `json:"children"`
+	RoomType          *string    `json:"room_type,omitempty"`
+	RequestedCheckIn  string     `json:"requested_check_in"`
+	RequestedCheckOut string     `json:"requested_check_out"`
+	Priority          int        `json:"priority"`
+	Notes             *string    `json:"notes,omitempty"`
+	Status            string     `json:"status"`
+	AssignedRoomNumber *string   `json:"assigned_room_number,omitempty"`
+	AssignedReservationID *uuid.UUID `json:"assigned_reservation_id,omitempty"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+}
+
+// WaitlistCreateRequest adds a guest to the waitlist.
+type WaitlistCreateRequest struct {
+	GuestName         string `json:"guest_name"`
+	Email             string `json:"email,omitempty"`
+	Phone             string `json:"phone,omitempty"`
+	Adults            int    `json:"adults"`
+	Children          int    `json:"children"`
+	RoomType          string `json:"room_type,omitempty"`
+	RequestedCheckIn  string `json:"requested_check_in"`
+	RequestedCheckOut string `json:"requested_check_out"`
+	Priority          int    `json:"priority"`
+	Notes             string `json:"notes,omitempty"`
+}
+
+// WaitlistAssignRequest assigns a room to a waitlisted guest.
+type WaitlistAssignRequest struct {
 	RoomNumber string `json:"room_number"`
 }
 

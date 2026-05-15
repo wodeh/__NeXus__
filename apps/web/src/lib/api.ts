@@ -69,7 +69,7 @@ export interface Reservation {
   check_out: string;
   adults: number;
   children: number;
-  status: "confirmed" | "checked_in" | "checked_out" | "cancelled" | "no_show";
+  status: "confirmed" | "checked_in" | "checked_out" | "cancelled" | "no_show" | "waitlisted";
   source: "walk_in" | "ota" | "direct" | "agent";
   total: number;
   balance: number;
@@ -227,6 +227,25 @@ export interface ChannelSyncLog {
   created_at: string;
 }
 
+export interface WaitlistEntry {
+  id: string;
+  guest_name: string;
+  email?: string;
+  phone?: string;
+  adults: number;
+  children: number;
+  room_type?: string;
+  requested_check_in: string;
+  requested_check_out: string;
+  priority: number;
+  notes?: string;
+  status: "waiting" | "assigned" | "cancelled" | "expired";
+  assigned_room_number?: string;
+  assigned_reservation_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 /* ─── Reservation API ─── */
 
 export async function getReservations(): Promise<Reservation[]> {
@@ -282,6 +301,33 @@ export async function getGroupReservations(): Promise<Array<{ group_id: string; 
 
 export async function getGroupReservationDetail(groupId: string): Promise<{ group_id: string; reservations: Reservation[] }> {
   return api(`/v1/group-reservations/${groupId}`);
+}
+
+/* ─── Waitlist API ─── */
+
+export async function getWaitlist(): Promise<WaitlistEntry[]> {
+  const data = await api<{ waitlist: WaitlistEntry[] }>("/v1/waitlist");
+  return data.waitlist || [];
+}
+
+export async function addToWaitlist(
+  payload: Omit<WaitlistEntry, "id" | "status" | "created_at" | "updated_at">
+): Promise<WaitlistEntry> {
+  return api<WaitlistEntry>("/v1/waitlist", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function assignWaitlistRoom(id: string, roomNumber: string): Promise<void> {
+  return api(`/v1/waitlist/${id}/assign`, {
+    method: "PATCH",
+    body: JSON.stringify({ room_number: roomNumber }),
+  });
+}
+
+export async function cancelWaitlistEntry(id: string): Promise<void> {
+  return api(`/v1/waitlist/${id}/cancel`, { method: "PATCH" });
 }
 
 /* ─── Room API ─── */

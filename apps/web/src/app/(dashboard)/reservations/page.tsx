@@ -8,9 +8,10 @@ import {
   ChevronLeft, ChevronRight as ChevronRightIcon, GripVertical, RefreshCw,
 } from "lucide-react";
 import {
-  Reservation, Room,
+  Reservation, Room, WaitlistEntry,
   getReservations, createReservation, checkInReservation, checkOutReservation,
   cancelReservation, assignRoom, getRooms, createGroupReservation,
+  getWaitlist, addToWaitlist, assignWaitlistRoom, cancelWaitlistEntry,
 } from "@/lib/api";
 
 const statusBadge: Record<string, string> = {
@@ -125,6 +126,9 @@ export default function ReservationsPage() {
             <button onClick={() => setView("calendar")} className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium ${view === "calendar" ? "bg-slate-700 text-white" : "text-slate-400 hover:text-white"}`}>
               <CalendarDays className="h-3.5 w-3.5" /> Calendar
             </button>
+            <button onClick={() => setView("waitlist")} className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium ${view === "waitlist" ? "bg-slate-700 text-white" : "text-slate-400 hover:text-white"}`}>
+              <Clock className="h-3.5 w-3.5" /> Waitlist
+            </button>
           </div>
           <button onClick={fetchData} className="rounded-lg border border-slate-700 bg-slate-800 p-2 text-slate-400 hover:text-white" title="Refresh">
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -154,6 +158,7 @@ export default function ReservationsPage() {
         <>
           {view === "list" && <ListView reservations={reservations} rooms={rooms} today={today} onRefresh={fetchData} />}
           {view === "calendar" && <CalendarView reservations={reservations} rooms={rooms} today={today} onRefresh={fetchData} />}
+          {view === "waitlist" && <WaitlistView rooms={rooms} onRefresh={fetchData} />}
         </>
       )}
 
@@ -190,6 +195,218 @@ export default function ReservationsPage() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function WaitlistView({ rooms, onRefresh }: { rooms: Room[]; onRefresh: () => void }) {
+  const [entries, setEntries] = useState<WaitlistEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadWaitlist();
+  }, []);
+
+  async function loadWaitlist() {
+    setLoading(true);
+    try {
+      const data = await getWaitlist();
+      setEntries(data);
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-slate-400">
+          {entries.filter((e) => e.status === "waiting").length} waiting
+        </div>
+        <button onClick={() => setShowAdd(true)} className="btn-primary text-xs">
+          <Plus className="h-4 w-4" /> Add to Waitlist
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-slate-500">
+          <RefreshCw className="mr-2 h-5 w-5 animate-spin" /> Loading...
+        </div>
+      ) : entries.length === 0 ? (
+        <div className="rounded-lg border border-slate-700 bg-slate-800 p-8 text-center text-sm text-slate-400">
+          No guests on the waitlist.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {entries.map((entry) => (
+            <div key={entry.id} className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800 p-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/10">
+                  <Clock className="h-4 w-4 text-amber-400" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-white">{entry.guest_name}</div>
+                  <div className="text-xs text-slate-400">
+                    {entry.requested_check_in} → {entry.requested_check_out}
+                    {entry.room_type && ` · ${entry.room_type}`}
+                    {entry.adults > 0 && ` · ${entry.adults} adults`}
+                    {entry.children > 0 && ` · ${entry.children} children`}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {entry.assigned_room_number ? (
+                  <span className="rounded bg-emerald-500/10 px-2 py-1 text-xs text-emerald-400">
+                    Room {entry.assigned_room_number} suggested
+                  </span>
+                ) : (
+                  <span className="rounded bg-slate-700 px-2 py-1 text-xs text-slate-400">No room available</span>
+                )}
+                {entry.assigned_room_number && (
+                  <button
+                    onClick={async () => {
+                      setActionLoading(entry.id);
+                      try {
+                        await assignWaitlistRoom(entry.id, entry.assigned_room_number!);
+                        loadWaitlist();
+                        onRefresh();
+                      } catch (e: any) {
+                        alert(e.message);
+                      } finally {
+                        setActionLoading(null);
+                      }
+                    }}
+                    disabled={actionLoading === entry.id}
+                    className="btn-primary text-xs disabled:opacity-50"
+                  >
+                    {actionLoading === entry.id ? "Assigning..." : "Assign Room"}
+                  </button>
+                )}
+                <button
+                  onClick={async () => {
+                    if (!confirm("Cancel this waitlist entry?")) return;
+                    try {
+                      await cancelWaitlistEntry(entry.id);
+                      loadWaitlist();
+                    } catch (e: any) {
+                      alert(e.message);
+                    }
+                  }}
+                  className="rounded border border-rose-500/20 px-2 py-1 text-xs text-rose-400 hover:bg-rose-500/10"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showAdd && (
+        <WaitlistAddModal
+          rooms={rooms}
+          onClose={() => setShowAdd(false)}
+          onAdd={async (payload) => {
+            try {
+              await addToWaitlist(payload);
+              loadWaitlist();
+              setShowAdd(false);
+            } catch (e: any) {
+              alert(e.message);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function WaitlistAddModal({
+  rooms,
+  onClose,
+  onAdd,
+}: {
+  rooms: Room[];
+  onClose: () => void;
+  onAdd: (payload: any) => Promise<void>;
+}) {
+  const [guestName, setGuestName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [roomType, setRoomType] = useState("");
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
+  const [adults, setAdults] = useState(2);
+  const [children, setChildren] = useState(0);
+  const [priority, setPriority] = useState(0);
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const roomTypes = Array.from(new Set(rooms.map((r) => r.type)));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-white">Add to Waitlist</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-white">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="space-y-3">
+          <input className="input w-full" placeholder="Guest name *" value={guestName} onChange={(e) => setGuestName(e.target.value)} />
+          <div className="grid grid-cols-2 gap-3">
+            <input className="input w-full" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input className="input w-full" placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <input type="date" className="input w-full" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} />
+            <input type="date" className="input w-full" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} />
+          </div>
+          <select className="input w-full" value={roomType} onChange={(e) => setRoomType(e.target.value)}>
+            <option value="">Any room type</option>
+            {roomTypes.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+          <div className="grid grid-cols-3 gap-3">
+            <input type="number" min={1} max={10} className="input w-full" value={adults} onChange={(e) => setAdults(parseInt(e.target.value) || 1)} placeholder="Adults" />
+            <input type="number" min={0} max={10} className="input w-full" value={children} onChange={(e) => setChildren(parseInt(e.target.value) || 0)} placeholder="Children" />
+            <input type="number" min={0} max={100} className="input w-full" value={priority} onChange={(e) => setPriority(parseInt(e.target.value) || 0)} placeholder="Priority" />
+          </div>
+          <textarea className="input w-full" rows={2} placeholder="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={onClose} className="btn-secondary text-xs">Cancel</button>
+          <button
+            onClick={async () => {
+              if (!guestName || !checkIn || !checkOut) return alert("Guest name, check in, and check out are required");
+              setLoading(true);
+              await onAdd({
+                guest_name: guestName,
+                email,
+                phone,
+                room_type: roomType,
+                requested_check_in: checkIn,
+                requested_check_out: checkOut,
+                adults,
+                children,
+                priority,
+                notes,
+              });
+              setLoading(false);
+            }}
+            disabled={loading}
+            className="btn-primary text-xs disabled:opacity-50"
+          >
+            {loading ? "Adding..." : "Add to Waitlist"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
