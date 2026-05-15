@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { TenantConfig } from "@/lib/tenant";
@@ -73,6 +71,83 @@ export const apiClient = {
 /* ─── Tenant API ─── */
 export async function getTenantConfig(externalId: string): Promise<TenantConfig> {
   return api<TenantConfig>(`/v1/tenant/${externalId}`);
+}
+
+/* ─── Reservation API ─── */
+export interface Reservation {
+  id: string;
+  guest_name: string;
+  email: string;
+  phone: string;
+  room_number: string;
+  room_type: string;
+  check_in: string;
+  check_out: string;
+  adults: number;
+  children: number;
+  status: string;
+  source: string;
+  total: number;
+  balance: number;
+  special_requests: string;
+  vip: boolean;
+  property_id?: string;
+}
+
+export interface Room {
+  id: string;
+  number: string;
+  type: string;
+  floor: string;
+  bed_type: string;
+  status: string;
+  rate_night: number;
+  config: Record<string, any>;
+  property_id?: string;
+}
+
+export async function getReservations(): Promise<Reservation[]> {
+  return api<Reservation[]>("/v1/reservations");
+}
+
+export async function getRooms(): Promise<Room[]> {
+  return api<Room[]>("/v1/rooms");
+}
+
+export async function getReservationDetail(id: string): Promise<Reservation> {
+  return api<Reservation>(`/v1/reservations/${id}`);
+}
+
+export async function checkInReservation(id: string): Promise<void> {
+  return api<void>(`/v1/reservations/${id}`, { method: "PATCH", body: JSON.stringify({ action: "check-in" }) });
+}
+
+export async function checkOutReservation(id: string): Promise<void> {
+  return api<void>(`/v1/reservations/${id}`, { method: "PATCH", body: JSON.stringify({ action: "check-out" }) });
+}
+
+export async function cancelReservation(id: string): Promise<void> {
+  return api<void>(`/v1/reservations/${id}`, { method: "PATCH", body: JSON.stringify({ action: "cancel" }) });
+}
+
+export async function restoreReservation(id: string): Promise<void> {
+  return api<void>(`/v1/reservations/${id}`, { method: "PATCH", body: JSON.stringify({ action: "restore" }) });
+}
+
+export async function assignRoom(id: string, roomNumber: string): Promise<void> {
+  return api<void>(`/v1/reservations/${id}`, { method: "PATCH", body: JSON.stringify({ action: "assign-room", room_number: roomNumber }) });
+}
+
+export async function moveReservation(id: string, newRoom: string): Promise<void> {
+  return api<void>(`/v1/reservations/${id}`, { method: "PATCH", body: JSON.stringify({ action: "move-room", room_number: newRoom }) });
+}
+
+export async function updateRoomStatus(roomId: string, status: string): Promise<void> {
+  return api<void>(`/v1/rooms/${roomId}`, { method: "PATCH", body: JSON.stringify({ status }) });
+}
+
+export async function createReservation(data: Partial<Reservation>): Promise<Reservation> {
+  return api<Reservation>("/v1/reservations", { method: "POST", body: JSON.stringify(data) });
 }
 
 /* ─── Overbooking API ─── */
