@@ -236,6 +236,7 @@ func defaultCapabilities() []string {
 
 func adminCapabilities() []string {
 	return []string{
+		"admin:full",
 		"core:reservations", "core:guests", "core:properties", "core:rooms",
 		"core:housekeeping", "core:settings", "core:audit_logs",
 		"operations:floor_dashboard", "operations:room_blocks",

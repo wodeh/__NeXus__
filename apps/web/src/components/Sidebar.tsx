@@ -36,6 +36,7 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   cap: string;
+  adminOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -70,23 +71,41 @@ const navItems: NavItem[] = [
   { label: "Tapechart", href: "/villa-tapechart", icon: CalendarDays, cap: CAPABILITIES.VILLA.RESERVATIONS },
   { label: "Villa Revenue", href: "/villa-revenue", icon: TrendingUp, cap: CAPABILITIES.VILLA.REVENUE },
   { label: "Cleaner Tracking", href: "/cleaner-tracking", icon: Smartphone, cap: CAPABILITIES.VILLA.CLEANER_TRACKING },
+  // Admin link — only visible to super_admin
+  { label: "Admin", href: "/admin", icon: ShieldCheck, cap: "admin:full", adminOnly: true },
 ];
 
-export default function Sidebar({ tenantConfig }: { tenantConfig: TenantConfig | null }) {
+export default function Sidebar({
+  tenantConfig,
+  propertyCount,
+  isSuperAdmin,
+}: {
+  tenantConfig: TenantConfig | null;
+  propertyCount?: number | null;
+  isSuperAdmin?: boolean;
+}) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const { isVillaOwner, isSuperAdmin } = useAuth();
+  const { isVillaOwner } = useAuth();
 
   const filteredNav = navItems.filter((item) => {
-    if (isSuperAdmin) return true; // Super admin sees all menus
+    // Admin-only link — only for super_admin
+    if (item.adminOnly) return isSuperAdmin;
+
+    if (isSuperAdmin) return true;
     if (!tenantConfig) return true;
     if (isVillaOwner) {
-      // Villa owners see: villa-specific pages, dashboard, settings, and IPTV
-      return item.cap.startsWith("villa:") || 
-             item.href === "/" || 
+      return item.cap.startsWith("villa:") ||
+             item.href === "/" ||
              item.href === "/settings" ||
              item.cap === CAPABILITIES.OPERATIONS.IPTV_BASIC;
     }
+
+    // Hide Properties menu if hotel has only 1 property
+    if (item.href === "/properties" && propertyCount !== null && propertyCount <= 1) {
+      return false;
+    }
+
     return hasCapability(tenantConfig, item.cap);
   });
 

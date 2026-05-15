@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const isVillaOwner = tenant?.external_id === 'villa-owners' || capabilities.includes('villa:dashboard');
-  const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'admin';
+  const isSuperAdmin = user?.role === 'super_admin' || capabilities.includes('admin:full');
 
   return (
     <AuthContext.Provider

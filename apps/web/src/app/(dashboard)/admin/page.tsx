@@ -70,7 +70,7 @@ interface SystemConfig {
 // --- Components ---
 export default function AdminPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, capabilities } = useAuth();
   const { config } = useTenant();
   const [tab, setTab] = useState<'overview' | 'hotels' | 'users' | 'roles' | 'settings' | 'audit'>('overview');
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -102,7 +102,7 @@ export default function AdminPage() {
   }
 
   // Check if user is super_admin
-  const isSuperAdmin = user?.role === 'super_admin' || user?.capabilities?.includes('admin:full');
+  const isSuperAdmin = user?.role === 'super_admin' || capabilities?.includes('admin:full');
 
   if (!isSuperAdmin) {
     return (
