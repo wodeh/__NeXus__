@@ -29,10 +29,13 @@ type Reservation struct {
 	Color           *string   `json:"color,omitempty"`
 	GroupID         *uuid.UUID `json:"group_id,omitempty"`
 	GroupName       *string   `json:"group_name,omitempty"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	PreArrivalReady bool       `json:"pre_arrival_ready"`
+	DepositPaid     int        `json:"deposit_paid"`
+	SpecialRequestsAcknowledged bool `json:"special_requests_acknowledged"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 	DeletedAt       *time.Time `json:"deleted_at,omitempty"`
-	Version         int       `json:"version"`
+	Version         int        `json:"version"`
 }
 
 // ReservationCreateRequest is the payload for creating a reservation.

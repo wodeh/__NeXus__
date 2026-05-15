@@ -38,7 +38,7 @@ func (r *ReservationRepository) List(ctx context.Context, tenantID string) ([]do
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, tenant_id, property_id, guest_name, email, phone, room_number, room_type,
 			check_in::text, check_out::text, adults, children, status, source, total, balance,
-			special_requests, vip, color, group_id, group_name, config, created_at, updated_at, deleted_at, version
+			special_requests, vip, color, group_id, group_name, pre_arrival_ready, deposit_paid, special_requests_acknowledged, config, created_at, updated_at, deleted_at, version
 		FROM reservations
 		WHERE tenant_id = $1 AND deleted_at IS NULL
 		ORDER BY check_in DESC
@@ -84,7 +84,7 @@ func (r *ReservationRepository) Get(ctx context.Context, tenantID string, id uui
 	row := r.pool.QueryRow(ctx, `
 		SELECT id, tenant_id, property_id, guest_name, email, phone, room_number, room_type,
 			check_in::text, check_out::text, adults, children, status, source, total, balance,
-			special_requests, vip, color, group_id, group_name, config, created_at, updated_at, deleted_at, version
+			special_requests, vip, color, group_id, group_name, pre_arrival_ready, deposit_paid, special_requests_acknowledged, config, created_at, updated_at, deleted_at, version
 		FROM reservations
 		WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
 	`, id, tenantID)
@@ -178,7 +178,7 @@ func (r *ReservationRepository) Create(ctx context.Context, tx pgx.Tx, tenantID 
 		INSERT INTO reservations (
 			id, tenant_id, property_id, guest_name, email, phone, room_number, room_type,
 			check_in, check_out, adults, children, status, source, total, balance,
-			special_requests, vip, color, group_id, group_name, config, created_at, updated_at, version
+			special_requests, vip, color, group_id, group_name, pre_arrival_ready, deposit_paid, special_requests_acknowledged, config, created_at, updated_at, version
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW(), NOW(), 1)
 	`, res.ID, res.TenantID, res.PropertyID, res.GuestName, res.Email, res.Phone, res.RoomNumber,
 		res.RoomType, res.CheckIn, res.CheckOut, res.Adults, res.Children, res.Status, res.Source,
@@ -403,7 +403,7 @@ func (r *ReservationRepository) GetGroup(ctx context.Context, tenantID string, g
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, tenant_id, property_id, guest_name, email, phone, room_number, room_type,
 			check_in::text, check_out::text, adults, children, status, source, total, balance,
-			special_requests, vip, color, group_id, group_name, config, created_at, updated_at, deleted_at, version
+			special_requests, vip, color, group_id, group_name, pre_arrival_ready, deposit_paid, special_requests_acknowledged, config, created_at, updated_at, deleted_at, version
 		FROM reservations
 		WHERE tenant_id = $1 AND group_id = $2 AND deleted_at IS NULL
 		ORDER BY check_in, guest_name
