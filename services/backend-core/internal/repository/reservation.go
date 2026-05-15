@@ -58,7 +58,8 @@ func (r *ReservationRepository) List(ctx context.Context, tenantID string) ([]do
 			&res.ID, &res.TenantID, &res.PropertyID, &res.GuestName, &email, &phone, &roomNumber,
 			&res.RoomType, &res.CheckIn, &res.CheckOut, &res.Adults, &res.Children,
 			&res.Status, &res.Source, &res.Total, &res.Balance,
-			&specialRequests, &res.VIP, &color, &groupID, &groupName, &configJSON,
+			&specialRequests, &res.VIP, &color, &groupID, &groupName,
+			&res.PreArrivalReady, &res.DepositPaid, &res.SpecialRequestsAcknowledged, &configJSON,
 			&res.CreatedAt, &res.UpdatedAt, &res.DeletedAt, &res.Version,
 		); err != nil {
 			return nil, fmt.Errorf("scan reservation: %w", err)
@@ -97,7 +98,8 @@ func (r *ReservationRepository) Get(ctx context.Context, tenantID string, id uui
 		&res.ID, &res.TenantID, &res.PropertyID, &res.GuestName, &email, &phone, &roomNumber,
 		&res.RoomType, &res.CheckIn, &res.CheckOut, &res.Adults, &res.Children,
 		&res.Status, &res.Source, &res.Total, &res.Balance,
-		&specialRequests, &res.VIP, &color, &groupID, &groupName, &configJSON,
+		&specialRequests, &res.VIP, &color, &groupID, &groupName,
+		&res.PreArrivalReady, &res.DepositPaid, &res.SpecialRequestsAcknowledged, &configJSON,
 		&res.CreatedAt, &res.UpdatedAt, &res.DeletedAt, &res.Version,
 	); err != nil {
 		if err == pgx.ErrNoRows {
@@ -416,7 +418,8 @@ func (r *ReservationRepository) GetGroup(ctx context.Context, tenantID string, g
 			&res.ID, &res.TenantID, &res.PropertyID, &res.GuestName, &email, &phone, &roomNumber,
 			&res.RoomType, &res.CheckIn, &res.CheckOut, &res.Adults, &res.Children,
 			&res.Status, &res.Source, &res.Total, &res.Balance,
-			&specialRequests, &res.VIP, &color, &gid, &groupName, &configJSON,
+			&specialRequests, &res.VIP, &color, &gid, &groupName,
+			&res.PreArrivalReady, &res.DepositPaid, &res.SpecialRequestsAcknowledged, &configJSON,
 			&res.CreatedAt, &res.UpdatedAt, &res.DeletedAt, &res.Version,
 		); err != nil {
 			return nil, fmt.Errorf("scan group reservation: %w", err)
