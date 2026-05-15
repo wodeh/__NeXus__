@@ -1,6 +1,6 @@
 -- ========================================================================
--- Nexus Demo Data Seed — Plain SQL Version
--- No DO block: each statement runs independently with clear error messages
+-- Nexus Demo Data Seed — Plain SQL Version (schema-corrected)
+-- Matches actual migration schemas exactly
 -- Run after seed_admin.sql has created the tenant, users, and properties
 -- ========================================================================
 
@@ -108,113 +108,105 @@ WHERE r.tenant_id = (SELECT id FROM tenants WHERE external_id = 'demo')
 ON CONFLICT DO NOTHING;
 
 -- =====================================================================
--- 5. WIFI ACCESS POINTS
+-- 5. WIFI ACCESS POINTS (schema matches migration 021 exactly)
 -- =====================================================================
-INSERT INTO wifi_access_points (tenant_id, name, floor, location, mac_address, ip_address, model, status, firmware_version, config, created_at, updated_at)
+INSERT INTO wifi_access_points (tenant_id, name, floor, location, mac_address, ip_address, model, firmware, channels_2ghz, channels_5ghz, max_clients, status, snmp_community, snmp_version, created_at, updated_at)
 VALUES
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-Lobby-01',    'Lobby',  'Main lobby ceiling',         'aa:bb:cc:dd:ee:01', '10.0.1.101', 'Ubiquiti U6-Pro',    'online',  '6.5.50', '{"channel":36,"bandwidth":80,"power":20}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-Lobby-02',    'Lobby',  'Reception desk',             'aa:bb:cc:dd:ee:02', '10.0.1.102', 'Ubiquiti U6-Pro',    'online',  '6.5.50', '{"channel":40,"bandwidth":80,"power":18}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-F1-Corridor', '1',      'Floor 1 east corridor',      'aa:bb:cc:dd:ee:03', '10.0.1.103', 'Ubiquiti U6-Lite',   'online',  '6.5.48', '{"channel":1,"bandwidth":20,"power":22}',  NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-F1-West',     '1',      'Floor 1 west wing',          'aa:bb:cc:dd:ee:04', '10.0.1.104', 'Ubiquiti U6-Lite',   'online',  '6.5.48', '{"channel":6,"bandwidth":20,"power":22}',  NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-F2-East',     '2',      'Floor 2 east corridor',      'aa:bb:cc:dd:ee:05', '10.0.1.105', 'Ubiquiti U6-Pro',    'online',  '6.5.50', '{"channel":36,"bandwidth":80,"power":20}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-F2-West',     '2',      'Floor 2 west wing',          'aa:bb:cc:dd:ee:06', '10.0.1.106', 'Ubiquiti U6-Pro',    'warning', '6.5.47', '{"channel":40,"bandwidth":80,"power":20}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-F3-East',     '3',      'Floor 3 east corridor',      'aa:bb:cc:dd:ee:07', '10.0.1.107', 'Ubiquiti U6-Pro',    'online',  '6.5.50', '{"channel":44,"bandwidth":80,"power":20}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-F3-West',     '3',      'Floor 3 west wing',          'aa:bb:cc:dd:ee:08', '10.0.1.108', 'Ubiquiti U6-Pro',    'online',  '6.5.50', '{"channel":48,"bandwidth":80,"power":20}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-F4-Center',   '4',      'Penthouse floor center',     'aa:bb:cc:dd:ee:09', '10.0.1.109', 'Ubiquiti U6-Enterprise', 'online', '6.5.50', '{"channel":52,"bandwidth":160,"power":22}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-Poolside',    'Pool',   'Pool deck east',             'aa:bb:cc:dd:ee:10', '10.0.1.110', 'Ubiquiti U6-Mesh',   'offline', '6.5.45', '{"channel":11,"bandwidth":20,"power":24}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-Gym',         'Gym',    'Fitness center ceiling',     'aa:bb:cc:dd:ee:11', '10.0.1.111', 'Ubiquiti U6-Lite',   'online',  '6.5.50', '{"channel":1,"bandwidth":20,"power":20}',  NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-Spa',         'Spa',    'Spa reception',              'aa:bb:cc:dd:ee:12', '10.0.1.112', 'Ubiquiti U6-Lite',   'online',  '6.5.50', '{"channel":6,"bandwidth":20,"power":20}',  NOW(), NOW())
+    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-Lobby-01',    'Lobby',  'Main lobby ceiling',         'aa:bb:cc:dd:ee:01', '10.0.1.101', 'Ubiquiti U6-Pro',    '6.5.50', ARRAY[1,6,11], ARRAY[36,40,44],    64, 'online',  'public', 'v2c', NOW(), NOW()),
+    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-Lobby-02',    'Lobby',  'Reception desk',             'aa:bb:cc:dd:ee:02', '10.0.1.102', 'Ubiquiti U6-Pro',    '6.5.50', ARRAY[1,6,11], ARRAY[36,40,44],    64, 'online',  'public', 'v2c', NOW(), NOW()),
+    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-F1-Corridor', '1',      'Floor 1 east corridor',      'aa:bb:cc:dd:ee:03', '10.0.1.103', 'Ubiquiti U6-Lite',   '6.5.48', ARRAY[1,6,11], ARRAY[36,40],       32, 'online',  'public', 'v2c', NOW(), NOW()),
+    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-F1-West',     '1',      'Floor 1 west wing',          'aa:bb:cc:dd:ee:04', '10.0.1.104', 'Ubiquiti U6-Lite',   '6.5.48', ARRAY[1,6,11], ARRAY[36,40],       32, 'online',  'public', 'v2c', NOW(), NOW()),
+    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-F2-East',     '2',      'Floor 2 east corridor',      'aa:bb:cc:dd:ee:05', '10.0.1.105', 'Ubiquiti U6-Pro',    '6.5.50', ARRAY[1,6,11], ARRAY[36,40,44,48], 64, 'online',  'public', 'v2c', NOW(), NOW()),
+    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-F2-West',     '2',      'Floor 2 west wing',          'aa:bb:cc:dd:ee:06', '10.0.1.106', 'Ubiquiti U6-Pro',    '6.5.47', ARRAY[1,6,11], ARRAY[36,40,44,48], 64, 'degraded', 'public', 'v2c', NOW(), NOW()),
+    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-F3-East',     '3',      'Floor 3 east corridor',      'aa:bb:cc:dd:ee:07', '10.0.1.107', 'Ubiquiti U6-Pro',    '6.5.50', ARRAY[1,6,11], ARRAY[36,40,44,48], 64, 'online',  'public', 'v2c', NOW(), NOW()),
+    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-F3-West',     '3',      'Floor 3 west wing',          'aa:bb:cc:dd:ee:08', '10.0.1.108', 'Ubiquiti U6-Pro',    '6.5.50', ARRAY[1,6,11], ARRAY[36,40,44,48], 64, 'online',  'public', 'v2c', NOW(), NOW()),
+    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-F4-Center',   '4',      'Penthouse floor center',     'aa:bb:cc:dd:ee:09', '10.0.1.109', 'Ubiquiti U6-Enterprise', '6.5.50', ARRAY[1,6,11], ARRAY[52,56,60,64,100,104], 128, 'online', 'public', 'v2c', NOW(), NOW()),
+    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-Poolside',    'Pool',   'Pool deck east',             'aa:bb:cc:dd:ee:10', '10.0.1.110', 'Ubiquiti U6-Mesh',   '6.5.45', ARRAY[1,6,11], ARRAY[36,40,44],    64, 'offline', 'public', 'v2c', NOW(), NOW()),
+    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-Gym',         'Gym',    'Fitness center ceiling',     'aa:bb:cc:dd:ee:11', '10.0.1.111', 'Ubiquiti U6-Lite',   '6.5.50', ARRAY[1,6,11], ARRAY[36,40],       32, 'online',  'public', 'v2c', NOW(), NOW()),
+    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'AP-Spa',         'Spa',    'Spa reception',              'aa:bb:cc:dd:ee:12', '10.0.1.112', 'Ubiquiti U6-Lite',   '6.5.50', ARRAY[1,6,11], ARRAY[36,40],       32, 'online',  'public', 'v2c', NOW(), NOW())
 ON CONFLICT (tenant_id, mac_address) DO NOTHING;
 
 -- =====================================================================
--- 6. WIFI ALERTS (generated from AP status)
+-- 6. WIFI ALERTS (schema matches migration 021: type, is_resolved, suggested_fix)
 -- =====================================================================
-INSERT INTO wifi_alerts (tenant_id, ap_id, alert_type, severity, message, resolved, created_at, updated_at)
+INSERT INTO wifi_alerts (tenant_id, ap_id, floor, type, severity, message, suggested_fix, is_resolved, created_at)
 SELECT
     (SELECT id FROM tenants WHERE external_id = 'demo'),
     ap.id,
-    CASE WHEN ap.status = 'offline' THEN 'device_offline'
-         WHEN ap.firmware_version < '6.5.50' THEN 'firmware_outdated'
-         WHEN ap.status = 'warning' THEN 'signal_degraded'
-         ELSE 'interference_detected' END,
+    ap.floor,
+    CASE WHEN ap.status = 'offline' THEN 'ap_offline'
+         WHEN ap.firmware < '6.5.50' THEN 'poor_signal'
+         WHEN ap.status = 'degraded' THEN 'interference'
+         ELSE 'channel_conflict' END,
     CASE WHEN ap.status = 'offline' THEN 'critical'
-         WHEN ap.firmware_version < '6.5.50' THEN 'high'
-         ELSE 'medium' END,
+         WHEN ap.firmware < '6.5.50' THEN 'warning'
+         ELSE 'warning' END,
     CASE WHEN ap.status = 'offline' THEN 'Access point unreachable for > 15 minutes'
-         WHEN ap.firmware_version < '6.5.50' THEN 'Firmware ' || ap.firmware_version || ' has known security vulnerabilities'
-         WHEN ap.status = 'warning' THEN 'Signal strength below threshold on 5GHz band'
+         WHEN ap.firmware < '6.5.50' THEN 'Firmware ' || ap.firmware || ' has known security vulnerabilities'
+         WHEN ap.status = 'degraded' THEN 'Signal strength below threshold on 5GHz band'
          ELSE 'Channel congestion detected — recommend switching to channel 149' END,
+    CASE WHEN ap.status = 'offline' THEN 'Check power and ethernet connection'
+         WHEN ap.firmware < '6.5.50' THEN 'Schedule firmware upgrade to 6.5.50'
+         WHEN ap.status = 'degraded' THEN 'Check for physical obstructions or interference sources'
+         ELSE 'Run auto-channel selection or manually assign channel 149' END,
     false,
-    NOW() - (random() * interval '6 hours'),
-    NOW()
+    NOW() - (random() * interval '6 hours')
 FROM wifi_access_points ap
 WHERE ap.tenant_id = (SELECT id FROM tenants WHERE external_id = 'demo')
-  AND (ap.status != 'online' OR ap.firmware_version < '6.5.50')
+  AND (ap.status != 'online' OR ap.firmware < '6.5.50')
 ON CONFLICT DO NOTHING;
 
 -- =====================================================================
--- 7. IPTV CHANNELS
+-- 7. SMART LOCKS (schema matches migration 008: room_id, serial_number, firmware_version, remote_unlock_enabled, auto_lock_enabled, config)
 -- =====================================================================
-INSERT INTO iptv_channels (tenant_id, name, category, number, url, icon_url, is_active, is_premium, language, config, created_at, updated_at)
-VALUES
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'CNN International',    'news',       1,  'https://cnn-international.stream/live.m3u8',     '', true, false, 'en', '{}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'BBC World News',       'news',       2,  'https://bbc-world.stream/live.m3u8',            '', true, false, 'en', '{}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'Al Jazeera English',   'news',       3,  'https://aljazeera.stream/live.m3u8',           '', true, false, 'en', '{}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'ESPN',                 'sports',     10, 'https://espn.stream/live.m3u8',                '', true, true,  'en', '{"hd":true,"dolby":true}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'Sky Sports',           'sports',     11, 'https://skysports.stream/live.m3u8',           '', true, true,  'en', '{"hd":true}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'HBO',                  'movies',     20, 'https://hbo.stream/live.m3u8',                 '', true, true,  'en', '{"hd":true,"dolby":true}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'Netflix Hotel',        'movies',     21, 'https://netflix-hotel.stream/live.m3u8',       '', true, true,  'en', '{"4k":true,"dolby_vision":true}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'Cartoon Network',      'kids',       30, 'https://cn.stream/live.m3u8',                    '', true, false, 'en', '{}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'Disney Channel',       'kids',       31, 'https://disney.stream/live.m3u8',              '', true, false, 'en', '{}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'Local Guide',          'hotel',      50, 'https://hotel-guide.stream/welcome.m3u8',       '', true, false, 'en', '{"loop":true}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'Room Service Menu',    'hotel',      51, 'https://hotel-menu.stream/menu.m3u8',          '', true, false, 'en', '{"interactive":true}', NOW(), NOW()),
-    ((SELECT id FROM tenants WHERE external_id = 'demo'), 'Spa & Wellness',       'hotel',      52, 'https://hotel-spa.stream/wellness.m3u8',       '', true, true,  'en', '{"booking_integration":true}', NOW(), NOW())
-ON CONFLICT DO NOTHING;
-
--- =====================================================================
--- 8. SMART LOCKS (generated per room)
--- =====================================================================
-INSERT INTO smart_locks (tenant_id, device_id, room_number, status, battery_level, firmware_version, config, created_at, updated_at)
+INSERT INTO smart_locks (tenant_id, room_id, room_number, serial_number, model, manufacturer, status, battery_level, firmware_version, remote_unlock_enabled, auto_lock_enabled, config, created_at, updated_at)
 SELECT
     (SELECT id FROM tenants WHERE external_id = 'demo'),
-    'LOCK-' || r.number,
+    r.id,
     r.number,
-    CASE WHEN r.status IN ('occupied','checked_in') THEN 'locked'
-         WHEN r.status = 'maintenance' THEN 'maintenance'
-         ELSE 'unlocked' END,
+    'SN-' || r.number || '-OT',
+    'OT-SL300',
+    'OrbitaTech',
+    CASE WHEN r.status IN ('occupied','checked_in') THEN 'online'
+         WHEN r.status = 'maintenance' THEN 'offline'
+         ELSE 'online' END,
     (70 + (random() * 30))::int,
-    '2.4.1',
-    '{"auto_lock":true,"auto_lock_delay":30,"master_code_enabled":true,"audit_log":true}',
+    '3.2.1',
+    true,
+    true,
+    '{"master_code":"1234","guest_code":"9999","audit_log":true}',
     NOW(),
     NOW()
 FROM rooms r
 WHERE r.tenant_id = (SELECT id FROM tenants WHERE external_id = 'demo')
   AND r.deleted_at IS NULL
   AND r.type != 'service'
-ON CONFLICT (tenant_id, device_id) DO NOTHING;
+ON CONFLICT (tenant_id, serial_number) DO NOTHING;
 
 -- =====================================================================
--- 9. WIFI FLOOR SUMMARIES (trigger auto-populates, but seed some initial metrics)
+-- 8. WIFI FLOOR SUMMARY (schema matches migration 021: wifi_floor_summary singular)
 -- =====================================================================
-INSERT INTO wifi_floor_summaries (tenant_id, floor, ap_count, online_count, offline_count, avg_signal, avg_clients, avg_throughput, last_updated)
+INSERT INTO wifi_floor_summary (tenant_id, floor, ap_count, online_aps, avg_signal_dbm, total_clients, active_alerts, overall_health, updated_at)
 SELECT
     (SELECT id FROM tenants WHERE external_id = 'demo'),
     ap.floor,
     COUNT(*)::int,
     COUNT(*) FILTER (WHERE ap.status = 'online')::int,
-    COUNT(*) FILTER (WHERE ap.status = 'offline')::int,
-    (70 + random() * 25)::int,
+    (-40 - (random() * 20))::int,
     (15 + random() * 40)::int,
-    (50 + random() * 150)::int,
+    (SELECT COUNT(*)::int FROM wifi_alerts wa WHERE wa.tenant_id = (SELECT id FROM tenants WHERE external_id = 'demo') AND wa.floor = ap.floor AND wa.is_resolved = false),
+    CASE WHEN COUNT(*) FILTER (WHERE ap.status = 'online') = COUNT(*) THEN 'excellent'
+         WHEN COUNT(*) FILTER (WHERE ap.status = 'offline') > 0 THEN 'poor'
+         ELSE 'good' END,
     NOW()
 FROM wifi_access_points ap
 WHERE ap.tenant_id = (SELECT id FROM tenants WHERE external_id = 'demo')
 GROUP BY ap.floor
 ON CONFLICT (tenant_id, floor) DO UPDATE SET
     ap_count = EXCLUDED.ap_count,
-    online_count = EXCLUDED.online_count,
-    offline_count = EXCLUDED.offline_count,
-    avg_signal = EXCLUDED.avg_signal,
-    avg_clients = EXCLUDED.avg_clients,
-    avg_throughput = EXCLUDED.avg_throughput,
-    last_updated = NOW();
+    online_aps = EXCLUDED.online_aps,
+    avg_signal_dbm = EXCLUDED.avg_signal_dbm,
+    total_clients = EXCLUDED.total_clients,
+    active_alerts = EXCLUDED.active_alerts,
+    overall_health = EXCLUDED.overall_health,
+    updated_at = NOW();
