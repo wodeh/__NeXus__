@@ -83,6 +83,7 @@ export default function ReservationsPage() {
 
   const [showQuickBook, setShowQuickBook] = useState(false);
   const [showGroupBook, setShowGroupBook] = useState(false);
+  const [showWalkIn, setShowWalkIn] = useState(false);
 
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
@@ -141,6 +142,10 @@ export default function ReservationsPage() {
             <Plus className="h-4 w-4" />
             Group Book
           </button>
+          <button onClick={() => setShowWalkIn(true)} className="btn-primary bg-emerald-600 hover:bg-emerald-500">
+            <DoorOpen className="h-4 w-4" />
+            Walk-in
+          </button>
         </div>
       </div>
 
@@ -195,6 +200,95 @@ export default function ReservationsPage() {
           }}
         />
       )}
+
+      {/* Walk-in Modal */}
+      {showWalkIn && (
+        <WalkInModal
+          rooms={rooms}
+          onClose={() => setShowWalkIn(false)}
+          onCreate={async (payload) => {
+            try {
+              const res = await createReservation(payload);
+              await checkInReservation(res.id);
+              fetchData();
+              setShowWalkIn(false);
+            } catch (e: any) {
+              alert(e.message);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function WalkInModal({ rooms, onClose, onCreate }: { rooms: Room[]; onClose: () => void; onCreate: (payload: any) => Promise<void> }) {
+  const [guestName, setGuestName] = useState("");
+  const [roomNumber, setRoomNumber] = useState("");
+  const [nights, setNights] = useState(1);
+  const [adults, setAdults] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const today = new Date().toISOString().split("T")[0];
+  const checkOut = addDays(today, nights);
+
+  const vacantRooms = rooms.filter((r) => r.status === "vacant_clean");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-sm rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-white">Walk-in Express</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="space-y-3">
+          <input className="input w-full" placeholder="Guest name *" value={guestName} onChange={(e) => setGuestName(e.target.value)} autoFocus />
+          <select className="input w-full" value={roomNumber} onChange={(e) => setRoomNumber(e.target.value)}>
+            <option value="">Select vacant room...</option>
+            {vacantRooms.map((r) => (
+              <option key={r.number} value={r.number}>{r.number} · {r.type} · Floor {r.floor}</option>
+            ))}
+          </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Nights</label>
+              <input type="number" min={1} max={30} className="input w-full" value={nights} onChange={(e) => setNights(parseInt(e.target.value) || 1)} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Adults</label>
+              <input type="number" min={1} max={6} className="input w-full" value={adults} onChange={(e) => setAdults(parseInt(e.target.value) || 1)} />
+            </div>
+          </div>
+          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2 text-xs text-emerald-400">
+            <CheckCircle2 className="mr-1 inline h-3 w-3" />
+            Auto check-in today ({today}) · checkout {checkOut}
+          </div>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={onClose} className="btn-secondary text-xs">Cancel</button>
+          <button
+            onClick={async () => {
+              if (!guestName) return alert("Guest name required");
+              if (!roomNumber) return alert("Select a room");
+              setLoading(true);
+              await onCreate({
+                guest_name: guestName,
+                room_number: roomNumber,
+                room_type: vacantRooms.find((r) => r.number === roomNumber)?.type || "Standard",
+                check_in: today,
+                check_out: checkOut,
+                adults,
+                source: "walk_in",
+              });
+              setLoading(false);
+            }}
+            disabled={loading}
+            className="btn-primary bg-emerald-600 hover:bg-emerald-500 text-xs disabled:opacity-50"
+          >
+            <DoorOpen className="mr-1 h-4 w-4" />
+            {loading ? "Checking in..." : "Check In Now"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
