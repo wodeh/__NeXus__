@@ -107,11 +107,13 @@ export interface Room {
 }
 
 export async function getReservations(): Promise<Reservation[]> {
-  return api<Reservation[]>("/v1/reservations");
+  const data = await api<{ reservations: Reservation[] }>("/v1/reservations");
+  return data.reservations || [];
 }
 
 export async function getRooms(): Promise<Room[]> {
-  return api<Room[]>("/v1/rooms");
+  const data = await api<{ rooms: Room[] }>("/v1/rooms");
+  return data.rooms || [];
 }
 
 export async function getReservationDetail(id: string): Promise<Reservation> {
