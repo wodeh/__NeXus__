@@ -148,11 +148,7 @@ export default function ReservationsPage() {
       ) : (
         <>
           {view === "list" && <ListView reservations={reservations} rooms={rooms} today={today} onRefresh={fetchData} />}
-          {view === "calendar" && (
-            <div className="flex h-96 items-center justify-center rounded-lg border border-dashed border-slate-700 text-slate-500">
-              Calendar view coming soon
-            </div>
-          )}
+          {view === "calendar" && <CalendarView reservations={reservations} rooms={rooms} today={today} onRefresh={fetchData} />}
         </>
       )}
 
@@ -666,6 +662,154 @@ function TapechartView({ reservations, rooms, today, onRefresh }: { reservations
   );
 }
 
+
+/* ─── Calendar View ─── */
+function CalendarView({ reservations, rooms, today, onRefresh }: { reservations: Reservation[]; rooms: Room[]; today: string; onRefresh: () => void }) {
+  const [currentDate, setCurrentDate] = useState(() => new Date(today + "T00:00:00"));
+  const [selectedRes, setSelectedRes] = useState<Reservation | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+  const goToPrevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const goToNextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+  const goToToday = () => setCurrentDate(new Date(today + "T00:00:00"));
+
+  const firstDayOfMonth = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const startDayOfWeek = firstDayOfMonth.getDay();
+
+  const days: { date: number; dateStr: string; isToday: boolean; isCurrentMonth: boolean }[] = [];
+
+  // Previous month padding
+  const prevMonthDays = new Date(year, month, 0).getDate();
+  for (let i = startDayOfWeek - 1; i >= 0; i--) {
+    const d = prevMonthDays - i;
+    const prevMonth = month === 0 ? 11 : month - 1;
+    const prevYear = month === 0 ? year - 1 : year;
+    const dateStr = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    days.push({ date: d, dateStr, isToday: false, isCurrentMonth: false });
+  }
+
+  // Current month
+  for (let i = 1; i <= daysInMonth; i++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    days.push({ date: i, dateStr, isToday: dateStr === today, isCurrentMonth: true });
+  }
+
+  // Next month padding (fill 6 rows = 42 cells)
+  const remainingCells = 42 - days.length;
+  for (let i = 1; i <= remainingCells; i++) {
+    const nextMonth = month + 1;
+    const nextYear = nextMonth > 11 ? year + 1 : year;
+    const actualNextMonth = nextMonth % 12;
+    const dateStr = `${nextYear}-${String(actualNextMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    days.push({ date: i, dateStr, isToday: false, isCurrentMonth: false });
+  }
+
+  const getResForDay = (dateStr: string) => {
+    return reservations.filter((r) => isDateInRange(dateStr, r.check_in, r.check_out));
+  };
+
+  const inHouse = reservations.filter((r) => r.status === "checked_in").length;
+  const upcoming = reservations.filter((r) => r.status === "confirmed").length;
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center rounded-lg border border-slate-700 bg-slate-800">
+            <button onClick={goToPrevMonth} className="p-2 text-slate-400 hover:text-white"><ChevronLeft className="h-4 w-4" /></button>
+            <button onClick={goToToday} className="px-3 py-2 text-xs font-medium text-white hover:bg-slate-700">Today</button>
+            <button onClick={goToNextMonth} className="p-2 text-slate-400 hover:text-white"><ChevronRightIcon className="h-4 w-4" /></button>
+          </div>
+          <h2 className="text-lg font-bold text-white">{monthNames[month]} {year}</h2>
+        </div>
+        <div className="text-xs text-slate-400">{inHouse} in-house · {upcoming} upcoming</div>
+      </div>
+
+      {/* Calendar Grid */}
+      <div className="rounded-lg border border-slate-700 bg-slate-900 overflow-hidden">
+        <div className="grid grid-cols-7 border-b border-slate-700 bg-slate-800">
+          {dayNames.map((d) => (
+            <div key={d} className="px-2 py-2 text-center text-[10px] font-bold uppercase text-slate-400">{d}</div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 auto-rows-fr">
+          {days.map((day, idx) => {
+            const dayRes = getResForDay(day.dateStr);
+            const isWeekend = idx % 7 === 0 || idx % 7 === 6;
+            return (
+              <div
+                key={idx}
+                className={`min-h-[110px] border-r border-b border-slate-700/30 p-1.5 ${day.isCurrentMonth ? 'bg-slate-900' : 'bg-slate-800/30'} ${day.isToday ? 'ring-1 ring-inset ring-nexus-500/40' : ''} ${isWeekend && day.isCurrentMonth ? 'bg-slate-800/10' : ''}`}
+              >
+                <div className={`flex items-center justify-between text-xs font-medium ${day.isToday ? 'text-nexus-400' : day.isCurrentMonth ? 'text-slate-300' : 'text-slate-600'}`}>
+                  <span>{day.date}</span>
+                  {day.isToday && <span className="rounded bg-nexus-500/20 px-1 text-[9px]">TODAY</span>}
+                </div>
+                <div className="mt-1 space-y-0.5">
+                  {dayRes.slice(0, 4).map((r) => (
+                    <div
+                      key={r.id}
+                      className={`rounded px-1.5 py-0.5 text-[9px] truncate cursor-pointer hover:brightness-110 ${r.color || resColors[hashStringToIndex(r.id, resColors.length)]} text-white`}
+                      onClick={() => setSelectedRes(r)}
+                      title={`${r.guest_name} · ${r.room_number || 'Unassigned'} · ${r.status.replace('_', ' ')}`}
+                    >
+                      <span className="flex items-center gap-1">
+                        {r.vip && <span className="text-[7px] text-amber-300">★</span>}
+                        <span className="truncate">{r.guest_name}</span>
+                      </span>
+                    </div>
+                  ))}
+                  {dayRes.length > 4 && <div className="px-1 text-[9px] text-slate-500">+{dayRes.length - 4} more</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-4 text-[10px] text-slate-500">
+        <span className="font-bold uppercase">Status:</span>
+        <span className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-sky-500" /> Confirmed</span>
+        <span className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-emerald-500" /> Checked In</span>
+        <span className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-amber-500" /> Checked Out</span>
+        <span className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-rose-500" /> Cancelled</span>
+        <span className="ml-auto">Click a block for details · Use Quick Book to create</span>
+      </div>
+
+      {/* Reservation Detail Modal */}
+      {selectedRes && (
+        <ReservationDetailModal
+          reservation={selectedRes}
+          onClose={() => setSelectedRes(null)}
+          onAction={async (action) => {
+            setActionLoading(true);
+            try {
+              if (action === "checkin") await checkInReservation(selectedRes.id);
+              else if (action === "checkout") await checkOutReservation(selectedRes.id);
+              else if (action === "cancel") await cancelReservation(selectedRes.id);
+              onRefresh();
+              setSelectedRes(null);
+            } catch (e: any) {
+              alert(e.message);
+            } finally {
+              setActionLoading(false);
+            }
+          }}
+          loading={actionLoading}
+        />
+      )}
+    </div>
+  );
+}
 
 /* ─── Quick Book Modal ─── */
 function QuickBookModal({ rooms, onClose, onCreate }: { rooms: Room[]; onClose: () => void; onCreate: (payload: any) => Promise<void> }) {
