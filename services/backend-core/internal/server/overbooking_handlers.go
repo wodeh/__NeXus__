@@ -17,7 +17,7 @@ func (s *Server) handleOverbookingConfidence(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	ctx := r.Context()
-	tenantID := tenantIDFromContext(ctx)
+	tenantID, _ := ctx.Value("tenant_id").(string)
 	
 	date := r.URL.Query().Get("date")
 	if date == "" {

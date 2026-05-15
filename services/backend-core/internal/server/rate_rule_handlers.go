@@ -16,7 +16,7 @@ func (s *Server) registerRateRuleHandlers(mux *http.ServeMux) {
 
 func (s *Server) handleRateRules(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tenantID := tenantIDFromContext(ctx)
+	tenantID, _ := ctx.Value("tenant_id").(string)
 
 	switch r.Method {
 	case http.MethodGet:
@@ -47,7 +47,7 @@ func (s *Server) handleRateRules(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleRateRuleDetail(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tenantID := tenantIDFromContext(ctx)
+	tenantID, _ := ctx.Value("tenant_id").(string)
 	idStr := r.URL.Path[len("/v1/rate-rules/"):]
 	if idStr == "" {
 		writeJSONError(w, http.StatusBadRequest, "missing id")
@@ -77,7 +77,7 @@ func (s *Server) handleRateCalculate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	tenantID := tenantIDFromContext(ctx)
+	tenantID, _ := ctx.Value("tenant_id").(string)
 
 	var req domain.RateCalculateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

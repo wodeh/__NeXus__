@@ -187,3 +187,8 @@ type GuestJourneyTimeline struct {
 	GuestName     string              `json:"guest_name"`
 	Events        []GuestJourneyEvent `json:"events"`
 }
+
+// ReservationAssignRequest assigns a room to a reservation.
+type ReservationAssignRequest struct {
+	RoomNumber string `json:"room_number"`
+}

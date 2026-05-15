@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/nexus-platform/backend-core/internal/domain"
 )
 
 func (s *Server) registerGuestJourneyHandlers(mux *http.ServeMux) {
@@ -15,7 +14,7 @@ func (s *Server) registerGuestJourneyHandlers(mux *http.ServeMux) {
 
 func (s *Server) handleGuestJourney(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tenantID := tenantIDFromContext(ctx)
+	tenantID, _ := ctx.Value("tenant_id").(string)
 	
 	// Extract reservation ID from path: /v1/guest-journey/:id
 	path := r.URL.Path[len("/v1/guest-journey/"):]
@@ -51,7 +50,7 @@ func (s *Server) handleGuestJourneyEvents(w http.ResponseWriter, r *http.Request
 	}
 	
 	ctx := r.Context()
-	tenantID := tenantIDFromContext(ctx)
+	tenantID, _ := ctx.Value("tenant_id").(string)
 	
 	var req struct {
 		ReservationID string                 `json:"reservation_id"`
