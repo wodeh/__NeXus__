@@ -168,3 +168,22 @@ type RateCalculateResponse struct {
 	Adjustments []RateAdjustment `json:"adjustments"`
 	FinalRate   int              `json:"final_rate"`
 }
+
+// GuestJourneyEvent represents a single touchpoint in the guest lifecycle.
+type GuestJourneyEvent struct {
+	ID            uuid.UUID `json:"id"`
+	TenantID      uuid.UUID `json:"tenant_id"`
+	ReservationID uuid.UUID `json:"reservation_id"`
+	EventType     string    `json:"event_type"`
+	EventData     map[string]interface{} `json:"event_data"`
+	OccurredAt    time.Time `json:"occurred_at"`
+	CreatedBy     string    `json:"created_by"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
+// GuestJourneyTimeline returns all events for a reservation in chronological order.
+type GuestJourneyTimeline struct {
+	ReservationID uuid.UUID           `json:"reservation_id"`
+	GuestName     string              `json:"guest_name"`
+	Events        []GuestJourneyEvent `json:"events"`
+}

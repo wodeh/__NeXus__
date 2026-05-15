@@ -113,6 +113,7 @@ func (s *Server) Start(ctx context.Context) error {
 	s.registerVillaHandlers(mux)
 	s.registerHousekeepingHandlers(mux)
 	s.registerWiFiHandlers(mux)
+	s.registerGuestJourneyHandlers(mux)
 	s.registerRateRuleHandlers(mux)
 
 	// Build middleware chain: CORS is outermost — every response gets CORS headers
