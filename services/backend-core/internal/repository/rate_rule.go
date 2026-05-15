@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/nexus-platform/backend-core/internal/db"
 	"github.com/nexus-platform/backend-core/internal/domain"
 )
@@ -177,6 +176,5 @@ func daysBetween(a, b string) int {
 func matchesDayOfWeek(checkIn, value string) bool {
 	layout := "2006-01-02"
 	t, _ := time.Parse(layout, checkIn)
-	days := []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 	return t.Weekday().String() == value
 }

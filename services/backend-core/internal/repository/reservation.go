@@ -165,13 +165,7 @@ func (r *ReservationRepository) Create(ctx context.Context, tx pgx.Tx, tenantID 
 	res.Balance = res.Total
 
 	configJSON := []byte("{}")
-	if res.Config != nil {
-		var err error
-		configJSON, err = json.Marshal(res.Config)
-		if err != nil {
-			return nil, fmt.Errorf("marshal config: %w", err)
-		}
-	}
+	_ = configJSON // unused placeholder — config field removed from domain model
 
 	execer := r.execer(tx)
 	_, err := execer.Exec(ctx, `
