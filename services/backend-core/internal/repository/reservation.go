@@ -38,7 +38,7 @@ func (r *ReservationRepository) List(ctx context.Context, tenantID string) ([]do
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, tenant_id, property_id, guest_name, email, phone, room_number, room_type,
 			check_in::text, check_out::text, adults, children, status, source, total, balance,
-			special_requests, vip, color, config, created_at, updated_at, deleted_at, version
+			special_requests, vip, color, group_id, group_name, config, created_at, updated_at, deleted_at, version
 		FROM reservations
 		WHERE tenant_id = $1 AND deleted_at IS NULL
 		ORDER BY check_in DESC
@@ -52,12 +52,14 @@ func (r *ReservationRepository) List(ctx context.Context, tenantID string) ([]do
 	for rows.Next() {
 		var res domain.Reservation
 		var email, phone, roomNumber, specialRequests, color *string
+		var groupName *string
+		var groupID *uuid.UUID
 		var configJSON []byte
 		if err := rows.Scan(
 			&res.ID, &res.TenantID, &res.PropertyID, &res.GuestName, &email, &phone, &roomNumber,
 			&res.RoomType, &res.CheckIn, &res.CheckOut, &res.Adults, &res.Children,
 			&res.Status, &res.Source, &res.Total, &res.Balance,
-			&specialRequests, &res.VIP, &color, &configJSON,
+			&specialRequests, &res.VIP, &color, &groupID, &groupName, &configJSON,
 			&res.CreatedAt, &res.UpdatedAt, &res.DeletedAt, &res.Version,
 		); err != nil {
 			return nil, fmt.Errorf("scan reservation: %w", err)
@@ -67,6 +69,8 @@ func (r *ReservationRepository) List(ctx context.Context, tenantID string) ([]do
 		res.RoomNumber = roomNumber
 		res.SpecialRequests = specialRequests
 		res.Color = color
+		res.GroupID = groupID
+		res.GroupName = groupName
 		reservations = append(reservations, res)
 	}
 	if err := rows.Err(); err != nil {
@@ -80,19 +84,21 @@ func (r *ReservationRepository) Get(ctx context.Context, tenantID string, id uui
 	row := r.pool.QueryRow(ctx, `
 		SELECT id, tenant_id, property_id, guest_name, email, phone, room_number, room_type,
 			check_in::text, check_out::text, adults, children, status, source, total, balance,
-			special_requests, vip, color, config, created_at, updated_at, deleted_at, version
+			special_requests, vip, color, group_id, group_name, config, created_at, updated_at, deleted_at, version
 		FROM reservations
 		WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
 	`, id, tenantID)
 
 	var res domain.Reservation
 	var email, phone, roomNumber, specialRequests, color *string
+	var groupName *string
+	var groupID *uuid.UUID
 	var configJSON []byte
 	if err := row.Scan(
 		&res.ID, &res.TenantID, &res.PropertyID, &res.GuestName, &email, &phone, &roomNumber,
 		&res.RoomType, &res.CheckIn, &res.CheckOut, &res.Adults, &res.Children,
 		&res.Status, &res.Source, &res.Total, &res.Balance,
-		&specialRequests, &res.VIP, &color, &configJSON,
+		&specialRequests, &res.VIP, &color, &groupID, &groupName, &configJSON,
 		&res.CreatedAt, &res.UpdatedAt, &res.DeletedAt, &res.Version,
 	); err != nil {
 		if err == pgx.ErrNoRows {
@@ -105,6 +111,8 @@ func (r *ReservationRepository) Get(ctx context.Context, tenantID string, id uui
 	res.RoomNumber = roomNumber
 	res.SpecialRequests = specialRequests
 	res.Color = color
+	res.GroupID = groupID
+	res.GroupName = groupName
 	return &res, nil
 }
 
@@ -170,11 +178,11 @@ func (r *ReservationRepository) Create(ctx context.Context, tx pgx.Tx, tenantID 
 		INSERT INTO reservations (
 			id, tenant_id, property_id, guest_name, email, phone, room_number, room_type,
 			check_in, check_out, adults, children, status, source, total, balance,
-			special_requests, vip, color, config, created_at, updated_at, version
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW(), NOW(), 1)
+			special_requests, vip, color, group_id, group_name, config, created_at, updated_at, version
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW(), NOW(), 1)
 	`, res.ID, res.TenantID, res.PropertyID, res.GuestName, res.Email, res.Phone, res.RoomNumber,
 		res.RoomType, res.CheckIn, res.CheckOut, res.Adults, res.Children, res.Status, res.Source,
-		res.Total, res.Balance, res.SpecialRequests, res.VIP, res.Color, configJSON)
+		res.Total, res.Balance, res.SpecialRequests, res.VIP, res.Color, res.GroupID, res.GroupName, configJSON)
 	if err != nil {
 		return nil, fmt.Errorf("insert reservation: %w", err)
 	}
@@ -353,6 +361,132 @@ func (r *ReservationRepository) Move(ctx context.Context, tenantID string, id uu
 	}
 	fmt.Printf("[BACKEND] Move: returning updated reservation check_in=%s check_out=%s room=%s\n", updated.CheckIn, updated.CheckOut, *updated.RoomNumber)
 	return updated, nil
+}
+
+// CreateGroup creates multiple reservations under a single group.
+func (r *ReservationRepository) CreateGroup(ctx context.Context, tenantID string, groupName string, members []domain.ReservationCreateRequest) ([]domain.Reservation, error) {
+	groupID := uuid.Must(uuid.NewRandom())
+	results := make([]domain.Reservation, 0, len(members))
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin group tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	for i, req := range members {
+		res, err := r.Create(ctx, tx, tenantID, &req)
+		if err != nil {
+			return nil, fmt.Errorf("create group member %d: %w", i, err)
+		}
+		res.GroupID = &groupID
+		res.GroupName = &groupName
+
+		_, err = tx.Exec(ctx, `
+			UPDATE reservations SET group_id = $1, group_name = $2, updated_at = NOW()
+			WHERE id = $3 AND tenant_id = $4
+		`, groupID, groupName, res.ID, res.TenantID)
+		if err != nil {
+			return nil, fmt.Errorf("link group member %d: %w", i, err)
+		}
+		results = append(results, *res)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit group: %w", err)
+	}
+	return results, nil
+}
+
+// GetGroup returns all reservations in a group.
+func (r *ReservationRepository) GetGroup(ctx context.Context, tenantID string, groupID uuid.UUID) ([]domain.Reservation, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT id, tenant_id, property_id, guest_name, email, phone, room_number, room_type,
+			check_in::text, check_out::text, adults, children, status, source, total, balance,
+			special_requests, vip, color, group_id, group_name, config, created_at, updated_at, deleted_at, version
+		FROM reservations
+		WHERE tenant_id = $1 AND group_id = $2 AND deleted_at IS NULL
+		ORDER BY check_in, guest_name
+	`, tenantID, groupID)
+	if err != nil {
+		return nil, fmt.Errorf("get group: %w", err)
+	}
+	defer rows.Close()
+
+	var reservations []domain.Reservation
+	for rows.Next() {
+		var res domain.Reservation
+		var email, phone, roomNumber, specialRequests, color, groupName *string
+		var gid *uuid.UUID
+		var configJSON []byte
+		if err := rows.Scan(
+			&res.ID, &res.TenantID, &res.PropertyID, &res.GuestName, &email, &phone, &roomNumber,
+			&res.RoomType, &res.CheckIn, &res.CheckOut, &res.Adults, &res.Children,
+			&res.Status, &res.Source, &res.Total, &res.Balance,
+			&specialRequests, &res.VIP, &color, &gid, &groupName, &configJSON,
+			&res.CreatedAt, &res.UpdatedAt, &res.DeletedAt, &res.Version,
+		); err != nil {
+			return nil, fmt.Errorf("scan group reservation: %w", err)
+		}
+		res.Email = email
+		res.Phone = phone
+		res.RoomNumber = roomNumber
+		res.SpecialRequests = specialRequests
+		res.Color = color
+		res.GroupID = gid
+		res.GroupName = groupName
+		reservations = append(reservations, res)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("group rows: %w", err)
+	}
+	return reservations, nil
+}
+
+// ListGroups returns all group names/IDs for a tenant.
+func (r *ReservationRepository) ListGroups(ctx context.Context, tenantID string) ([]struct {
+	GroupID   uuid.UUID `json:"group_id"`
+	GroupName string    `json:"group_name"`
+	Members   int       `json:"members"`
+	CheckIn   string    `json:"check_in"`
+	CheckOut  string    `json:"check_out"`
+}, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT group_id, group_name, COUNT(*) as members, MIN(check_in)::text as check_in, MAX(check_out)::text as check_out
+		FROM reservations
+		WHERE tenant_id = $1 AND deleted_at IS NULL AND group_id IS NOT NULL
+		GROUP BY group_id, group_name
+		ORDER BY MIN(check_in) DESC
+	`, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("list groups: %w", err)
+	}
+	defer rows.Close()
+
+	var groups []struct {
+		GroupID   uuid.UUID `json:"group_id"`
+		GroupName string    `json:"group_name"`
+		Members   int       `json:"members"`
+		CheckIn   string    `json:"check_in"`
+		CheckOut  string    `json:"check_out"`
+	}
+	for rows.Next() {
+		var g struct {
+			GroupID   uuid.UUID `json:"group_id"`
+			GroupName string    `json:"group_name"`
+			Members   int       `json:"members"`
+			CheckIn   string    `json:"check_in"`
+			CheckOut  string    `json:"check_out"`
+		}
+		if err := rows.Scan(&g.GroupID, &g.GroupName, &g.Members, &g.CheckIn, &g.CheckOut); err != nil {
+			return nil, fmt.Errorf("scan group: %w", err)
+		}
+		groups = append(groups, g)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list group rows: %w", err)
+	}
+	return groups, nil
 }
 
 // ErrNotFound is returned when a record is not found.

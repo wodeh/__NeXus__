@@ -76,6 +76,8 @@ export interface Reservation {
   special_requests?: string;
   vip: boolean;
   color?: string;
+  group_id?: string;
+  group_name?: string;
   created_at: string;
   updated_at: string;
 }
@@ -264,6 +266,22 @@ export async function moveReservation(id: string, payload: { room_number?: strin
     method: "PATCH",
     body: JSON.stringify(payload),
   });
+}
+
+export async function createGroupReservation(payload: { group_name: string; members: CreateReservationPayload[] }): Promise<{ group_name: string; members: number; reservations: Reservation[] }> {
+  return api("/v1/group-reservations", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getGroupReservations(): Promise<Array<{ group_id: string; group_name: string; members: number; check_in: string; check_out: string }>> {
+  const data = await api<{ groups: Array<{ group_id: string; group_name: string; members: number; check_in: string; check_out: string }> }>("/v1/group-reservations");
+  return data.groups || [];
+}
+
+export async function getGroupReservationDetail(groupId: string): Promise<{ group_id: string; reservations: Reservation[] }> {
+  return api(`/v1/group-reservations/${groupId}`);
 }
 
 /* ─── Room API ─── */

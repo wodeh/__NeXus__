@@ -10,7 +10,7 @@ import {
 import {
   Reservation, Room,
   getReservations, createReservation, checkInReservation, checkOutReservation,
-  cancelReservation, assignRoom, getRooms,
+  cancelReservation, assignRoom, getRooms, createGroupReservation,
 } from "@/lib/api";
 
 const statusBadge: Record<string, string> = {
@@ -81,6 +81,7 @@ export default function ReservationsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [showQuickBook, setShowQuickBook] = useState(false);
+  const [showGroupBook, setShowGroupBook] = useState(false);
 
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
@@ -132,6 +133,10 @@ export default function ReservationsPage() {
             <Plus className="h-4 w-4" />
             Quick Book
           </button>
+          <button onClick={() => setShowGroupBook(true)} className="btn-primary bg-violet-600 hover:bg-violet-500">
+            <Plus className="h-4 w-4" />
+            Group Book
+          </button>
         </div>
       </div>
 
@@ -162,6 +167,23 @@ export default function ReservationsPage() {
               await createReservation(payload);
               fetchData();
               setShowQuickBook(false);
+            } catch (e: any) {
+              alert(e.message);
+            }
+          }}
+        />
+      )}
+
+      {/* Group Book Modal */}
+      {showGroupBook && (
+        <GroupBookingModal
+          rooms={rooms}
+          onClose={() => setShowGroupBook(false)}
+          onCreate={async (payload) => {
+            try {
+              await createGroupReservation(payload);
+              fetchData();
+              setShowGroupBook(false);
             } catch (e: any) {
               alert(e.message);
             }
@@ -292,6 +314,7 @@ function ListView({ reservations, rooms, today, onRefresh }: { reservations: Res
                       <div>
                         <span className="font-medium text-white">{r.guest_name}</span>
                         {r.vip && <span className="ml-2 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400">VIP</span>}
+                        {r.group_name && <span className="ml-1 rounded bg-violet-500/10 px-1.5 py-0.5 text-[10px] text-violet-400">{r.group_name}</span>}
                         {r.email && <p className="text-[10px] text-slate-500">{r.email}</p>}
                       </div>
                     </div>
@@ -906,6 +929,120 @@ function QuickBookModal({ rooms, onClose, onCreate }: { rooms: Room[]; onClose: 
             >
               <Save className="h-4 w-4" />
               {loading ? "Creating..." : "Create Booking"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Group Booking Modal ─── */
+function GroupBookingModal({ rooms, onClose, onCreate }: { rooms: Room[]; onClose: () => void; onCreate: (payload: { group_name: string; members: any[] }) => Promise<void> }) {
+  const [groupName, setGroupName] = useState("");
+  const [members, setMembers] = useState([{ guest_name: "", room_number: "", adults: 2, children: 0 }]);
+  const [checkIn, setCheckIn] = useState("");
+  const [nights, setNights] = useState(1);
+  const [loading, setLoading] = useState(false);
+
+  const vacantRooms = rooms.filter((r) => r.status === "vacant_clean");
+  const checkOut = checkIn ? addDays(checkIn, nights) : "";
+
+  const addMember = () => setMembers([...members, { guest_name: "", room_number: "", adults: 2, children: 0 }]);
+  const removeMember = (i: number) => setMembers(members.filter((_, idx) => idx !== i));
+  const updateMember = (i: number, field: string, value: any) => {
+    const next = [...members];
+    next[i] = { ...next[i], [field]: value };
+    setMembers(next);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-lg rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl max-h-[80vh] overflow-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-white">Group Booking</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Group Name</label>
+            <input className="input w-full" value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="e.g. Johnson Wedding Party" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Check In</label>
+              <input type="date" className="input w-full" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Nights</label>
+              <input type="number" min={1} max={30} className="input w-full" value={nights} onChange={(e) => setNights(parseInt(e.target.value) || 1)} />
+            </div>
+          </div>
+          <div className="border-t border-slate-700 pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold uppercase text-slate-400">Members</span>
+              <button onClick={addMember} className="text-xs text-violet-400 hover:text-violet-300">+ Add Room</button>
+            </div>
+            <div className="space-y-3">
+              {members.map((m, i) => (
+                <div key={i} className="rounded-lg border border-slate-700 bg-slate-800 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-500">Room {i + 1}</span>
+                    {members.length > 1 && (
+                      <button onClick={() => removeMember(i)} className="text-[10px] text-rose-400 hover:text-rose-300">Remove</button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input className="input text-xs" placeholder="Guest name" value={m.guest_name} onChange={(e) => updateMember(i, "guest_name", e.target.value)} />
+                    <select className="input text-xs" value={m.room_number} onChange={(e) => updateMember(i, "room_number", e.target.value)}>
+                      <option value="">Select room...</option>
+                      {vacantRooms.map((r) => (
+                        <option key={r.number} value={r.number}>{r.number} · {r.type}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-500">Adults</span>
+                    <input type="number" min={1} max={6} className="input w-16 text-xs" value={m.adults} onChange={(e) => updateMember(i, "adults", parseInt(e.target.value) || 1)} />
+                    <span className="text-[10px] text-slate-500">Children</span>
+                    <input type="number" min={0} max={4} className="input w-16 text-xs" value={m.children} onChange={(e) => updateMember(i, "children", parseInt(e.target.value) || 0)} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 flex items-center justify-between border-t border-slate-700 pt-4">
+          <div className="text-sm text-slate-400">{members.length} rooms · {nights} nights</div>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="btn-secondary text-xs">Cancel</button>
+            <button
+              onClick={async () => {
+                if (!groupName) return alert("Group name is required");
+                if (!checkIn) return alert("Check in date is required");
+                if (members.some((m) => !m.guest_name || !m.room_number)) return alert("All members need a guest name and room");
+                setLoading(true);
+                const payload = {
+                  group_name: groupName,
+                  members: members.map((m) => ({
+                    guest_name: m.guest_name,
+                    room_number: m.room_number,
+                    room_type: vacantRooms.find((r) => r.number === m.room_number)?.type || "Standard",
+                    check_in: checkIn,
+                    check_out: checkOut,
+                    adults: m.adults,
+                    children: m.children,
+                    source: "direct",
+                  })),
+                };
+                await onCreate(payload);
+                setLoading(false);
+              }}
+              disabled={loading}
+              className="btn-primary text-xs disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" />
+              {loading ? "Creating..." : "Create Group Booking"}
             </button>
           </div>
         </div>

@@ -11,6 +11,8 @@ import (
 
 func (s *Server) registerReservationHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/v1/reservations", s.withTenant(s.handleReservations))
+	mux.HandleFunc("/v1/group-reservations", s.withTenant(s.handleGroupReservations))
+	mux.HandleFunc("/v1/group-reservations/", s.withTenant(s.handleGroupReservationDetail))
 }
 
 func (s *Server) handleReservations(w http.ResponseWriter, r *http.Request) {
@@ -172,4 +174,72 @@ func splitPath(path string) []string {
 		parts = append(parts, path[start:])
 	}
 	return parts
+}
+
+func (s *Server) handleGroupReservations(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tenantID, _ := ctx.Value("tenant_id").(string)
+	repo := repository.NewReservationRepository(s.repo.Pool())
+
+	switch r.Method {
+	case http.MethodGet:
+		groups, err := repo.ListGroups(ctx, tenantID)
+		if err != nil {
+			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]interface{}{"groups": groups})
+
+	case http.MethodPost:
+		var req domain.GroupCreateRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+			return
+		}
+		if req.GroupName == "" || len(req.Members) == 0 {
+			http.Error(w, `{"error":"group_name and members required"}`, http.StatusBadRequest)
+			return
+		}
+		results, err := repo.CreateGroup(ctx, tenantID, req.GroupName, req.Members)
+		if err != nil {
+			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, http.StatusCreated, map[string]interface{}{
+			"group_name":   req.GroupName,
+			"members":      len(results),
+			"reservations": results,
+		})
+
+	default:
+		http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handleGroupReservationDetail(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tenantID, _ := ctx.Value("tenant_id").(string)
+	repo := repository.NewReservationRepository(s.repo.Pool())
+
+	path := r.URL.Path[len("/v1/group-reservations/"):]
+	id, err := uuid.Parse(path)
+	if err != nil {
+		http.Error(w, `{"error":"invalid group id"}`, http.StatusBadRequest)
+		return
+	}
+
+	if r.Method != http.MethodGet {
+		http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	reservations, err := repo.GetGroup(ctx, tenantID, id)
+	if err != nil {
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"group_id":     id,
+		"reservations": reservations,
+	})
 }

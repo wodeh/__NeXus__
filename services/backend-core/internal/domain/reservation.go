@@ -27,7 +27,8 @@ type Reservation struct {
 	SpecialRequests *string   `json:"special_requests,omitempty"`
 	VIP             bool      `json:"vip"`
 	Color           *string   `json:"color,omitempty"`
-	Config          map[string]interface{} `json:"config,omitempty"`
+	GroupID         *uuid.UUID `json:"group_id,omitempty"`
+	GroupName       *string   `json:"group_name,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 	DeletedAt       *time.Time `json:"deleted_at,omitempty"`
@@ -48,6 +49,12 @@ type ReservationCreateRequest struct {
 	Source          string `json:"source"`
 	SpecialRequests string `json:"special_requests,omitempty"`
 	VIP             bool   `json:"vip"`
+}
+
+// GroupCreateRequest creates multiple reservations under one group.
+type GroupCreateRequest struct {
+	GroupName string                    `json:"group_name"`
+	Members   []ReservationCreateRequest `json:"members"`
 }
 
 // ReservationAssignRequest assigns a room to a reservation.
