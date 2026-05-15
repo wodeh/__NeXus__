@@ -130,6 +130,9 @@ export default function ReservationsPage() {
             <button onClick={() => setView("waitlist")} className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium ${view === "waitlist" ? "bg-slate-700 text-white" : "text-slate-400 hover:text-white"}`}>
               <Clock className="h-3.5 w-3.5" /> Waitlist
             </button>
+            <button onClick={() => setView("readiness")} className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium ${view === "readiness" ? "bg-slate-700 text-white" : "text-slate-400 hover:text-white"}`}>
+              <CheckCircle2 className="h-3.5 w-3.5" /> Readiness
+            </button>
           </div>
           <button onClick={fetchData} className="rounded-lg border border-slate-700 bg-slate-800 p-2 text-slate-400 hover:text-white" title="Refresh">
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -164,6 +167,7 @@ export default function ReservationsPage() {
           {view === "list" && <ListView reservations={reservations} rooms={rooms} today={today} onRefresh={fetchData} />}
           {view === "calendar" && <CalendarView reservations={reservations} rooms={rooms} today={today} onRefresh={fetchData} />}
           {view === "waitlist" && <WaitlistView rooms={rooms} onRefresh={fetchData} />}
+          {view === "readiness" && <ReadinessView reservations={reservations} rooms={rooms} today={today} onRefresh={fetchData} />}
         </>
       )}
 
@@ -501,6 +505,148 @@ function WaitlistAddModal({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ─── Readiness View ─── */
+function ReadinessView({ reservations, rooms, today, onRefresh }: { reservations: Reservation[]; rooms: Room[]; today: string; onRefresh: () => void }) {
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const arrivals = reservations.filter(
+    (r) => r.status === "confirmed" && (r.check_in === today || r.check_in === addDays(today, 1))
+  );
+
+  function isReady(r: Reservation) {
+    const roomAssigned = !!r.room_number;
+    const roomClean = rooms.find((room) => room.number === r.room_number)?.status === "vacant_clean";
+    const hasDeposit = (r.deposit_paid || 0) > 0;
+    const specialAck = !r.special_requests || r.special_requests_acknowledged;
+    return roomAssigned && roomClean && hasDeposit && specialAck;
+  }
+
+  function readyItems(r: Reservation) {
+    const items = [];
+    if (r.room_number) items.push("Room assigned");
+    if (rooms.find((room) => room.number === r.room_number)?.status === "vacant_clean") items.push("Room clean");
+    if ((r.deposit_paid || 0) > 0) items.push("Deposit paid");
+    if (!r.special_requests || r.special_requests_acknowledged) items.push("Requests OK");
+    return items;
+  }
+
+  function missingItems(r: Reservation) {
+    const items = [];
+    if (!r.room_number) items.push("Assign room");
+    else if (rooms.find((room) => room.number === r.room_number)?.status !== "vacant_clean") items.push("Room not clean");
+    if ((r.deposit_paid || 0) === 0) items.push("No deposit");
+    if (r.special_requests && !r.special_requests_acknowledged) items.push("Acknowledge requests");
+    return items;
+  }
+
+  const todayArrivals = arrivals.filter((r) => r.check_in === today);
+  const tomorrowArrivals = arrivals.filter((r) => r.check_in === addDays(today, 1));
+  const readyCount = todayArrivals.filter(isReady).length;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-3">
+        <StatCard label="Today's Arrivals" value={todayArrivals.length} icon={User} color="sky" />
+        <StatCard label="Ready" value={readyCount} icon={CheckCircle2} color="emerald" />
+        <StatCard label="Needs Attention" value={todayArrivals.length - readyCount} icon={AlertTriangle} color={todayArrivals.length - readyCount > 0 ? "rose" : "slate"} alert={todayArrivals.length - readyCount > 0} />
+      </div>
+
+      {todayArrivals.length === 0 && tomorrowArrivals.length === 0 ? (
+        <div className="rounded-lg border border-slate-700 bg-slate-800 p-8 text-center text-sm text-slate-400">No upcoming arrivals.</div>
+      ) : (
+        <div className="space-y-4">
+          {todayArrivals.length > 0 && (
+            <div>
+              <h3 className="mb-2 text-sm font-semibold text-white">Today</h3>
+              <div className="space-y-2">
+                {todayArrivals.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800 p-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isReady(r) ? "bg-emerald-500/10" : "bg-amber-500/10"}`}>
+                        {isReady(r) ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <AlertTriangle className="h-4 w-4 text-amber-400" />}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-white">{r.guest_name}</div>
+                        <div className="text-xs text-slate-400">
+                          {r.room_number ? `Room ${r.room_number}` : "No room assigned"} · {r.room_type} · {r.adults} adults
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {readyItems(r).map((item) => (
+                            <span key={item} className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-400">{item}</span>
+                          ))}
+                          {missingItems(r).map((item) => (
+                            <span key={item} className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400">{item}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {r.room_number && (
+                        <button
+                          onClick={async () => {
+                            setActionLoading(r.id);
+                            try {
+                              await checkInReservation(r.id);
+                              onRefresh();
+                            } catch (e: any) {
+                              alert(e.message);
+                            } finally {
+                              setActionLoading(null);
+                            }
+                          }}
+                          disabled={actionLoading === r.id}
+                          className="btn-primary bg-emerald-600 hover:bg-emerald-500 text-xs disabled:opacity-50"
+                        >
+                          {actionLoading === r.id ? "Checking in..." : "Check In"}
+                        </button>
+                      )}
+                      {!r.room_number && (
+                        <Link href={`/tapechart?assign=${r.id}`} className="btn-secondary text-xs">Assign Room</Link>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {tomorrowArrivals.length > 0 && (
+            <div>
+              <h3 className="mb-2 text-sm font-semibold text-slate-300">Tomorrow</h3>
+              <div className="space-y-2">
+                {tomorrowArrivals.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800 p-3 opacity-70">
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isReady(r) ? "bg-emerald-500/10" : "bg-amber-500/10"}`}>
+                        {isReady(r) ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <AlertTriangle className="h-4 w-4 text-amber-400" />}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-white">{r.guest_name}</div>
+                        <div className="text-xs text-slate-400">
+                          {r.room_number ? `Room ${r.room_number}` : "No room assigned"} · {r.room_type}
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {readyItems(r).map((item) => (
+                            <span key={item} className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-400">{item}</span>
+                          ))}
+                          {missingItems(r).map((item) => (
+                            <span key={item} className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400">{item}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-xs text-slate-500">Arrives tomorrow</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
