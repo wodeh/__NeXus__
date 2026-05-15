@@ -17,7 +17,7 @@ interface ApiResponse<T> {
 }
 
 function getTenantId(): string {
-  return localStorage.getItem("tenantId") || "demo";
+  return localStorage.getItem("tenantId") || "hotel-01";
 }
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {

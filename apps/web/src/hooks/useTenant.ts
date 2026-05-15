@@ -33,7 +33,7 @@ export function useTenant() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const tenant = localStorage.getItem("nexus-tenant") || "demo";
+    const tenant = localStorage.getItem("nexus-tenant") || "hotel-01";
     getTenantConfig(tenant)
       .then((data) => {
         // Normalize: ensure capabilities array exists

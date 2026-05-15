@@ -65,7 +65,7 @@ export default function DashboardLayout({
       setLoading(false);
       return;
     }
-    const tenantExternalId = isVillaOwner ? "villa-owners" : (user?.tenant_id || "demo");
+    const tenantExternalId = isVillaOwner ? "villa-owners" : (user?.tenant_id || "hotel-01");
 
     Promise.all([
       apiClient.get(`/v1/tenant/${tenantExternalId}`),
